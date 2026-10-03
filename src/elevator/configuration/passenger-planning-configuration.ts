@@ -9,10 +9,15 @@ import {
 } from '../../engineering'
 import type { LiftConfiguration } from '../models/lift-configuration'
 import { LIFT_FAMILIES } from '../types/lift-family'
+import {
+  passengerMechanicalPlanningSchema,
+  COUNTERWEIGHT_ARRANGEMENTS,
+  type PassengerMechanicalPlanningInput,
+} from './passenger-mechanical-planning'
 
 export const PASSENGER_PLANNING_SCHEMA_VERSION = 'passenger-planning-v2' as const
 
-export const COUNTERWEIGHT_POSITIONS = ['rear', 'left', 'right'] as const
+export const COUNTERWEIGHT_POSITIONS = COUNTERWEIGHT_ARRANGEMENTS
 
 export type CounterweightPosition = (typeof COUNTERWEIGHT_POSITIONS)[number]
 
@@ -40,7 +45,9 @@ export interface PassengerPlanningConfiguration
   readonly driveConcept?: string
   readonly counterweightWidthMm?: Millimetres
   readonly counterweightHeightMm?: Millimetres
+  readonly counterweightDepthMm?: Millimetres
   readonly counterweightPosition?: CounterweightPosition
+  readonly mechanical?: PassengerMechanicalPlanningInput
 }
 
 const optionalFiniteNumber = z.number().finite().optional()
@@ -80,7 +87,9 @@ export const passengerPlanningConfigurationSchema = z
     driveConcept: z.string().optional(),
     counterweightWidthMm: optionalMillimetres,
     counterweightHeightMm: optionalMillimetres,
+    counterweightDepthMm: optionalMillimetres,
     counterweightPosition: z.enum(COUNTERWEIGHT_POSITIONS).optional(),
+    mechanical: passengerMechanicalPlanningSchema.optional(),
   })
   .strict()
 

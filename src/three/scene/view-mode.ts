@@ -24,6 +24,8 @@ export interface PassengerViewVisibility {
   readonly frontDoorOpacity: number
   readonly shaftEnvelopeOpacity: number
   readonly mechanicalOpacity: number
+  readonly landingOpacity: number
+  readonly pitOpacity: number
 }
 
 export function getPassengerViewVisibility(
@@ -38,6 +40,8 @@ export function getPassengerViewVisibility(
       frontDoorOpacity: 0.08,
       shaftEnvelopeOpacity: 0,
       mechanicalOpacity: 1,
+      landingOpacity: 0.06,
+      pitOpacity: 0,
     }
   }
 
@@ -45,11 +49,13 @@ export function getPassengerViewVisibility(
     return {
       showRightCabinWall: true,
       showFrontWallSections: true,
-      cabinShellOpacity: 0.12,
-      cabinCeilingOpacity: 0.06,
-      frontDoorOpacity: 0.08,
-      shaftEnvelopeOpacity: 0.025,
+      cabinShellOpacity: 0.085,
+      cabinCeilingOpacity: 0.025,
+      frontDoorOpacity: 0.025,
+      shaftEnvelopeOpacity: 0,
       mechanicalOpacity: 1,
+      landingOpacity: 0.025,
+      pitOpacity: 0,
     }
   }
 
@@ -60,6 +66,8 @@ export function getPassengerViewVisibility(
     cabinCeilingOpacity: 1,
     frontDoorOpacity: 1,
     shaftEnvelopeOpacity: 0.08,
-    mechanicalOpacity: 0.82,
+    mechanicalOpacity: 1,
+    landingOpacity: 0.12,
+    pitOpacity: 0.1,
   }
 }

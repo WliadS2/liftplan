@@ -1,4 +1,3 @@
-import type { CounterweightPosition } from '../../../elevator'
 import {
   metres,
   millimetresToMetres,
@@ -26,6 +25,7 @@ export type PassengerGeometryField =
   | 'levels.elevationsMm'
   | 'counterweight.widthMm'
   | 'counterweight.heightMm'
+  | 'counterweight.depthMm'
   | 'counterweight.position'
 
 export interface PassengerLandingLevelModel {
@@ -86,14 +86,6 @@ export interface PassengerLevelFootprintModel {
   readonly depth: Metres
 }
 
-export interface PassengerCounterweightModel {
-  readonly width: Metres
-  readonly height: Metres
-  readonly center: readonly [Metres, Metres, Metres]
-  readonly rotationY: number
-  readonly position: CounterweightPosition
-}
-
 export interface PassengerPitModel {
   readonly width: Metres
   readonly depth: Metres
@@ -113,7 +105,6 @@ export interface PassengerInstallationModel {
   readonly shaft?: PassengerShaftModel
   readonly levels: readonly PassengerLandingLevelModel[]
   readonly levelFootprint?: PassengerLevelFootprintModel
-  readonly counterweight?: PassengerCounterweightModel
   readonly pit?: PassengerPitModel
   readonly bounds: PassengerInstallationBounds
 }
@@ -226,49 +217,6 @@ function createLevelElevations(levels: LevelPlanningInput): LevelElevationResult
   }
 }
 
-function createCounterweightModel(
-  input: PassengerGeometryPlanningInput,
-  shaft: PassengerShaftModel,
-): PassengerCounterweightModel | undefined {
-  const { widthMm, heightMm, position } = input.counterweight
-
-  if (
-    widthMm === undefined ||
-    heightMm === undefined ||
-    position === undefined ||
-    !isPositive(widthMm) ||
-    !isPositive(heightMm)
-  ) {
-    return undefined
-  }
-
-  const width = millimetresToMetres(widthMm)
-  const height = millimetresToMetres(heightMm)
-  const centerY = metres(height / 2)
-
-  if (position === 'rear') {
-    return {
-      width,
-      height,
-      center: [metres(0), centerY, metres(-shaft.depth / 2)],
-      rotationY: 0,
-      position,
-    }
-  }
-
-  return {
-    width,
-    height,
-    center: [
-      metres((position === 'left' ? -shaft.width : shaft.width) / 2),
-      centerY,
-      metres(0),
-    ],
-    rotationY: Math.PI / 2,
-    position,
-  }
-}
-
 function createEntranceModel(
   side: PassengerEntranceSide,
   door: PassengerDoorModel,
@@ -327,6 +275,7 @@ function collectMissingFields(
   const counterweightValues = [
     input.counterweight.widthMm,
     input.counterweight.heightMm,
+    input.counterweight.depthMm,
     input.counterweight.position,
   ]
   const hasPartialCounterweight =
@@ -339,6 +288,9 @@ function collectMissingFields(
     }
     if (input.counterweight.heightMm === undefined) {
       fields.push('counterweight.heightMm')
+    }
+    if (input.counterweight.depthMm === undefined) {
+      fields.push('counterweight.depthMm')
     }
     if (input.counterweight.position === undefined) {
       fields.push('counterweight.position')
@@ -363,6 +315,7 @@ function collectInvalidFields(
     ['shaft.depthMm', input.shaft.depthMm],
     ['counterweight.widthMm', input.counterweight.widthMm],
     ['counterweight.heightMm', input.counterweight.heightMm],
+    ['counterweight.depthMm', input.counterweight.depthMm],
   ] as const
 
   for (const [field, value] of positiveDimensions) {
@@ -528,8 +481,6 @@ function createInstallationModel(
           centerY: metres(-validPitDepth / 2),
         }
       : undefined
-  const counterweight =
-    shaft === undefined ? undefined : createCounterweightModel(input, shaft)
   const hasGeometry =
     cabinAssembly !== undefined || shaft !== undefined || levels.length > 0
 
@@ -546,9 +497,6 @@ function createInstallationModel(
     cabinAssembly?.height ?? 0,
     highestLevel ?? 0,
     shaft?.verticalExtent?.topY ?? 0,
-    counterweight === undefined
-      ? 0
-      : counterweight.center[1] + counterweight.height / 2,
   )
 
   return {
@@ -556,7 +504,6 @@ function createInstallationModel(
     shaft,
     levels,
     levelFootprint,
-    counterweight,
     pit,
     bounds: {
       width: metres(Math.max(cabinAssembly?.width ?? 0, shaft?.width ?? 0)),

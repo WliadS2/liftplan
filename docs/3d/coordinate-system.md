@@ -25,4 +25,6 @@ The passenger cutaway view opens the model toward the default camera on the `+Z/
 
 Mechanical planning points use the same canonical `X/Y/Z` axes and are stored in millimetres. The mechanical layout transform converts them to metre-based immutable tuples before rendering. Rail paths use bottom-to-top points along `+Y`; buffer positions refer to their base points; machine and sheave positions refer to their visual envelope centres; suspension paths retain their supplied point order.
 
-The current rear/left/right counterweight arrangement indicates only a side of the shaft. Until exact coordinates are supplied, its placement and the related rail positions are explicitly schematic. They must not be interpreted as clearances or approved mechanical coordinates.
+The rear/left/right counterweight arrangement indicates a side of the cabin and the width-axis orientation. `counterweightOffsetMm` supplies an explicit three-coordinate centre-to-centre displacement from the cabin centre; no shaft-boundary placement is inferred. Cabin rails use either an explicit pair of X/Z positions or spacing along X/Z symmetric about the canonical cabin axis (or an explicitly supplied rail axis). Counterweight rails use explicit positions or explicit spacing along the weight's width axis.
+
+Mechanical debugging bounds contain full `min`, `max`, and three-coordinate `center` tuples, including non-centred components. Bounds-based camera fitting consumes the complete installation and mechanical envelopes.

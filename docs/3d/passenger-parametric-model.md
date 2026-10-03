@@ -14,7 +14,7 @@ The first LiftPlan 3D assembly is a lightweight planning visualization for the p
 
 Missing dimensions remain missing. The transform does not insert hidden shaft, cabin, level, pit, or counterweight defaults.
 
-Partial models remain visible. Cabin geometry needs only its three explicit dimensions; doors, shaft footprint and envelope, levels, pit, and counterweight are added only when their own placement and dimension inputs are available. Mechanical frame and rail placeholders are then derived independently from the usable geometry. A shaft with only width and depth is shown as its explicit footprint until known vertical extents are available. Levels without a known footprint use screen-sized point markers rather than an invented world-space width.
+Partial models remain visible. Cabin geometry needs only its three explicit dimensions; doors, shaft footprint and envelope, levels, and pit are added independently. Frame and rail systems require their own explicit layout inputs. The separate mechanical transform positions a counterweight only with complete dimensions, arrangement, and centre-offset data. A shaft with only width and depth is shown as its explicit footprint until known vertical extents are available. Levels without a known footprint use screen-sized point markers rather than an invented world-space width.
 
 ## Explicit planning inputs
 
@@ -26,7 +26,8 @@ The current scene can consume:
 - shaft width and depth;
 - uniform stop count and storey height, with an explicit-elevation contract available for future data;
 - pit depth and headroom;
-- optional counterweight width, height, and rear, left, or right placement.
+- optional counterweight width, height, depth, rear/left/right arrangement, and centre offset;
+- optional rail spacing/orientation/axes, buffer positions, machine/sheave geometry, and suspension routing.
 
 Capacity, passenger count, nominal speed, and drive concept remain project data but do not create geometry yet. Machine, sheave, and suspension placeholders remain absent unless their complete optional mechanical planning inputs are supplied.
 

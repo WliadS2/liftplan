@@ -26,7 +26,7 @@ export function DoorLeaf({ leaf, opacity, thickness, y, z }: DoorLeafProps) {
         roughness={0.52}
         transparent={opacity < 1}
       />
-      <Edges color={TECHNICAL_MATERIALS.doorEdge} />
+      <Edges color={TECHNICAL_MATERIALS.doorEdge} opacity={opacity} transparent={opacity < 1} />
     </mesh>
   )
 }

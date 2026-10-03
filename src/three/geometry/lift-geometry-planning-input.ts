@@ -44,6 +44,7 @@ export interface PassengerGeometryPlanningInput {
   readonly counterweight: {
     readonly widthMm?: Millimetres
     readonly heightMm?: Millimetres
+    readonly depthMm?: Millimetres
     readonly position?: CounterweightPosition
   }
   readonly mechanical: PassengerMechanicalPlanningInput
@@ -94,11 +95,13 @@ function createPassengerGeometryPlanningInput(
     counterweight: {
       widthMm: planning.counterweightWidthMm,
       heightMm: planning.counterweightHeightMm,
-      position: planning.counterweightPosition,
+      depthMm: planning.counterweightDepthMm,
+      position: planning.mechanical?.counterweightArrangement ?? planning.counterweightPosition,
     },
     mechanical: {
-      counterweightArrangement: planning.counterweightPosition,
-      driveConcept: planning.driveConcept,
+      ...planning.mechanical,
+      counterweightArrangement: planning.mechanical?.counterweightArrangement ?? planning.counterweightPosition,
+      driveConcept: planning.mechanical?.driveConcept ?? planning.driveConcept,
     },
   }
 }

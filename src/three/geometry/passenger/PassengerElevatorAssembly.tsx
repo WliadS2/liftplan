@@ -25,12 +25,13 @@ export function PassengerElevatorAssembly({
   return (
     <group>
       {model.shaft && <Shaft shaft={model.shaft} viewMode={viewMode} />}
-      {model.pit && <Pit pit={model.pit} />}
+      {model.pit && <Pit pit={model.pit} opacity={visibility.pitOpacity} />}
       <LandingLevels
         cabin={model.cabin}
         footprint={model.levelFootprint}
         levels={model.levels}
         shaft={model.shaft}
+        opacity={visibility.landingOpacity}
       />
       <PassengerMechanicalAssembly
         layout={mechanicalLayout}

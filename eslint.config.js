@@ -48,6 +48,9 @@ export default defineConfig([
       'src/elevator/**/*.{ts,tsx}',
       'src/collision/**/*.{ts,tsx}',
       'src/simulation/**/*.{ts,tsx}',
+      'src/three/geometry/lift-geometry-planning-input.ts',
+      'src/three/geometry/passenger/passenger-installation-model.ts',
+      'src/three/geometry/passenger/mechanical/passenger-mechanical-layout.ts',
     ],
     rules: {
       'no-restricted-imports': [

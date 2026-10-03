@@ -1,4 +1,5 @@
 import { TECHNICAL_MATERIALS } from '../../materials/technical-materials'
+import { Edges } from '@react-three/drei'
 
 export interface CabinWallProps {
   readonly dimensions: readonly [number, number, number]
@@ -28,6 +29,7 @@ export function CabinWall({
         roughness={0.76}
         transparent={opacity < 1}
       />
+      {opacity < 1 && <Edges color={TECHNICAL_MATERIALS.cabinFloor} opacity={0.16} transparent />}
     </mesh>
   )
 }

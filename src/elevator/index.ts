@@ -27,6 +27,8 @@ export type {
   PassengerPlanningConfiguration,
   PassengerPlanningConfigurationUpdate,
 } from './configuration/passenger-planning-configuration'
+export { passengerMechanicalPlanningSchema, RAIL_ORIENTATIONS } from './configuration/passenger-mechanical-planning'
+export type { PassengerMechanicalPlanningInput, RailOrientation } from './configuration/passenger-mechanical-planning'
 export { validateLiftConfiguration } from './configuration/structural-validation'
 export type {
   StructuralValidationIssue,

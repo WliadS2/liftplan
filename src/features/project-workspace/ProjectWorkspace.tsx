@@ -1,10 +1,12 @@
 import { lazy, Suspense } from 'react'
 import {
   COUNTERWEIGHT_POSITIONS,
+  RAIL_ORIENTATIONS,
   LIFT_FAMILIES,
   getLiftTypeDefinitions,
   isRegisteredLiftFamily,
   updatePassengerPlanningConfiguration,
+  type PassengerMechanicalPlanningInput,
 } from '../../elevator'
 import {
   kilograms,
@@ -78,6 +80,7 @@ export function ProjectWorkspace() {
   const geometryInput = createLiftGeometryPlanningInput(project.configuration)
   const isPassengerLift =
     project.configuration.family === LIFT_FAMILIES.passenger
+  const passengerConfiguration = isPassengerLift ? project.configuration : undefined
 
   const updatePassengerConfiguration = (
     update: Parameters<typeof updatePassengerPlanningConfiguration>[1],
@@ -89,6 +92,11 @@ export function ProjectWorkspace() {
     updateConfiguration(
       updatePassengerPlanningConfiguration(project.configuration, update),
     )
+  }
+
+  const updateMechanicalConfiguration = (update: Partial<PassengerMechanicalPlanningInput>) => {
+    if (!isPassengerLift) return
+    updatePassengerConfiguration({ mechanical: { ...project.configuration.mechanical, ...update } })
   }
 
   return (
@@ -379,6 +387,7 @@ export function ProjectWorkspace() {
                     )
                     updatePassengerConfiguration({
                       counterweightPosition,
+                      mechanical: { ...passengerConfiguration?.mechanical, counterweightArrangement: counterweightPosition },
                     })
                   }}
                 >
@@ -388,6 +397,32 @@ export function ProjectWorkspace() {
                   <option value="right">Rechts</option>
                 </select>
               </label>
+              <details>
+                <summary>Mechanische Anordnung</summary>
+                <p className="panel-note">Positionen relativ zur Kabinenmitte. Fehlende Werte bleiben offen.</p>
+                <label className="field">
+                  <span>Ausrichtung der Kabinenschienen</span>
+                  <select
+                    value={project.configuration.mechanical?.carRailOrientation ?? ''}
+                    onChange={(event) => updateMechanicalConfiguration({ carRailOrientation: RAIL_ORIENTATIONS.find((orientation) => orientation === event.target.value) })}
+                  >
+                    <option value="">Nicht angegeben</option>
+                    <option value="x">Links / rechts</option>
+                    <option value="z">Vorn / hinten</option>
+                  </select>
+                </label>
+                <MillimetreField label="Kabinenschienenabstand" value={project.configuration.mechanical?.carRailSpacingMm} onChange={(carRailSpacingMm) => updateMechanicalConfiguration({ carRailSpacingMm })} />
+                <MillimetreField label="Gegengewichttiefe" value={project.configuration.counterweightDepthMm} onChange={(counterweightDepthMm) => updatePassengerConfiguration({ counterweightDepthMm })} />
+                <MillimetreField label="Gegengewichtschienenabstand" value={project.configuration.mechanical?.counterweightRailSpacingMm} onChange={(counterweightRailSpacingMm) => updateMechanicalConfiguration({ counterweightRailSpacingMm })} />
+                {(['xMm', 'yMm', 'zMm'] as const).map((axis, index) => (
+                  <MillimetreField
+                    key={axis}
+                    label={`Gegengewichtversatz ${['X', 'Y', 'Z'][index]}`}
+                    value={passengerConfiguration?.mechanical?.counterweightOffsetMm?.[axis]}
+                    onChange={(value) => updateMechanicalConfiguration({ counterweightOffsetMm: { ...passengerConfiguration?.mechanical?.counterweightOffsetMm, [axis]: value } })}
+                  />
+                ))}
+              </details>
             </div>
           ) : (
             <p className="coming-soon-message">

@@ -1,10 +1,10 @@
 import { Edges, Line } from '@react-three/drei'
 import { TECHNICAL_MATERIALS } from '../../../materials/technical-materials'
-import type { PassengerMechanicalLayout } from './passenger-mechanical-layout'
+import type { PassengerMechanicalLayout, PassengerRailLineLayout } from './passenger-mechanical-layout'
 import {
   visualizationBufferHeight,
   visualizationBufferRadius,
-  visualizationCounterweightDepth,
+  visualizationRailThickness,
   visualizationFrameMemberThickness,
   visualizationSheaveDepth,
 } from './mechanical-visualization'
@@ -33,6 +33,25 @@ function MechanicalMaterial({
   )
 }
 
+function FrameMember({
+  segment, member, offset = [0, 0, 0], opacity,
+}: {
+  readonly segment: PassengerRailLineLayout
+  readonly member: number
+  readonly offset?: readonly [number, number, number]
+  readonly opacity: number
+}) {
+  const center = segment.start.map((v, i) => (v + segment.end[i]) / 2 + offset[i]) as [number, number, number]
+  const size = segment.start.map((v, i) => Math.abs(segment.end[i] - v) || member) as [number, number, number]
+  return (
+    <mesh position={center}>
+      <boxGeometry args={size} />
+      <MechanicalMaterial color={TECHNICAL_MATERIALS.carFrame} opacity={opacity} />
+      <Edges color={TECHNICAL_MATERIALS.guideRail} />
+    </mesh>
+  )
+}
+
 export function CarFrame({
   frame,
   opacity,
@@ -42,32 +61,27 @@ export function CarFrame({
 }) {
   const member = Math.min(
     visualizationFrameMemberThickness,
-    frame.width / 8,
-    frame.depth / 8,
+    frame.cabinBounds.width / 8,
+    frame.cabinBounds.depth / 8,
   )
-  const height = frame.topY - frame.bottomY
-  const centerY = frame.bottomY + height / 2
-  const postX = frame.width / 2 + member / 2
 
   return (
     <group>
-      {([-1, 1] as const).map((direction) => (
-        <mesh key={direction} position={[direction * postX, centerY, 0]}>
-          <boxGeometry args={[member, height, member]} />
-          <MechanicalMaterial
-            color={TECHNICAL_MATERIALS.carFrame}
-            opacity={opacity}
-          />
-        </mesh>
+      {frame.uprights.map((upright, index) => (
+        <FrameMember
+          key={upright.id}
+          segment={upright}
+          member={member}
+          offset={frame.orientation === 'x'
+            ? [(index === 0 ? -1 : 1) * member / 2, 0, 0]
+            : [0, 0, (index === 0 ? -1 : 1) * member / 2]}
+          opacity={opacity}
+        />
       ))}
-      {([frame.bottomY, frame.topY] as const).map((y) => (
-        <mesh key={y} position={[0, y, 0]}>
-          <boxGeometry args={[frame.width + member * 2, member, member]} />
-          <MechanicalMaterial
-            color={TECHNICAL_MATERIALS.carFrame}
-            opacity={opacity}
-          />
-        </mesh>
+      <FrameMember segment={frame.crosshead} member={member} offset={[0, member / 2, 0]} opacity={opacity} />
+      <FrameMember segment={frame.lowerSling} member={member} offset={[0, -member / 2, 0]} opacity={opacity} />
+      {frame.platformSupports.map((support) => (
+        <FrameMember key={support.id} segment={support} member={member} offset={[0, -member / 2, 0]} opacity={opacity} />
       ))}
     </group>
   )
@@ -88,14 +102,11 @@ export function RailSystem({
   return (
     <group>
       {railSystem.rails.map((rail) => (
-        <Line
-          key={rail.id}
-          color={color}
-          lineWidth={railSystem.kind === 'car' ? 2.5 : 2}
-          opacity={opacity}
-          points={[rail.start, rail.end]}
-          transparent={opacity < 1}
-        />
+        <mesh key={rail.id} position={[rail.start[0], (rail.start[1] + rail.end[1]) / 2, rail.start[2]]}>
+          <boxGeometry args={[visualizationRailThickness, rail.end[1] - rail.start[1], visualizationRailThickness]} />
+          <MechanicalMaterial color={color} opacity={opacity} />
+          <Edges color={color} />
+        </mesh>
       ))}
     </group>
   )
@@ -132,7 +143,7 @@ export function CounterweightAssembly({
             args={[
               horizontalMemberWidth,
               member,
-              visualizationCounterweightDepth,
+              counterweight.depth,
             ]}
           />
           <MechanicalMaterial
@@ -150,7 +161,7 @@ export function CounterweightAssembly({
             args={[
               member,
               verticalMemberHeight,
-              visualizationCounterweightDepth,
+              counterweight.depth,
             ]}
           />
           <MechanicalMaterial
@@ -159,9 +170,9 @@ export function CounterweightAssembly({
           />
         </mesh>
       ))}
-      <mesh position={[0, 0, visualizationCounterweightDepth / 2]}>
+      <mesh>
         <boxGeometry
-          args={[innerWidth, innerHeight, visualizationCounterweightDepth]}
+          args={[innerWidth, innerHeight, counterweight.depth]}
         />
         <MechanicalMaterial
           color={TECHNICAL_MATERIALS.counterweight}
@@ -279,7 +290,7 @@ export function MechanicalZones({
           <meshBasicMaterial
             color={TECHNICAL_MATERIALS.mechanicalZone}
             depthWrite={false}
-            opacity={0.035}
+            opacity={0}
             transparent
           />
           <Edges color={TECHNICAL_MATERIALS.mechanicalZone} />

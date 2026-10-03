@@ -10,10 +10,12 @@ export {
   createPassengerInstallationModel,
   createUniformLevelElevations,
 } from './geometry/passenger/passenger-installation-model'
-export { createPassengerMechanicalLayout } from './geometry/passenger/mechanical/passenger-mechanical-layout'
+export { createPassengerMechanicalLayout, getPassengerMechanicalDebugPositions } from './geometry/passenger/mechanical/passenger-mechanical-layout'
 export type {
   MechanicalLayoutSource,
   MechanicalPoint,
+  MechanicalBounds,
+  MechanicalPlanningIssueCode,
   PassengerMechanicalLayout,
 } from './geometry/passenger/mechanical/passenger-mechanical-layout'
 export type {

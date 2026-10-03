@@ -59,6 +59,7 @@ function createCompletePlanningInput(throughCar = false) {
     throughCar,
     counterweightWidthMm: millimetres(700),
     counterweightHeightMm: millimetres(1800),
+    counterweightDepthMm: millimetres(220),
     counterweightPosition: 'rear',
   })
 }
@@ -201,12 +202,8 @@ describe('passenger geometry planning', () => {
     })
     expect(model.shaft?.verticalExtent?.height).toBeCloseTo(10.8)
     expect(model.pit?.height).toBe(1.2)
-    expect(model.counterweight).toMatchObject({
-      width: 0.7,
-      height: 1.8,
-      center: [0, 0.9, -1],
-      position: 'rear',
-    })
+    // Mechanical placement is resolved separately from the installation envelope.
+    expect(model).not.toHaveProperty('counterweight')
   })
 
   it('keeps a closed rear wall when through-car is disabled', () => {

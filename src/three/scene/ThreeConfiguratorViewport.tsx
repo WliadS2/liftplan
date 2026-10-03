@@ -7,9 +7,26 @@ import { createPassengerMechanicalLayout } from '../geometry/passenger/mechanica
 import { createPassengerInstallationModel } from '../geometry/passenger/passenger-installation-model'
 import type { LiftGeometryPlanningInput } from '../geometry/lift-geometry-planning-input'
 import type { ThreeViewMode } from './view-mode'
+import type { MechanicalPlanningIssueCode } from '../geometry/passenger/mechanical/passenger-mechanical-layout'
+
+const mechanicalPlanningMessages: Record<MechanicalPlanningIssueCode, string> = {
+  'non-finite-coordinate': 'Eine mechanische Position enthält ungültige Koordinaten.',
+  'non-positive-dimension': 'Ein mechanisches Planungsmaß muss größer als null sein.',
+  'collapsed-rail-pair': 'Die beiden Führungsschienen liegen auf derselben Achse.',
+  'outside-shaft': 'Eine geplante Komponente liegt außerhalb des angegebenen Schachts.',
+  'frame-intersects-cabin': 'Die Schienenanordnung lässt keinen Rahmen um die angegebene Kabine zu.',
+  'invalid-rail-axis': 'Die Kabinenschienen müssen auf einer gemeinsamen Querachse liegen.',
+  'counterweight-intersects-cabin': 'Das geplante Gegengewicht überschneidet die Kabine.',
+  'arrangement-mismatch': 'Die Gegengewichtposition passt nicht zur gewählten Anordnung.',
+  'rail-pair-misses-assembly': 'Die Gegengewichtschienen passen nicht zur angegebenen Gegengewichtposition.',
+  'buffer-outside-pit': 'Eine Pufferposition liegt außerhalb der angegebenen Grube.',
+  'buffer-misses-assembly': 'Eine Pufferposition liegt nicht unter der zugehörigen Baugruppe.',
+  'invalid-zone-offset': 'Der Zonenversatz passt nicht zur angegebenen Grube oder zum Schachtkopf.',
+}
 
 export interface ThreeConfiguratorViewportProps {
   readonly geometryInput?: LiftGeometryPlanningInput
+  readonly initialViewMode?: ThreeViewMode
 }
 
 function ViewportFallback({ children }: { readonly children: string }) {
@@ -18,8 +35,9 @@ function ViewportFallback({ children }: { readonly children: string }) {
 
 export function ThreeConfiguratorViewport({
   geometryInput,
+  initialViewMode = 'overview',
 }: ThreeConfiguratorViewportProps) {
-  const [viewMode, setViewMode] = useState<ThreeViewMode>('overview')
+  const [viewMode, setViewMode] = useState<ThreeViewMode>(initialViewMode)
   const modelResult = geometryInput
     ? createPassengerInstallationModel(geometryInput)
     : undefined
@@ -120,7 +138,7 @@ export function ThreeConfiguratorViewport({
               <directionalLight intensity={2.1} position={[5, 8, 6]} />
               <directionalLight intensity={0.7} position={[-4, 3, -5]} />
 
-              <Bounds clip fit margin={1.2} observe>
+              <Bounds margin={1.15}>
                 {model && mechanicalLayout && (
                   <PassengerElevatorAssembly
                     mechanicalLayout={mechanicalLayout}
@@ -128,7 +146,7 @@ export function ThreeConfiguratorViewport({
                     viewMode={viewMode}
                   />
                 )}
-                <AutoFitCamera frameKey={frameKey} />
+                <AutoFitCamera frameKey={frameKey} mechanicalBounds={mechanicalLayout?.bounds} />
               </Bounds>
             </Canvas>
           </div>
@@ -142,6 +160,14 @@ export function ThreeConfiguratorViewport({
               Teilansicht – ungültige Planungsdaten werden nicht dargestellt.
             </p>
           )}
+          {mechanicalLayout?.validation.state === 'incomplete' && (
+            <p className="viewport-status">Mechanische Anordnung unvollständig – explizite Layoutdaten fehlen.</p>
+          )}
+          {mechanicalLayout?.validation.issues.map((issue, index) => (
+            <p key={`${issue.code}-${index}`} className="viewport-status" role="alert">
+              {mechanicalPlanningMessages[issue.code]}
+            </p>
+          ))}
         </>
       )}
 

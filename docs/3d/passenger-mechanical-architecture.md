@@ -1,68 +1,54 @@
-# Passenger mechanical visualization architecture
+# Explicit passenger mechanical layout
 
-## Scope and data flow
+## Data boundary
 
-The passenger mechanical layer is a schematic planning visualization. It does not represent a certified, EN 81-validated, structurally verified, or manufacturer-specific installation.
+The serializable mechanical planning contract and its structural Zod schema live in `src/elevator/configuration/passenger-mechanical-planning.ts`. Passenger configuration v2 now accepts an optional `mechanical` object and optional counterweight depth. This is an additive draft-schema extension; no persistence or migration layer exists yet. Default configuration factories supply none of these values.
 
-The dependency chain is deliberately one-way:
+Data flows through pure transformations before React rendering:
 
-1. `PassengerGeometryPlanningInput` carries optional millimetre-based planning values.
-2. `createPassengerInstallationModel` creates normalized installation geometry in metres.
-3. `createPassengerMechanicalLayout` combines those two read-only inputs into a normalized, React-independent mechanical layout.
-4. `PassengerMechanicalAssembly` and its child renderers display that layout without reading Zustand or deriving engineering rules.
+1. Passenger configuration in millimetres.
+2. Normalized installation planning input and installation geometry in metres.
+3. `createPassengerMechanicalLayout` creates optional mechanical subsystems, complete bounds, missing-field information, and structured spatial issues.
+4. React Three Fiber renders the normalized layout without consulting Zustand or deriving placement rules.
 
-This keeps rope routing, component placement, and future mechanical rules testable outside React and Three.js. Missing data removes only the affected subsystem.
+Missing inputs omit only dependent subsystems. Invalid placement omits the affected subsystem and returns an issue with a code, path, severity, message key, and optional coordinates. A renderable cabin remains available independently of mechanical completeness.
 
-## Planning-driven and schematic geometry
+## Explicit layout inputs
 
-Mechanical layout values are classified explicitly:
+Cabin rails accept either two explicit plan positions or explicit spacing and an `x`/`z` orientation. The spacing mode means a pair symmetric about the cabin travel axis; an optional explicit `carRailAxisMm` shifts that axis. The canonical cabin axis is the project origin, not an assumed clearance. Explicit positions take precedence over spacing.
 
-- `planning` identifies a dimension or position supplied by project planning data.
-- `schematic` identifies a derived visual relationship that is useful for orientation but is not an engineering placement or dimension.
+The frame uses the same rail axes. Its two uprights flank the cabin along the selected orientation; upper and lower cross-members connect them, and platform supports follow the cabin depth or width. A pair that does not surround the cabin or is not on a common transverse axis produces an error. Cabin dimensions are never enlarged to fit the frame. Without a usable explicit rail layout, frame and rails remain unavailable.
 
-Counterweight width and height are planning-driven. Its current plan position is schematic because `rear`, `left`, or `right` defines an arrangement side, not an exact coordinate. The layout therefore exposes `dimensionsSource: planning` and `placementSource: schematic` separately.
+Counterweights require explicit width, height, depth, arrangement (`rear`, `left`, `right`), and a complete `counterweightOffsetMm`. This three-coordinate vector displaces the counterweight centre from the cabin centre. Its Y component is therefore a centre-to-centre displacement, not a bottom elevation. Unknown coordinates remain absent while being entered. Rear arrangements orient counterweight width along X; side arrangements orient width along Z. Exact placement comes from the offset; the arrangement identifies the intended side and is checked against that geometry.
 
-The car frame, fallback rail positions, and fallback buffer positions are schematic. They communicate subsystem relationships without claiming certified spacing or component selection. Explicit future rail and buffer coordinates replace the schematic positions and are marked as planning-driven.
+Counterweight rails accept either two explicit plan positions or explicit spacing centred on the counterweight. Spacing is along its width axis. The pair must bracket the weight envelope and share its transverse plane. Neither system infers a rail spacing from a frame or weight width.
 
-Small member thicknesses, counterweight depth, buffer display size, and sheave display depth live in `mechanical-visualization.ts`. These constants only make simplified shapes visible. They are never returned as technical data, used by validation, or presented as manufactured dimensions.
+Buffers accept explicit base positions. Car and counterweight buffers remain separate. The pit and related assembly must exist; the base must lie in the pit and under that assembly's plan envelope. No buffer count or position is inferred.
 
-## Subsystems
+Machines require an explicit centre and width/height/depth envelope. Sheaves require an explicit centre and diameter; the schematic disc lies in the XY plane. Suspension requires an explicit `1:1` or `2:1` state and ordered path points. These inputs do not select a machine, calculate ropes, or prove an actual roping arrangement. Zones represent explicit pit and headroom regions with optional inward offsets.
 
-### Car frame
+The production form exposes only orientation/spacing, counterweight depth, counterweight rail spacing, and centre-offset coordinates under the collapsed German “Mechanische Anordnung” section. Advanced rail axes, individual buffers, machine/sheave, and routing remain data-contract inputs.
 
-The layout follows the explicit cabin envelope without changing it. The renderer adds upper and lower cross-members and vertical sling members as a recognizable schematic frame. Frame geometry remains separate from the cabin shell.
+## Visualization constants
 
-### Rail systems
+`mechanical-visualization.ts` contains only rail display thickness, frame member thickness, buffer display radius/height, and sheave display thickness. These control readability, never planning positions. Counterweight depth is now explicit planning data; the earlier visual counterweight-depth constant and fallback placements have been removed.
 
-Cabin and counterweight rails are separate typed systems with independent IDs, sources, and paths. Rails extend through the known shaft vertical extent, or through the cabin height when that is the only usable extent. Current rails are line placeholders, not T profiles. Schematic positions do not represent approved rail spacing.
+Frame member display thickness extends outward from the normalized boundary paths and above/below the cabin. It is not a manufactured cross-section or an engineering clearance. Buffer cylinders are markers anchored at explicit base positions; their display size is not a selected buffer's capacity or stroke. Sanity validation uses normalized planning envelopes/axes only, excluding display thicknesses. The camera uses complete normalized installation/mechanical bounds with a visual margin.
 
-### Counterweight
+## Spatial sanity and debugging
 
-The counterweight assembly separates a schematic frame from a visible weight-mass placeholder. Its arrangement is the explicit `rear`, `left`, or `right` planning state. No counterweight mass, cabin-weight relationship, or balance factor is calculated.
+The pure transform checks finite coordinates, positive supplied dimensions, distinct rail axes, frame/cabin relationships, arrangement/offset consistency, counterweight/cabin overlap, buffer relationships, and inclusion in an explicitly known shaft envelope. No required clearance is added. Vertical shaft constraints are applied only when the corresponding pit or landing/headroom data are explicitly known; a partially visualized shaft does not establish a missing technical limit.
 
-### Buffers
+`validation.state` is `valid`, `incomplete`, or `invalid` for these geometric checks only. It does not mean engineering approval or full completeness of every optional subsystem. `getPassengerMechanicalDebugPositions` exposes sorted cabin rail paths, counterweight rail paths, frame/weight bounds, buffer positions, machine/sheave centres, full min/max/centre bounds, and structured issues without React.
 
-Car and counterweight buffers are independent systems. They appear only when a pit and the related cabin or counterweight context exist. Without explicit coordinates, their single fallback marker is schematic and does not represent buffer count, selection, capacity, stroke, or approved placement.
+## Development fixture
 
-### Machine and sheave
+`src/dev/fixtures/passenger-mechanical-fixture.ts` defines a complete schematic dataset for automated tests and browser inspection. All dimensions and coordinates in that file are synthetic demo/test values, not standards, recommendations, manufacturer specifications, or compliant examples. Its rear/left/right variants exercise the placement model. The values never enter a new user project automatically.
 
-The traction-machine placeholder requires both an explicit position and explicit envelope. The traction sheave requires an explicit position and diameter. Partial input produces no component. Neither shape identifies a construction type or manufacturer.
+Run `pnpm dev`, then open `/dev/mechanical` to inspect the fixture in Gesamtansicht, Mechanik, and Schnittansicht. The preview reads local fixture data directly and does not change the project store. Its dynamic import is guarded by `import.meta.env.DEV`; the fixture and preview are excluded from production bundles.
 
-### Suspension path
+## View policy and remaining scope
 
-Suspension planning is separate from line rendering. A path is created only when an explicit `1:1` or `2:1` arrangement and at least two explicit path points are present. The line does not represent individual ropes and carries no rope diameter or rope count.
+Mechanik hides shaft/pit surfaces, reduces landing opacity, makes cabin surfaces highly translucent, and reduces door edges along with door surfaces. Rails, sling, weight frame/block, buffers, machine, sheave, and routing remain opaque in a restrained neutral material hierarchy. Schnittansicht also retains mechanics. View modes do not alter planning data.
 
-### Mechanical zones
-
-The lower zone reflects an explicit pit volume. The upper zone requires explicit headroom and a known highest landing. Optional offsets are represented in the planning contract for future data sources. These zones are spatial planning regions, not safety clearances.
-
-## View modes
-
-The typed view-mode catalog prepares `Gesamtansicht`, `Kabine`, `Schacht`, `Mechanik`, `Türen`, `Antrieb`, `Schnittansicht`, and `Explosionsansicht`. Only Gesamtansicht, Mechanik, and Schnittansicht are currently selectable.
-
-Mechanik makes cabin and shaft surfaces translucent while keeping rails, frame, counterweight, buffers, and any explicitly available machine or suspension elements prominent. Schnittansicht removes the obstructing cabin and shaft surfaces but leaves mechanical components visible. The view mode changes presentation only; it never mutates installation or mechanical geometry.
-
-## Intentionally non-engineered
-
-The current layer has no real rail profiles, guide shoes, detailed traction machine, brakes, governor, safety gear, realistic ropes, rope-count or diameter calculation, counterweight mass or balance calculation, structural loads, collision detection, movement simulation, door movement, CAD imports, fasteners, manufacturer-specific components, or EN 81 validation.
-
+This is a schematic planning layer, not a certified, EN 81-validated, structurally verified, or manufacturer-specific installation. Deferred systems include real rail profiles, guide shoes, brackets/joints, detailed weights/buffers/machines, brakes, governor, safety gear, realistic ropes, rope count/diameter, mass/balance/load calculation, CAD imports, fasteners, collision simulation, movement, and certification rules.

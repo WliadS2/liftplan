@@ -15,6 +15,7 @@ interface LandingDoorOpeningProps {
   readonly elevationY: number
   readonly shaftDepth: number
   readonly side: 'front' | 'rear'
+  readonly opacity: number
 }
 
 function LandingDoorOpening({
@@ -22,6 +23,7 @@ function LandingDoorOpening({
   elevationY,
   shaftDepth,
   side,
+  opacity,
 }: LandingDoorOpeningProps) {
   const z = side === 'front' ? shaftDepth / 2 : -shaftDepth / 2
 
@@ -29,6 +31,8 @@ function LandingDoorOpening({
     <Line
       color={TECHNICAL_MATERIALS.door}
       lineWidth={1}
+      opacity={opacity}
+      transparent
       points={[
         [-entrance.width / 2, elevationY, z],
         [-entrance.width / 2, elevationY + entrance.height, z],
@@ -44,6 +48,7 @@ export interface LandingLevelsProps {
   readonly footprint?: PassengerLevelFootprintModel
   readonly levels: readonly PassengerLandingLevelModel[]
   readonly shaft?: PassengerShaftModel
+  readonly opacity?: number
 }
 
 export function LandingLevels({
@@ -51,6 +56,7 @@ export function LandingLevels({
   footprint,
   levels,
   shaft,
+  opacity = 0.12,
 }: LandingLevelsProps) {
   const frontEntrance = cabin?.entrances.find(
     (entrance) => entrance.side === 'front',
@@ -87,7 +93,7 @@ export function LandingLevels({
               <planeGeometry args={[footprint.width, footprint.depth]} />
               <meshStandardMaterial
                 color={TECHNICAL_MATERIALS.landing}
-                opacity={0.12}
+                opacity={opacity}
                 polygonOffset
                 polygonOffsetFactor={1}
                 roughness={0.85}
@@ -102,6 +108,7 @@ export function LandingLevels({
               elevationY={level.elevationY}
               shaftDepth={shaft.depth}
               side="front"
+              opacity={opacity * 3}
             />
           )}
           {rearEntrance && shaft && (
@@ -110,6 +117,7 @@ export function LandingLevels({
               elevationY={level.elevationY}
               shaftDepth={shaft.depth}
               side="rear"
+              opacity={opacity * 3}
             />
           )}
         </group>

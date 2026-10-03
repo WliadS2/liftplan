@@ -4,7 +4,7 @@
 
 Data-shape validation and technical validation are separate concerns. Zod schemas can establish that configuration data has the expected structure. Technical validators determine whether a sufficiently complete configuration satisfies approved rules.
 
-The current implementation provides only structural validation. It returns `valid` or `invalid` with stable issue codes, paths, and a presentation message key. It must not be presented as an engineering approval.
+The configuration boundary provides structural validation with stable issue codes, paths, and presentation message keys. The passenger mechanical transform additionally returns non-engineering spatial sanity results for finite coordinates, positive explicit dimensions, distinct rails, envelope inclusion, and assembly relationships. These checks use only supplied geometry, add no required clearances, and do not represent certification or load verification. Their `valid` state means the available geometric checks passed, not engineering approval.
 
 ## Result model
 

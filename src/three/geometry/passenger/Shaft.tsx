@@ -51,16 +51,17 @@ export function Shaft({ shaft, viewMode }: ShaftProps) {
 
 export interface PitProps {
   readonly pit: PassengerPitModel
+  readonly opacity?: number
 }
 
-export function Pit({ pit }: PitProps) {
+export function Pit({ pit, opacity = 0.1 }: PitProps) {
   return (
     <mesh position={[0, pit.centerY, 0]}>
       <boxGeometry args={[pit.width, pit.height, pit.depth]} />
       <meshStandardMaterial
         color={TECHNICAL_MATERIALS.pit}
         depthWrite={false}
-        opacity={0.14}
+        opacity={opacity}
         transparent
       />
       <Edges color={TECHNICAL_MATERIALS.pit} />
