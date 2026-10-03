@@ -11,6 +11,7 @@ import {
   millimetres,
 } from '../../../engineering'
 import { createLiftGeometryPlanningInput } from '../lift-geometry-planning-input'
+import { getPassengerViewVisibility } from '../../scene/view-mode'
 import {
   createPassengerInstallationModel,
   createUniformLevelElevations,
@@ -101,11 +102,11 @@ describe('passenger geometry planning', () => {
       depth: 1.4,
       height: 2.2,
     })
-    expect(model.cabin?.door).toBeUndefined()
+    expect(model.cabin?.entrances).toEqual([])
     expect(model.shaft).toBeUndefined()
   })
 
-  it('adds the door when cabin and door dimensions exist', () => {
+  it('creates a front entrance with two correctly dimensioned door leaves', () => {
     const result = createPassengerInstallationModel(
       createPlanningInput({
         capacityKg: kilograms(630),
@@ -120,9 +121,17 @@ describe('passenger geometry planning', () => {
       }),
     )
     const model = getRenderedModel(result)
+    const frontEntrance = model.cabin?.entrances.find(
+      (entrance) => entrance.side === 'front',
+    )
 
     expect(result.status).toBe('partial')
-    expect(model.cabin?.door).toEqual({ width: 0.9, height: 2.1 })
+    expect(frontEntrance).toMatchObject({ width: 0.9, height: 2.1 })
+    expect(frontEntrance?.doorLeaves).toHaveLength(2)
+    expect(frontEntrance?.doorLeaves).toEqual([
+      expect.objectContaining({ position: 'left', width: 0.45, height: 2.1 }),
+      expect.objectContaining({ position: 'right', width: 0.45, height: 2.1 }),
+    ])
     expect(model.shaft).toBeUndefined()
     expect(model.levels).toEqual([])
   })
@@ -176,8 +185,14 @@ describe('passenger geometry planning', () => {
       width: 1.1,
       depth: 1.4,
       height: 2.2,
-      door: { width: 0.9, height: 2.1 },
+      rearWall: 'closed',
       throughCar: false,
+    })
+    expect(model.cabin?.entrances).toHaveLength(1)
+    expect(model.cabin?.entrances[0]).toMatchObject({
+      side: 'front',
+      width: 0.9,
+      height: 2.1,
     })
     expect(model.levels.map((level) => level.elevationY)).toEqual([0, 3, 6])
     expect(model.shaft?.verticalExtent).toMatchObject({
@@ -194,12 +209,42 @@ describe('passenger geometry planning', () => {
     })
   })
 
-  it('preserves the through-car state for front and rear opening geometry', () => {
+  it('keeps a closed rear wall when through-car is disabled', () => {
+    const model = getRenderedModel(
+      createPassengerInstallationModel(createCompletePlanningInput(false)),
+    )
+
+    expect(model.cabin?.rearWall).toBe('closed')
+    expect(model.cabin?.entrances.map((entrance) => entrance.side)).toEqual([
+      'front',
+    ])
+  })
+
+  it('creates a rear entrance when through-car is enabled', () => {
     const result = createPassengerInstallationModel(
       createCompletePlanningInput(true),
     )
+    const cabin = getRenderedModel(result).cabin
 
-    expect(getRenderedModel(result).cabin?.throughCar).toBe(true)
+    expect(cabin?.rearWall).toBe('opening')
+    expect(cabin?.entrances.map((entrance) => entrance.side)).toEqual([
+      'front',
+      'rear',
+    ])
+    expect(cabin?.entrances[1]?.doorLeaves).toHaveLength(2)
+  })
+
+  it('changes obstructing-surface visibility in cutaway mode', () => {
+    const overview = getPassengerViewVisibility('overview')
+    const cutaway = getPassengerViewVisibility('cutaway')
+
+    expect(overview.showRightCabinWall).toBe(true)
+    expect(overview.showFrontWallSections).toBe(true)
+    expect(overview.frontDoorOpacity).toBe(1)
+    expect(cutaway.showRightCabinWall).toBe(false)
+    expect(cutaway.showFrontWallSections).toBe(false)
+    expect(cutaway.frontDoorOpacity).toBeLessThan(1)
+    expect(cutaway.shaftEnvelopeOpacity).toBe(0)
   })
 
   it('keeps valid cabin geometry visible when door dimensions are invalid', () => {
@@ -216,7 +261,7 @@ describe('passenger geometry planning', () => {
 
     expect(result.status).toBe('invalid')
     expect(model.cabin).toBeDefined()
-    expect(model.cabin?.door).toBeUndefined()
+    expect(model.cabin?.entrances).toEqual([])
   })
 
   it('generates uniform level elevations through centralized unit conversion', () => {

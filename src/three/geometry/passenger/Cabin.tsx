@@ -1,134 +1,98 @@
-import { DoubleSide } from 'three'
 import { TECHNICAL_MATERIALS } from '../../materials/technical-materials'
-import { Door } from './Door'
-import type {
-  PassengerCabinModel,
-  PassengerDoorModel,
-} from './passenger-installation-model'
-
-interface EntranceFrameProps {
-  readonly cabin: PassengerCabinModel
-  readonly door: PassengerDoorModel
-  readonly side: 'front' | 'rear'
-}
-
-function EntranceFrame({ cabin, door, side }: EntranceFrameProps) {
-  const z = side === 'front' ? cabin.depth / 2 : -cabin.depth / 2
-  const jambWidth = (cabin.width - door.width) / 2
-  const headerHeight = cabin.height - door.height
-  const jambY = cabin.bottomY + door.height / 2
-  const headerY = cabin.bottomY + door.height + headerHeight / 2
-
-  return (
-    <group>
-      {jambWidth > 0 &&
-        ([-1, 1] as const).map((direction) => (
-          <mesh
-            key={direction}
-            position={[
-              direction * (door.width / 2 + jambWidth / 2),
-              jambY,
-              z,
-            ]}
-          >
-            <planeGeometry args={[jambWidth, door.height]} />
-            <meshStandardMaterial
-              color={TECHNICAL_MATERIALS.cabinWall}
-              roughness={0.72}
-              side={DoubleSide}
-            />
-          </mesh>
-        ))}
-      {headerHeight > 0 && (
-        <mesh position={[0, headerY, z]}>
-          <planeGeometry args={[cabin.width, headerHeight]} />
-          <meshStandardMaterial
-            color={TECHNICAL_MATERIALS.cabinWall}
-            roughness={0.72}
-            side={DoubleSide}
-          />
-        </mesh>
-      )}
-    </group>
-  )
-}
+import {
+  getPassengerViewVisibility,
+  type ThreeViewMode,
+} from '../../scene/view-mode'
+import { CabinWall } from './CabinWall'
+import { EntranceAssembly } from './EntranceAssembly'
+import type { PassengerCabinModel } from './passenger-installation-model'
+import {
+  visualizationFloorThickness,
+  visualizationWallThickness,
+} from './visualization-geometry'
 
 export interface CabinProps {
   readonly cabin: PassengerCabinModel
+  readonly viewMode: ThreeViewMode
 }
 
-export function Cabin({ cabin }: CabinProps) {
+export function Cabin({ cabin, viewMode }: CabinProps) {
+  const visibility = getPassengerViewVisibility(viewMode)
+  const wallThickness = Math.min(
+    visualizationWallThickness,
+    cabin.width / 4,
+    cabin.depth / 4,
+  )
+  const floorThickness = Math.min(
+    visualizationFloorThickness,
+    cabin.height / 4,
+  )
+  const shellHeight = Math.max(cabin.height - floorThickness * 2, 0)
+  const shellCenterY = cabin.bottomY + floorThickness + shellHeight / 2
+
   return (
     <group>
-      <mesh
-        position={[0, cabin.bottomY, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-      >
-        <planeGeometry args={[cabin.width, cabin.depth]} />
+      <mesh position={[0, cabin.bottomY + floorThickness / 2, 0]}>
+        <boxGeometry args={[cabin.width, floorThickness, cabin.depth]} />
         <meshStandardMaterial
           color={TECHNICAL_MATERIALS.cabinFloor}
-          roughness={0.8}
-          side={DoubleSide}
+          metalness={0.05}
+          roughness={0.82}
         />
       </mesh>
 
-      <mesh
-        position={[0, cabin.bottomY + cabin.height, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-      >
-        <planeGeometry args={[cabin.width, cabin.depth]} />
-        <meshStandardMaterial
-          color={TECHNICAL_MATERIALS.cabinWall}
-          roughness={0.72}
-          side={DoubleSide}
-        />
-      </mesh>
+      <CabinWall
+        dimensions={[cabin.width, floorThickness, cabin.depth]}
+        opacity={visibility.cabinCeilingOpacity}
+        position={[
+          0,
+          cabin.bottomY + cabin.height - floorThickness / 2,
+          0,
+        ]}
+      />
 
-      {([-1, 1] as const).map((direction) => (
-        <mesh
-          key={direction}
-          position={[
-            direction * cabin.width / 2,
-            cabin.centerY,
-            0,
+      <CabinWall
+        dimensions={[wallThickness, shellHeight, cabin.depth]}
+        position={[
+          -cabin.width / 2 + wallThickness / 2,
+          shellCenterY,
+          0,
+        ]}
+      />
+
+      <CabinWall
+        dimensions={[wallThickness, shellHeight, cabin.depth]}
+        position={[
+          cabin.width / 2 - wallThickness / 2,
+          shellCenterY,
+          0,
+        ]}
+        visible={visibility.showRightCabinWall}
+      />
+
+      {cabin.rearWall === 'closed' && (
+        <CabinWall
+          dimensions={[
+            cabin.width - wallThickness * 2,
+            shellHeight,
+            wallThickness,
           ]}
-          rotation={[0, Math.PI / 2, 0]}
-        >
-          <planeGeometry args={[cabin.depth, cabin.height]} />
-          <meshStandardMaterial
-            color={TECHNICAL_MATERIALS.cabinWall}
-            roughness={0.72}
-            side={DoubleSide}
-          />
-        </mesh>
-      ))}
-
-      {cabin.door && (
-        <>
-          <EntranceFrame cabin={cabin} door={cabin.door} side="front" />
-          <Door cabin={cabin} door={cabin.door} side="front" />
-        </>
+          position={[
+            0,
+            shellCenterY,
+            -cabin.depth / 2 + wallThickness / 2,
+          ]}
+        />
       )}
 
-      {cabin.throughCar === true ? (
-        <>
-          {cabin.door && (
-            <>
-              <EntranceFrame cabin={cabin} door={cabin.door} side="rear" />
-              <Door cabin={cabin} door={cabin.door} side="rear" />
-            </>
-          )}
-        </>
-      ) : cabin.throughCar === false ? (
-        <mesh position={[0, cabin.centerY, -cabin.depth / 2]}>
-          <planeGeometry args={[cabin.width, cabin.height]} />
-          <meshStandardMaterial
-            color={TECHNICAL_MATERIALS.cabinWall}
-            roughness={0.72}
-            side={DoubleSide}
-          />
-        </mesh>
-      ) : null}
+      {cabin.entrances.map((entrance) => (
+        <EntranceAssembly
+          key={entrance.side}
+          cabin={cabin}
+          entrance={entrance}
+          viewMode={viewMode}
+        />
+      ))}
     </group>
   )
 }

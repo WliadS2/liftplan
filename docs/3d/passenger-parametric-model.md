@@ -31,9 +31,15 @@ Capacity, passenger count, nominal speed, and drive concept remain project data 
 
 ## Scene structure
 
-`PassengerElevatorAssembly` composes independent shaft, pit, landing-level, guide-rail, counterweight, cabin, and door components. Plane geometry represents cabin panels and the optional counterweight so the model does not invent material thicknesses. Guide rails and the counterweight are schematic spatial placeholders, not engineering profiles or mechanical designs.
+`PassengerElevatorAssembly` composes independent shaft, pit, landing-level, guide-rail, counterweight, cabin, and door components. Cabin surfaces use shallow visualization-only solids while the optional counterweight remains a schematic plane. Guide rails and the counterweight are spatial placeholders, not engineering profiles or mechanical designs.
 
-The scene uses a perspective camera, orbit controls, neutral technical lighting, and bounds-based automatic fitting. Changes that affect the installation bounds or level count trigger reframing so the full installation remains visible.
+The cabin is composed from separate floor, ceiling, side-wall, rear-wall, entrance, sill, and door-leaf meshes. Each entrance owns two equal visualization leaves representing a center-opening door. When through-car planning is enabled, the rear wall is replaced by a second entrance assembly; when it is disabled, the rear wall remains closed.
+
+Cabin wall, floor, door, frame, and sill thicknesses are defined in `visualization-geometry.ts`. These render-space constants exist only to make otherwise dimensionless surfaces readable. They are not planning values, engineering dimensions, manufactured thicknesses, or technical results, and they are bounded for very small input geometry.
+
+The active view-mode contract supports `overview` and `cutaway`. Overview retains the normal technical enclosure. Cutaway opens the `+Z/+X` camera side by removing the front wall sections and right cabin wall, making the front doors and ceiling translucent, and reducing the shaft enclosure to its edge frame. Neither mode mutates the planning or installation model.
+
+The scene uses a perspective camera, orbit controls, neutral technical lighting, and bounds-based automatic fitting. Changes that affect the installation bounds, level count, component availability, or view mode trigger reframing so the full installation remains visible.
 
 ## Deliberate limitations
 

@@ -18,3 +18,5 @@ Local component coordinates follow the same axis orientation. A component's pivo
 The current passenger installation places the cabin floor at the lowest served level (`Y = 0`). Uniform landing elevations are derived from the explicit stop count and storey height before React rendering. The level contract also accepts explicit millimetre elevations so later project data can replace uniform spacing without changing scene components.
 
 The primary entrance is on the `+Z` shaft face. A through-car configuration adds the corresponding rear opening on the `-Z` face. The pit extends below the lowest finished-floor plane only when an explicit pit depth is present.
+
+The passenger cutaway view opens the model toward the default camera on the `+Z/+X` side. It removes the front wall sections and right cabin wall, makes the front door leaves and ceiling translucent, and retains the shaft edges without its transparent enclosure surface. This is a rendering visibility convention only; it does not change planning geometry.

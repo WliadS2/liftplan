@@ -4,21 +4,21 @@ import { DoubleSide } from 'three'
 import { TECHNICAL_MATERIALS } from '../../materials/technical-materials'
 import type {
   PassengerCabinModel,
-  PassengerDoorModel,
+  PassengerEntranceModel,
   PassengerLandingLevelModel,
   PassengerLevelFootprintModel,
   PassengerShaftModel,
 } from './passenger-installation-model'
 
 interface LandingDoorOpeningProps {
-  readonly door: PassengerDoorModel
+  readonly entrance: PassengerEntranceModel
   readonly elevationY: number
   readonly shaftDepth: number
   readonly side: 'front' | 'rear'
 }
 
 function LandingDoorOpening({
-  door,
+  entrance,
   elevationY,
   shaftDepth,
   side,
@@ -30,10 +30,10 @@ function LandingDoorOpening({
       color={TECHNICAL_MATERIALS.door}
       lineWidth={1}
       points={[
-        [-door.width / 2, elevationY, z],
-        [-door.width / 2, elevationY + door.height, z],
-        [door.width / 2, elevationY + door.height, z],
-        [door.width / 2, elevationY, z],
+        [-entrance.width / 2, elevationY, z],
+        [-entrance.width / 2, elevationY + entrance.height, z],
+        [entrance.width / 2, elevationY + entrance.height, z],
+        [entrance.width / 2, elevationY, z],
       ]}
     />
   )
@@ -52,6 +52,12 @@ export function LandingLevels({
   levels,
   shaft,
 }: LandingLevelsProps) {
+  const frontEntrance = cabin?.entrances.find(
+    (entrance) => entrance.side === 'front',
+  )
+  const rearEntrance = cabin?.entrances.find(
+    (entrance) => entrance.side === 'rear',
+  )
   const markerPositions = useMemo(
     () =>
       new Float32Array(
@@ -90,17 +96,17 @@ export function LandingLevels({
               />
             </mesh>
           )}
-          {cabin?.door && shaft && (
+          {frontEntrance && shaft && (
             <LandingDoorOpening
-              door={cabin.door}
+              entrance={frontEntrance}
               elevationY={level.elevationY}
               shaftDepth={shaft.depth}
               side="front"
             />
           )}
-          {cabin?.door && cabin.throughCar === true && shaft && (
+          {rearEntrance && shaft && (
             <LandingDoorOpening
-              door={cabin.door}
+              entrance={rearEntrance}
               elevationY={level.elevationY}
               shaftDepth={shaft.depth}
               side="rear"

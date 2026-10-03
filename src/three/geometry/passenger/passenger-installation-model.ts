@@ -39,13 +39,32 @@ export interface PassengerDoorModel {
   readonly height: Metres
 }
 
+export type PassengerEntranceSide = 'front' | 'rear'
+
+export interface PassengerDoorLeafModel {
+  readonly id: string
+  readonly side: PassengerEntranceSide
+  readonly position: 'left' | 'right'
+  readonly width: Metres
+  readonly height: Metres
+}
+
+export interface PassengerEntranceModel extends PassengerDoorModel {
+  readonly side: PassengerEntranceSide
+  readonly doorLeaves: readonly [
+    PassengerDoorLeafModel,
+    PassengerDoorLeafModel,
+  ]
+}
+
 export interface PassengerCabinModel {
   readonly width: Metres
   readonly depth: Metres
   readonly height: Metres
   readonly bottomY: Metres
   readonly centerY: Metres
-  readonly door?: PassengerDoorModel
+  readonly entrances: readonly PassengerEntranceModel[]
+  readonly rearWall: 'closed' | 'opening' | 'unspecified'
   readonly throughCar?: boolean
 }
 
@@ -258,6 +277,35 @@ function createCounterweightModel(
   }
 }
 
+function createEntranceModel(
+  side: PassengerEntranceSide,
+  door: PassengerDoorModel,
+): PassengerEntranceModel {
+  const leafWidth = metres(door.width / 2)
+
+  return {
+    side,
+    width: door.width,
+    height: door.height,
+    doorLeaves: [
+      {
+        id: `${side}-door-left`,
+        side,
+        position: 'left',
+        width: leafWidth,
+        height: door.height,
+      },
+      {
+        id: `${side}-door-right`,
+        side,
+        position: 'right',
+        width: leafWidth,
+        height: door.height,
+      },
+    ],
+  }
+}
+
 function collectMissingFields(
   input: PassengerGeometryPlanningInput,
   levelMissingFields: readonly PassengerGeometryField[],
@@ -400,7 +448,27 @@ function createInstallationModel(
         }
       : undefined
 
-  const cabinWithDoor = cabin === undefined ? undefined : { ...cabin, door }
+  const cabinAssembly =
+    cabin === undefined
+      ? undefined
+      : {
+          ...cabin,
+          entrances:
+            door === undefined
+              ? []
+              : [
+                  createEntranceModel('front', door),
+                  ...(cabin.throughCar === true
+                    ? [createEntranceModel('rear', door)]
+                    : []),
+                ],
+          rearWall:
+            cabin.throughCar === true
+              ? ('opening' as const)
+              : cabin.throughCar === false
+                ? ('closed' as const)
+                : ('unspecified' as const),
+        }
 
   const shaftBase =
     input.shaft.widthMm !== undefined &&
@@ -427,7 +495,7 @@ function createInstallationModel(
   const highestLevel =
     levelElevations.length > 0 ? Math.max(...levelElevations) : undefined
   const knownTopValues = [
-    cabinWithDoor?.height,
+    cabinAssembly?.height,
     highestLevel === undefined
       ? undefined
       : metres(highestLevel + (validHeadroom ?? 0)),
@@ -456,8 +524,8 @@ function createInstallationModel(
   }))
   const levelFootprint = shaft
     ? { width: shaft.width, depth: shaft.depth }
-    : cabinWithDoor
-      ? { width: cabinWithDoor.width, depth: cabinWithDoor.depth }
+    : cabinAssembly
+      ? { width: cabinAssembly.width, depth: cabinAssembly.depth }
       : undefined
   const pit =
     shaft !== undefined && validPitDepth !== undefined && validPitDepth > 0
@@ -471,11 +539,11 @@ function createInstallationModel(
   const counterweight =
     shaft === undefined ? undefined : createCounterweightModel(input, shaft)
   const guideRails =
-    cabinWithDoor !== undefined && shaft?.verticalExtent !== undefined
+    cabinAssembly !== undefined && shaft?.verticalExtent !== undefined
       ? {
           xPositions: [
-            metres(-cabinWithDoor.width / 2),
-            metres(cabinWithDoor.width / 2),
+            metres(-cabinAssembly.width / 2),
+            metres(cabinAssembly.width / 2),
           ] as const,
           z: metres(0),
           bottomY: shaft.verticalExtent.bottomY,
@@ -484,7 +552,7 @@ function createInstallationModel(
       : undefined
 
   const hasGeometry =
-    cabinWithDoor !== undefined || shaft !== undefined || levels.length > 0
+    cabinAssembly !== undefined || shaft !== undefined || levels.length > 0
 
   if (!hasGeometry) {
     return undefined
@@ -496,7 +564,7 @@ function createInstallationModel(
   )
   const installationTop = Math.max(
     0,
-    cabinWithDoor?.height ?? 0,
+    cabinAssembly?.height ?? 0,
     highestLevel ?? 0,
     shaft?.verticalExtent?.topY ?? 0,
     counterweight === undefined
@@ -505,7 +573,7 @@ function createInstallationModel(
   )
 
   return {
-    cabin: cabinWithDoor,
+    cabin: cabinAssembly,
     shaft,
     levels,
     levelFootprint,
@@ -513,8 +581,8 @@ function createInstallationModel(
     counterweight,
     pit,
     bounds: {
-      width: metres(Math.max(cabinWithDoor?.width ?? 0, shaft?.width ?? 0)),
-      depth: metres(Math.max(cabinWithDoor?.depth ?? 0, shaft?.depth ?? 0)),
+      width: metres(Math.max(cabinAssembly?.width ?? 0, shaft?.width ?? 0)),
+      depth: metres(Math.max(cabinAssembly?.depth ?? 0, shaft?.depth ?? 0)),
       height: metres(installationTop - installationBottom),
       centerY: metres(
         installationBottom + (installationTop - installationBottom) / 2,

@@ -1,9 +1,11 @@
 import { Bounds, OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
+import { useState } from 'react'
 import { AutoFitCamera } from '../camera/AutoFitCamera'
 import { PassengerElevatorAssembly } from '../geometry/passenger/PassengerElevatorAssembly'
 import { createPassengerInstallationModel } from '../geometry/passenger/passenger-installation-model'
 import type { LiftGeometryPlanningInput } from '../geometry/lift-geometry-planning-input'
+import type { ThreeViewMode } from './view-mode'
 
 export interface ThreeConfiguratorViewportProps {
   readonly geometryInput?: LiftGeometryPlanningInput
@@ -16,6 +18,7 @@ function ViewportFallback({ children }: { readonly children: string }) {
 export function ThreeConfiguratorViewport({
   geometryInput,
 }: ThreeConfiguratorViewportProps) {
+  const [viewMode, setViewMode] = useState<ThreeViewMode>('overview')
   const modelResult = geometryInput
     ? createPassengerInstallationModel(geometryInput)
     : undefined
@@ -30,6 +33,7 @@ export function ThreeConfiguratorViewport({
           model.levels.length,
           model.cabin ? 'cabin' : 'no-cabin',
           model.shaft ? 'shaft' : 'no-shaft',
+          viewMode,
         ].join(':')
       : 'unavailable'
 
@@ -38,7 +42,25 @@ export function ThreeConfiguratorViewport({
       className="workspace-panel viewport-panel"
       aria-labelledby="viewport-heading"
     >
-      <h2 id="viewport-heading">3D-Ansicht</h2>
+      <div className="viewport-heading-row">
+        <h2 id="viewport-heading">3D-Ansicht</h2>
+        <div className="viewport-mode-controls" role="group" aria-label="Ansichtsmodus">
+          <button
+            aria-pressed={viewMode === 'overview'}
+            type="button"
+            onClick={() => setViewMode('overview')}
+          >
+            Gesamtansicht
+          </button>
+          <button
+            aria-pressed={viewMode === 'cutaway'}
+            type="button"
+            onClick={() => setViewMode('cutaway')}
+          >
+            Schnittansicht
+          </button>
+        </div>
+      </div>
 
       {!modelResult || modelResult.status === 'empty' ? (
         <ViewportFallback>
@@ -81,7 +103,12 @@ export function ThreeConfiguratorViewport({
               <directionalLight intensity={0.7} position={[-4, 3, -5]} />
 
               <Bounds clip fit margin={1.2} observe>
-                {model && <PassengerElevatorAssembly model={model} />}
+                {model && (
+                  <PassengerElevatorAssembly
+                    model={model}
+                    viewMode={viewMode}
+                  />
+                )}
                 <AutoFitCamera frameKey={frameKey} />
               </Bounds>
             </Canvas>

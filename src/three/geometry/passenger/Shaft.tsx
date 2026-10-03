@@ -1,5 +1,9 @@
 import { Edges, Line } from '@react-three/drei'
 import { TECHNICAL_MATERIALS } from '../../materials/technical-materials'
+import {
+  getPassengerViewVisibility,
+  type ThreeViewMode,
+} from '../../scene/view-mode'
 import type {
   PassengerPitModel,
   PassengerShaftModel,
@@ -7,10 +11,12 @@ import type {
 
 export interface ShaftProps {
   readonly shaft: PassengerShaftModel
+  readonly viewMode: ThreeViewMode
 }
 
-export function Shaft({ shaft }: ShaftProps) {
+export function Shaft({ shaft, viewMode }: ShaftProps) {
   const extent = shaft.verticalExtent
+  const visibility = getPassengerViewVisibility(viewMode)
 
   if (!extent) {
     return (
@@ -34,7 +40,7 @@ export function Shaft({ shaft }: ShaftProps) {
       <meshStandardMaterial
         color={TECHNICAL_MATERIALS.shaft}
         depthWrite={false}
-        opacity={0.08}
+        opacity={visibility.shaftEnvelopeOpacity}
         roughness={0.9}
         transparent
       />

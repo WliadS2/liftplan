@@ -67,6 +67,38 @@
   font-size: 1rem;
 }
 
+.viewport-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.viewport-heading-row h2 {
+  margin: 0;
+}
+
+.viewport-mode-controls {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.viewport-mode-controls button {
+  border: 1px solid #98a2b3;
+  border-radius: 5px;
+  padding: 5px 8px;
+  color: var(--text-heading);
+  background: #fff;
+  cursor: pointer;
+}
+
+.viewport-mode-controls button[aria-pressed='true'] {
+  border-color: #175cd3;
+  color: #175cd3;
+  background: #eff6ff;
+}
+
 .configuration-panel h3 {
   margin: 10px 0 0;
   color: var(--text-heading);
@@ -181,6 +213,11 @@
 
   .workspace-header {
     align-items: start;
+    flex-direction: column;
+  }
+
+  .viewport-heading-row {
+    align-items: flex-start;
     flex-direction: column;
   }
 }
