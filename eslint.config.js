@@ -19,4 +19,61 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: ['src/{components,pages}/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/elevator/calculations/**',
+                '**/elevator/rules/**',
+                '**/collision/**',
+                '**/simulation/**',
+                '**/three/geometry/**',
+              ],
+              message:
+                'Presentation code must consume feature-facing results instead of technical internals.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: [
+      'src/engineering/**/*.{ts,tsx}',
+      'src/elevator/**/*.{ts,tsx}',
+      'src/collision/**/*.{ts,tsx}',
+      'src/simulation/**/*.{ts,tsx}',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react',
+              message: 'Core technical modules must remain independent from React.',
+            },
+            {
+              name: 'three',
+              message:
+                'Core technical modules must expose render-neutral data to the Three.js layer.',
+            },
+            {
+              name: '@react-three/fiber',
+              message: 'Core technical modules must remain independent from rendering.',
+            },
+            {
+              name: '@react-three/drei',
+              message: 'Core technical modules must remain independent from rendering.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ])
