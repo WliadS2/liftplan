@@ -4,6 +4,8 @@
 
 Data-shape validation and technical validation are separate concerns. Zod schemas can establish that configuration data has the expected structure. Technical validators determine whether a sufficiently complete configuration satisfies approved rules.
 
+The current implementation provides only structural validation. It returns `valid` or `invalid` with stable issue codes, paths, and a presentation message key. It must not be presented as an engineering approval.
+
 ## Result model
 
 Technical validation returns a structured `TechnicalValidationResult` rather than a boolean or customer-facing sentence. The result contains:

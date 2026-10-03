@@ -2,9 +2,8 @@ import type { LiftFamily } from '../types/lift-family'
 
 export interface LiftConfiguration<
   Family extends LiftFamily = LiftFamily,
-  Parameters = unknown,
+  SchemaVersion extends string = string,
 > {
   readonly family: Family
-  readonly schemaVersion: number
-  readonly parameters: Parameters
+  readonly schemaVersion: SchemaVersion
 }

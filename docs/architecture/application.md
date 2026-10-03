@@ -37,6 +37,20 @@ ESLint guardrails prevent presentation modules from importing technical implemen
 
 Zustand may hold application and feature state, but it must not become a container for hidden engineering logic. Zod schemas validate data shape at trust boundaries; technical validity is a separate structured result.
 
+The current project store owns one in-memory `LiftPlanProject`. It delegates creation, family changes, and configuration replacement to pure project functions. Store state contains serializable project data and structural validation output only; it does not contain React refs, Three.js objects, scene state, or technical calculations.
+
+## Lift-family registry
+
+`src/elevator/configuration/lift-type-registry.ts` is the single registry for currently selectable lift families. A definition supplies its stable ID, German customer-facing display metadata, implementation status, configuration schema, default draft configuration, UI section descriptors, and references to future engineering and geometry modules.
+
+The Personenaufzug definition is currently available as a planning-input draft. The remaining registered families are explicitly marked `coming-soon` and use a deliberately empty placeholder configuration. Adding a family means adding one definition and its family-owned schema rather than changing application-wide switches.
+
+## Configuration and 3D boundary
+
+Configuration schemas are structural only. They validate data types, finite numeric input, and the family/schema identity; they do not approve an installation or encode engineering limits. The validation adapter returns stable codes, paths, and message keys for German presentation code.
+
+`src/three/geometry/lift-geometry-planning-input.ts` converts a structurally valid family configuration into a normalized, render-neutral planning input. The current passenger adapter passes unit-aware millimetre and speed values through unchanged. A future renderer converts millimetres to metres only at its rendering boundary and never reads React form state directly.
+
 Future database, authentication, file storage, or network services belong behind ports owned by the relevant domain module. Infrastructure adapters may depend on those ports. Domain modules must not depend on a backend SDK.
 
 ## Ownership

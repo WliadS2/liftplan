@@ -14,6 +14,7 @@ The current repository intentionally contains architecture and contracts rather 
 ```sh
 pnpm dev
 pnpm lint
+pnpm test
 pnpm build
 ```
 
