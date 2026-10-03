@@ -28,6 +28,14 @@ const ThreeConfiguratorViewport = lazy(async () => {
   return { default: module.ThreeConfiguratorViewport }
 })
 
+const DevelopmentMechanicalControls = import.meta.env.DEV
+  ? lazy(async () => {
+      const module = await import('../../dev/DevelopmentMechanicalControls')
+
+      return { default: module.DevelopmentMechanicalControls }
+    })
+  : undefined
+
 function parseOptionalNumber(value: string): number | undefined {
   if (value.trim() === '') {
     return undefined
@@ -106,9 +114,16 @@ export function ProjectWorkspace() {
           <p className="eyebrow">Professionelle Aufzugsplanung</p>
           <h1>LiftPlan</h1>
         </div>
-        <button type="button" onClick={() => createProject()}>
-          Neues Projekt
-        </button>
+        <div className="workspace-header-actions">
+          {DevelopmentMechanicalControls && (
+            <Suspense fallback={null}>
+              <DevelopmentMechanicalControls />
+            </Suspense>
+          )}
+          <button type="button" onClick={() => createProject()}>
+            Neues Projekt
+          </button>
+        </div>
       </header>
 
       <div className="workspace-grid">

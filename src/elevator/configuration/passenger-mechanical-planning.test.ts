@@ -3,6 +3,10 @@ import { createPassengerPlanningConfiguration, passengerPlanningConfigurationSch
 import { passengerMechanicalPlanningSchema } from './passenger-mechanical-planning'
 import { createProjectStore } from '../../projects/project-store'
 import { createPassengerMechanicalFixture } from '../../dev/fixtures/passenger-mechanical-fixture'
+import {
+  loadDevelopmentMechanicalFixture,
+  resetDevelopmentMechanicalFixture,
+} from '../../dev/development-mechanical-session'
 
 describe('passenger mechanical planning structure', () => {
   it('keeps partial planning input valid and preserves missing offset coordinates', () => {
@@ -23,5 +27,35 @@ describe('passenger mechanical planning structure', () => {
     expect(passengerPlanningConfigurationSchema.safeParse(store.getState().project.configuration).success).toBe(true)
     store.getState().createProject()
     expect(store.getState().project.configuration).toEqual(createPassengerPlanningConfiguration('Neues LiftPlan-Projekt'))
+  })
+
+  it('loads and resets the development fixture without making it a project default', () => {
+    const store = createProjectStore()
+    const normalConfiguration = store.getState().project.configuration
+
+    expect(normalConfiguration).toEqual(
+      createPassengerPlanningConfiguration('Neues LiftPlan-Projekt'),
+    )
+    expect(
+      passengerPlanningConfigurationSchema.parse(normalConfiguration).mechanical,
+    ).toBeUndefined()
+
+    const fixture = loadDevelopmentMechanicalFixture(store.getState())
+    const loaded = store.getState().project
+
+    expect(loaded.name).toBe('Mechanische Demo – Testdaten')
+    expect(loaded.configuration).toMatchObject({
+      mechanical: fixture.mechanical,
+      counterweightDepthMm: fixture.counterweightDepthMm,
+    })
+
+    resetDevelopmentMechanicalFixture(store.getState())
+
+    expect(store.getState().project.configuration).toEqual(normalConfiguration)
+    expect(
+      passengerPlanningConfigurationSchema.parse(
+        store.getState().project.configuration,
+      ).mechanical,
+    ).toBeUndefined()
   })
 })

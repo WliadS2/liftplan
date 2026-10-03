@@ -45,7 +45,7 @@ The pure transform checks finite coordinates, positive supplied dimensions, dist
 
 `src/dev/fixtures/passenger-mechanical-fixture.ts` defines a complete schematic dataset for automated tests and browser inspection. All dimensions and coordinates in that file are synthetic demo/test values, not standards, recommendations, manufacturer specifications, or compliant examples. Its rear/left/right variants exercise the placement model. The values never enter a new user project automatically.
 
-Run `pnpm dev`, then open `/dev/mechanical` to inspect the fixture in Gesamtansicht, Mechanik, and Schnittansicht. The preview reads local fixture data directly and does not change the project store. Its dynamic import is guarded by `import.meta.env.DEV`; the fixture and preview are excluded from production bundles.
+In local development, the normal workspace exposes the compact controls “Demo-Mechanik laden” and “Demo zurücksetzen” in its header. Loading uses this fixture to replace the current in-memory project configuration; resetting creates a normal, empty project again. Both controls and their fixture import are guarded by `import.meta.env.DEV` and are excluded from production bundles. The separate `/dev/mechanical` route remains available for isolated fixture inspection without changing the project store.
 
 ## View policy and remaining scope
 

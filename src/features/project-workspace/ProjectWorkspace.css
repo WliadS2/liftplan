@@ -13,6 +13,28 @@
   text-align: left;
 }
 
+.workspace-header-actions,
+.development-mechanical-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.development-mechanical-controls {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.development-mechanical-controls button {
+  border: 1px solid #98a2b3;
+  border-radius: 6px;
+  padding: 7px 9px;
+  color: var(--text-heading);
+  background: #fff;
+  cursor: pointer;
+}
+
 .workspace-header h1 {
   margin: 0;
   color: var(--text-heading);
@@ -214,6 +236,13 @@
   .workspace-header {
     align-items: start;
     flex-direction: column;
+  }
+
+  .workspace-header-actions,
+  .development-mechanical-controls {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
   .viewport-heading-row {
