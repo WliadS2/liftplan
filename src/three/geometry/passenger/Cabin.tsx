@@ -1,19 +1,23 @@
 import { DoubleSide } from 'three'
 import { TECHNICAL_MATERIALS } from '../../materials/technical-materials'
 import { Door } from './Door'
-import type { PassengerCabinModel } from './passenger-installation-model'
+import type {
+  PassengerCabinModel,
+  PassengerDoorModel,
+} from './passenger-installation-model'
 
 interface EntranceFrameProps {
   readonly cabin: PassengerCabinModel
+  readonly door: PassengerDoorModel
   readonly side: 'front' | 'rear'
 }
 
-function EntranceFrame({ cabin, side }: EntranceFrameProps) {
+function EntranceFrame({ cabin, door, side }: EntranceFrameProps) {
   const z = side === 'front' ? cabin.depth / 2 : -cabin.depth / 2
-  const jambWidth = (cabin.width - cabin.doorWidth) / 2
-  const headerHeight = cabin.height - cabin.doorHeight
-  const jambY = cabin.bottomY + cabin.doorHeight / 2
-  const headerY = cabin.bottomY + cabin.doorHeight + headerHeight / 2
+  const jambWidth = (cabin.width - door.width) / 2
+  const headerHeight = cabin.height - door.height
+  const jambY = cabin.bottomY + door.height / 2
+  const headerY = cabin.bottomY + door.height + headerHeight / 2
 
   return (
     <group>
@@ -22,12 +26,12 @@ function EntranceFrame({ cabin, side }: EntranceFrameProps) {
           <mesh
             key={direction}
             position={[
-              direction * (cabin.doorWidth / 2 + jambWidth / 2),
+              direction * (door.width / 2 + jambWidth / 2),
               jambY,
               z,
             ]}
           >
-            <planeGeometry args={[jambWidth, cabin.doorHeight]} />
+            <planeGeometry args={[jambWidth, door.height]} />
             <meshStandardMaterial
               color={TECHNICAL_MATERIALS.cabinWall}
               roughness={0.72}
@@ -99,15 +103,23 @@ export function Cabin({ cabin }: CabinProps) {
         </mesh>
       ))}
 
-      <EntranceFrame cabin={cabin} side="front" />
-      <Door cabin={cabin} side="front" />
-
-      {cabin.throughCar ? (
+      {cabin.door && (
         <>
-          <EntranceFrame cabin={cabin} side="rear" />
-          <Door cabin={cabin} side="rear" />
+          <EntranceFrame cabin={cabin} door={cabin.door} side="front" />
+          <Door cabin={cabin} door={cabin.door} side="front" />
         </>
-      ) : (
+      )}
+
+      {cabin.throughCar === true ? (
+        <>
+          {cabin.door && (
+            <>
+              <EntranceFrame cabin={cabin} door={cabin.door} side="rear" />
+              <Door cabin={cabin} door={cabin.door} side="rear" />
+            </>
+          )}
+        </>
+      ) : cabin.throughCar === false ? (
         <mesh position={[0, cabin.centerY, -cabin.depth / 2]}>
           <planeGeometry args={[cabin.width, cabin.height]} />
           <meshStandardMaterial
@@ -116,7 +128,7 @@ export function Cabin({ cabin }: CabinProps) {
             side={DoubleSide}
           />
         </mesh>
-      )}
+      ) : null}
     </group>
   )
 }

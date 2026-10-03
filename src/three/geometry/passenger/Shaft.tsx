@@ -1,4 +1,4 @@
-import { Edges } from '@react-three/drei'
+import { Edges, Line } from '@react-three/drei'
 import { TECHNICAL_MATERIALS } from '../../materials/technical-materials'
 import type {
   PassengerPitModel,
@@ -10,9 +10,27 @@ export interface ShaftProps {
 }
 
 export function Shaft({ shaft }: ShaftProps) {
+  const extent = shaft.verticalExtent
+
+  if (!extent) {
+    return (
+      <Line
+        color={TECHNICAL_MATERIALS.shaft}
+        lineWidth={1.5}
+        points={[
+          [-shaft.width / 2, 0, -shaft.depth / 2],
+          [shaft.width / 2, 0, -shaft.depth / 2],
+          [shaft.width / 2, 0, shaft.depth / 2],
+          [-shaft.width / 2, 0, shaft.depth / 2],
+          [-shaft.width / 2, 0, -shaft.depth / 2],
+        ]}
+      />
+    )
+  }
+
   return (
-    <mesh position={[0, shaft.centerY, 0]}>
-      <boxGeometry args={[shaft.width, shaft.height, shaft.depth]} />
+    <mesh position={[0, extent.centerY, 0]}>
+      <boxGeometry args={[shaft.width, extent.height, shaft.depth]} />
       <meshStandardMaterial
         color={TECHNICAL_MATERIALS.shaft}
         depthWrite={false}

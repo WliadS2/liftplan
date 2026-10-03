@@ -14,18 +14,19 @@ export function PassengerElevatorAssembly({
 }: PassengerElevatorAssemblyProps) {
   return (
     <group>
-      <Shaft shaft={model.shaft} />
+      {model.shaft && <Shaft shaft={model.shaft} />}
       {model.pit && <Pit pit={model.pit} />}
       <LandingLevels
         cabin={model.cabin}
+        footprint={model.levelFootprint}
         levels={model.levels}
         shaft={model.shaft}
       />
-      <GuideRails guideRails={model.guideRails} />
+      {model.guideRails && <GuideRails guideRails={model.guideRails} />}
       {model.counterweight && (
         <Counterweight counterweight={model.counterweight} />
       )}
-      <Cabin cabin={model.cabin} />
+      {model.cabin && <Cabin cabin={model.cabin} />}
     </group>
   )
 }

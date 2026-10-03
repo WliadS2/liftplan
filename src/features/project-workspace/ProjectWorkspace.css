@@ -120,6 +120,12 @@
   border-radius: 6px;
 }
 
+.viewport-status {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
 .panel-note,
 .coming-soon-message {
   color: var(--text-muted);

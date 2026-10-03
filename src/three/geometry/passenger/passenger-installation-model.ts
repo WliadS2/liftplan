@@ -34,24 +34,37 @@ export interface PassengerLandingLevelModel {
   readonly elevationY: Metres
 }
 
+export interface PassengerDoorModel {
+  readonly width: Metres
+  readonly height: Metres
+}
+
 export interface PassengerCabinModel {
   readonly width: Metres
   readonly depth: Metres
   readonly height: Metres
   readonly bottomY: Metres
   readonly centerY: Metres
-  readonly doorWidth: Metres
-  readonly doorHeight: Metres
-  readonly throughCar: boolean
+  readonly door?: PassengerDoorModel
+  readonly throughCar?: boolean
+}
+
+export interface PassengerShaftVerticalExtent {
+  readonly bottomY: Metres
+  readonly topY: Metres
+  readonly height: Metres
+  readonly centerY: Metres
 }
 
 export interface PassengerShaftModel {
   readonly width: Metres
   readonly depth: Metres
-  readonly bottomY: Metres
-  readonly topY: Metres
-  readonly height: Metres
-  readonly centerY: Metres
+  readonly verticalExtent?: PassengerShaftVerticalExtent
+}
+
+export interface PassengerLevelFootprintModel {
+  readonly width: Metres
+  readonly depth: Metres
 }
 
 export interface PassengerGuideRailModel {
@@ -84,10 +97,11 @@ export interface PassengerInstallationBounds {
 }
 
 export interface PassengerInstallationModel {
-  readonly cabin: PassengerCabinModel
-  readonly shaft: PassengerShaftModel
+  readonly cabin?: PassengerCabinModel
+  readonly shaft?: PassengerShaftModel
   readonly levels: readonly PassengerLandingLevelModel[]
-  readonly guideRails: PassengerGuideRailModel
+  readonly levelFootprint?: PassengerLevelFootprintModel
+  readonly guideRails?: PassengerGuideRailModel
   readonly counterweight?: PassengerCounterweightModel
   readonly pit?: PassengerPitModel
   readonly bounds: PassengerInstallationBounds
@@ -95,17 +109,31 @@ export interface PassengerInstallationModel {
 
 export type PassengerInstallationModelResult =
   | {
-      readonly status: 'ready'
-      readonly model: PassengerInstallationModel
-    }
-  | {
-      readonly status: 'incomplete'
+      readonly status: 'empty'
       readonly missingFields: readonly PassengerGeometryField[]
     }
   | {
+      readonly status: 'partial'
+      readonly model: PassengerInstallationModel
+      readonly missingFields: readonly PassengerGeometryField[]
+    }
+  | {
+      readonly status: 'complete'
+      readonly model: PassengerInstallationModel
+      readonly missingFields: readonly []
+    }
+  | {
       readonly status: 'invalid'
+      readonly model?: PassengerInstallationModel
+      readonly missingFields: readonly PassengerGeometryField[]
       readonly invalidFields: readonly PassengerGeometryField[]
     }
+
+interface LevelElevationResult {
+  readonly elevations: readonly Metres[]
+  readonly missingFields: readonly PassengerGeometryField[]
+  readonly invalidFields: readonly PassengerGeometryField[]
+}
 
 function isPositive(value: number): boolean {
   return Number.isFinite(value) && value > 0
@@ -113,6 +141,12 @@ function isPositive(value: number): boolean {
 
 function isNonNegative(value: number): boolean {
   return Number.isFinite(value) && value >= 0
+}
+
+function uniqueFields(
+  fields: readonly PassengerGeometryField[],
+): readonly PassengerGeometryField[] {
+  return [...new Set(fields)]
 }
 
 export function createUniformLevelElevations(
@@ -126,84 +160,74 @@ export function createUniformLevelElevations(
   )
 }
 
-function createLevelElevations(
-  levels: LevelPlanningInput,
-):
-  | { readonly status: 'ready'; readonly elevations: readonly Metres[] }
-  | {
-      readonly status: 'incomplete'
-      readonly missingFields: readonly PassengerGeometryField[]
-    }
-  | {
-      readonly status: 'invalid'
-      readonly invalidFields: readonly PassengerGeometryField[]
-    } {
+function createLevelElevations(levels: LevelPlanningInput): LevelElevationResult {
   if (levels.kind === 'explicit') {
     if (levels.elevationsMm.length === 0) {
-      return { status: 'incomplete', missingFields: ['levels.elevationsMm'] }
+      return {
+        elevations: [],
+        missingFields: ['levels.elevationsMm'],
+        invalidFields: [],
+      }
     }
 
     if (levels.elevationsMm.some((elevation) => !Number.isFinite(elevation))) {
-      return { status: 'invalid', invalidFields: ['levels.elevationsMm'] }
+      return {
+        elevations: [],
+        missingFields: [],
+        invalidFields: ['levels.elevationsMm'],
+      }
     }
 
     return {
-      status: 'ready',
       elevations: levels.elevationsMm.map(millimetresToMetres),
+      missingFields: [],
+      invalidFields: [],
     }
   }
 
   const { stopCount, floorHeightMm } = levels
   const missingFields: PassengerGeometryField[] = []
+  const invalidFields: PassengerGeometryField[] = []
 
   if (stopCount === undefined) {
     missingFields.push('levels.stopCount')
+  } else if (!Number.isInteger(stopCount) || !isPositive(stopCount)) {
+    invalidFields.push('levels.stopCount')
   }
 
   if (floorHeightMm === undefined) {
     missingFields.push('levels.floorHeightMm')
+  } else if (!isPositive(floorHeightMm)) {
+    invalidFields.push('levels.floorHeightMm')
   }
 
-  if (missingFields.length > 0) {
-    return { status: 'incomplete', missingFields }
-  }
-
-  if (
-    stopCount === undefined ||
-    floorHeightMm === undefined ||
-    !Number.isInteger(stopCount) ||
-    !isPositive(stopCount) ||
-    !isPositive(floorHeightMm)
-  ) {
-    return {
-      status: 'invalid',
-      invalidFields: [
-        stopCount === undefined ||
-        !Number.isInteger(stopCount) ||
-        !isPositive(stopCount)
-          ? 'levels.stopCount'
-          : 'levels.floorHeightMm',
-      ],
-    }
+  if (missingFields.length > 0 || invalidFields.length > 0) {
+    return { elevations: [], missingFields, invalidFields }
   }
 
   return {
-    status: 'ready',
     elevations: createUniformLevelElevations(
-      stopCount,
-      floorHeightMm,
+      stopCount as number,
+      floorHeightMm as Millimetres,
     ),
+    missingFields: [],
+    invalidFields: [],
   }
 }
 
 function createCounterweightModel(
   input: PassengerGeometryPlanningInput,
-  shaftWidth: Metres,
-  shaftDepth: Metres,
+  shaft: PassengerShaftModel,
 ): PassengerCounterweightModel | undefined {
   const { widthMm, heightMm, position } = input.counterweight
 
-  if (widthMm === undefined || heightMm === undefined || position === undefined) {
+  if (
+    widthMm === undefined ||
+    heightMm === undefined ||
+    position === undefined ||
+    !isPositive(widthMm) ||
+    !isPositive(heightMm)
+  ) {
     return undefined
   }
 
@@ -215,7 +239,7 @@ function createCounterweightModel(
     return {
       width,
       height,
-      center: [metres(0), centerY, metres(-shaftDepth / 2)],
+      center: [metres(0), centerY, metres(-shaft.depth / 2)],
       rotationY: 0,
       position,
     }
@@ -225,7 +249,7 @@ function createCounterweightModel(
     width,
     height,
     center: [
-      metres((position === 'left' ? -shaftWidth : shaftWidth) / 2),
+      metres((position === 'left' ? -shaft.width : shaft.width) / 2),
       centerY,
       metres(0),
     ],
@@ -234,28 +258,31 @@ function createCounterweightModel(
   }
 }
 
-export function createPassengerInstallationModel(
+function collectMissingFields(
   input: PassengerGeometryPlanningInput,
-): PassengerInstallationModelResult {
-  const requiredDimensions = [
+  levelMissingFields: readonly PassengerGeometryField[],
+): readonly PassengerGeometryField[] {
+  const fields: PassengerGeometryField[] = []
+  const coreValues = [
     ['cabin.widthMm', input.cabin.widthMm],
     ['cabin.depthMm', input.cabin.depthMm],
     ['cabin.heightMm', input.cabin.heightMm],
     ['cabin.doorWidthMm', input.cabin.doorWidthMm],
     ['cabin.doorHeightMm', input.cabin.doorHeightMm],
+    ['cabin.throughCar', input.cabin.throughCar],
     ['shaft.widthMm', input.shaft.widthMm],
     ['shaft.depthMm', input.shaft.depthMm],
     ['shaft.pitDepthMm', input.shaft.pitDepthMm],
     ['shaft.headroomMm', input.shaft.headroomMm],
   ] as const
 
-  const missingFields: PassengerGeometryField[] = requiredDimensions
-    .filter(([, value]) => value === undefined)
-    .map(([field]) => field)
-
-  if (input.cabin.throughCar === undefined) {
-    missingFields.push('cabin.throughCar')
+  for (const [field, value] of coreValues) {
+    if (value === undefined) {
+      fields.push(field)
+    }
   }
+
+  fields.push(...levelMissingFields)
 
   const counterweightValues = [
     input.counterweight.widthMm,
@@ -268,175 +295,264 @@ export function createPassengerInstallationModel(
 
   if (hasPartialCounterweight) {
     if (input.counterweight.widthMm === undefined) {
-      missingFields.push('counterweight.widthMm')
+      fields.push('counterweight.widthMm')
     }
     if (input.counterweight.heightMm === undefined) {
-      missingFields.push('counterweight.heightMm')
+      fields.push('counterweight.heightMm')
     }
     if (input.counterweight.position === undefined) {
-      missingFields.push('counterweight.position')
+      fields.push('counterweight.position')
     }
   }
 
-  const levelResult = createLevelElevations(input.levels)
+  return uniqueFields(fields)
+}
 
-  if (levelResult.status === 'incomplete') {
-    return {
-      status: 'incomplete',
-      missingFields: [...missingFields, ...levelResult.missingFields],
+function collectInvalidFields(
+  input: PassengerGeometryPlanningInput,
+  levelInvalidFields: readonly PassengerGeometryField[],
+): readonly PassengerGeometryField[] {
+  const fields: PassengerGeometryField[] = [...levelInvalidFields]
+  const positiveDimensions = [
+    ['cabin.widthMm', input.cabin.widthMm],
+    ['cabin.depthMm', input.cabin.depthMm],
+    ['cabin.heightMm', input.cabin.heightMm],
+    ['cabin.doorWidthMm', input.cabin.doorWidthMm],
+    ['cabin.doorHeightMm', input.cabin.doorHeightMm],
+    ['shaft.widthMm', input.shaft.widthMm],
+    ['shaft.depthMm', input.shaft.depthMm],
+    ['counterweight.widthMm', input.counterweight.widthMm],
+    ['counterweight.heightMm', input.counterweight.heightMm],
+  ] as const
+
+  for (const [field, value] of positiveDimensions) {
+    if (value !== undefined && !isPositive(value)) {
+      fields.push(field)
     }
   }
 
-  if (missingFields.length > 0) {
-    return { status: 'incomplete', missingFields }
-  }
+  const nonNegativeDimensions = [
+    ['shaft.pitDepthMm', input.shaft.pitDepthMm],
+    ['shaft.headroomMm', input.shaft.headroomMm],
+  ] as const
 
-  if (levelResult.status === 'invalid') {
-    return levelResult
-  }
-
-  const {
-    widthMm: cabinWidthMm,
-    depthMm: cabinDepthMm,
-    heightMm: cabinHeightMm,
-    doorWidthMm,
-    doorHeightMm,
-  } = input.cabin
-  const {
-    widthMm: shaftWidthMm,
-    depthMm: shaftDepthMm,
-    pitDepthMm,
-    headroomMm,
-  } = input.shaft
-
-  if (
-    cabinWidthMm === undefined ||
-    cabinDepthMm === undefined ||
-    cabinHeightMm === undefined ||
-    doorWidthMm === undefined ||
-    doorHeightMm === undefined ||
-    shaftWidthMm === undefined ||
-    shaftDepthMm === undefined ||
-    pitDepthMm === undefined ||
-    headroomMm === undefined ||
-    input.cabin.throughCar === undefined
-  ) {
-    return { status: 'incomplete', missingFields }
-  }
-
-  const invalidFields: PassengerGeometryField[] = []
-
-  for (const [field, value] of requiredDimensions) {
-    const acceptsZero =
-      field === 'shaft.pitDepthMm' || field === 'shaft.headroomMm'
-    if (value !== undefined && !(acceptsZero ? isNonNegative(value) : isPositive(value))) {
-      invalidFields.push(field)
+  for (const [field, value] of nonNegativeDimensions) {
+    if (value !== undefined && !isNonNegative(value)) {
+      fields.push(field)
     }
   }
 
-  if (doorWidthMm > cabinWidthMm) {
-    invalidFields.push('cabin.doorWidthMm')
-  }
-
-  if (doorHeightMm > cabinHeightMm) {
-    invalidFields.push('cabin.doorHeightMm')
+  if (
+    input.cabin.doorWidthMm !== undefined &&
+    input.cabin.widthMm !== undefined &&
+    input.cabin.doorWidthMm > input.cabin.widthMm
+  ) {
+    fields.push('cabin.doorWidthMm')
   }
 
   if (
-    input.counterweight.widthMm !== undefined &&
-    !isPositive(input.counterweight.widthMm)
+    input.cabin.doorHeightMm !== undefined &&
+    input.cabin.heightMm !== undefined &&
+    input.cabin.doorHeightMm > input.cabin.heightMm
   ) {
-    invalidFields.push('counterweight.widthMm')
+    fields.push('cabin.doorHeightMm')
   }
 
-  if (
-    input.counterweight.heightMm !== undefined &&
-    !isPositive(input.counterweight.heightMm)
-  ) {
-    invalidFields.push('counterweight.heightMm')
+  return uniqueFields(fields)
+}
+
+function createInstallationModel(
+  input: PassengerGeometryPlanningInput,
+  levelElevations: readonly Metres[],
+): PassengerInstallationModel | undefined {
+  const cabinHeight =
+    input.cabin.heightMm === undefined
+      ? undefined
+      : millimetresToMetres(input.cabin.heightMm)
+  const cabin =
+    input.cabin.widthMm !== undefined &&
+    input.cabin.depthMm !== undefined &&
+    cabinHeight !== undefined &&
+    isPositive(input.cabin.widthMm) &&
+    isPositive(input.cabin.depthMm) &&
+    isPositive(cabinHeight)
+      ? {
+          width: millimetresToMetres(input.cabin.widthMm),
+          depth: millimetresToMetres(input.cabin.depthMm),
+          height: cabinHeight,
+          bottomY: metres(0),
+          centerY: metres(cabinHeight / 2),
+          throughCar: input.cabin.throughCar,
+        }
+      : undefined
+
+  const door =
+    cabin !== undefined &&
+    input.cabin.doorWidthMm !== undefined &&
+    input.cabin.doorHeightMm !== undefined &&
+    isPositive(input.cabin.doorWidthMm) &&
+    isPositive(input.cabin.doorHeightMm) &&
+    millimetresToMetres(input.cabin.doorWidthMm) <= cabin.width &&
+    millimetresToMetres(input.cabin.doorHeightMm) <= cabin.height
+      ? {
+          width: millimetresToMetres(input.cabin.doorWidthMm),
+          height: millimetresToMetres(input.cabin.doorHeightMm),
+        }
+      : undefined
+
+  const cabinWithDoor = cabin === undefined ? undefined : { ...cabin, door }
+
+  const shaftBase =
+    input.shaft.widthMm !== undefined &&
+    input.shaft.depthMm !== undefined &&
+    isPositive(input.shaft.widthMm) &&
+    isPositive(input.shaft.depthMm)
+      ? {
+          width: millimetresToMetres(input.shaft.widthMm),
+          depth: millimetresToMetres(input.shaft.depthMm),
+        }
+      : undefined
+
+  const validPitDepth =
+    input.shaft.pitDepthMm !== undefined &&
+    isNonNegative(input.shaft.pitDepthMm)
+      ? millimetresToMetres(input.shaft.pitDepthMm)
+      : undefined
+  const validHeadroom =
+    input.shaft.headroomMm !== undefined &&
+    isNonNegative(input.shaft.headroomMm)
+      ? millimetresToMetres(input.shaft.headroomMm)
+      : undefined
+
+  const highestLevel =
+    levelElevations.length > 0 ? Math.max(...levelElevations) : undefined
+  const knownTopValues = [
+    cabinWithDoor?.height,
+    highestLevel === undefined
+      ? undefined
+      : metres(highestLevel + (validHeadroom ?? 0)),
+  ].filter((value): value is Metres => value !== undefined)
+  const shaftBottomY = metres(-(validPitDepth ?? 0))
+  const shaftTopY = metres(Math.max(0, ...knownTopValues))
+  const shaftHeight = metres(shaftTopY - shaftBottomY)
+  const shaftVerticalExtent =
+    shaftBase !== undefined && shaftHeight > 0
+      ? {
+          bottomY: shaftBottomY,
+          topY: shaftTopY,
+          height: shaftHeight,
+          centerY: metres(shaftBottomY + shaftHeight / 2),
+        }
+      : undefined
+  const shaft =
+    shaftBase === undefined
+      ? undefined
+      : { ...shaftBase, verticalExtent: shaftVerticalExtent }
+
+  const levels = levelElevations.map((elevationY, index) => ({
+    id: `level-${index + 1}`,
+    index,
+    elevationY,
+  }))
+  const levelFootprint = shaft
+    ? { width: shaft.width, depth: shaft.depth }
+    : cabinWithDoor
+      ? { width: cabinWithDoor.width, depth: cabinWithDoor.depth }
+      : undefined
+  const pit =
+    shaft !== undefined && validPitDepth !== undefined && validPitDepth > 0
+      ? {
+          width: shaft.width,
+          depth: shaft.depth,
+          height: validPitDepth,
+          centerY: metres(-validPitDepth / 2),
+        }
+      : undefined
+  const counterweight =
+    shaft === undefined ? undefined : createCounterweightModel(input, shaft)
+  const guideRails =
+    cabinWithDoor !== undefined && shaft?.verticalExtent !== undefined
+      ? {
+          xPositions: [
+            metres(-cabinWithDoor.width / 2),
+            metres(cabinWithDoor.width / 2),
+          ] as const,
+          z: metres(0),
+          bottomY: shaft.verticalExtent.bottomY,
+          topY: shaft.verticalExtent.topY,
+        }
+      : undefined
+
+  const hasGeometry =
+    cabinWithDoor !== undefined || shaft !== undefined || levels.length > 0
+
+  if (!hasGeometry) {
+    return undefined
   }
 
-  if (invalidFields.length > 0) {
-    return { status: 'invalid', invalidFields }
-  }
-
-  const cabinWidth = millimetresToMetres(cabinWidthMm)
-  const cabinDepth = millimetresToMetres(cabinDepthMm)
-  const cabinHeight = millimetresToMetres(cabinHeightMm)
-  const shaftWidth = millimetresToMetres(shaftWidthMm)
-  const shaftDepth = millimetresToMetres(shaftDepthMm)
-  const pitDepth = millimetresToMetres(pitDepthMm)
-  const headroom = millimetresToMetres(headroomMm)
-  const bottomY = metres(-pitDepth)
-  const highestLevel = Math.max(...levelResult.elevations)
-  const topY = metres(highestLevel + headroom)
-  const shaftHeight = metres(topY - bottomY)
-  const shaftCenterY = metres(bottomY + shaftHeight / 2)
-  const cabinCenterY = metres(cabinHeight / 2)
-  const counterweight = createCounterweightModel(
-    input,
-    shaftWidth,
-    shaftDepth,
+  const installationBottom = Math.min(
+    0,
+    shaft?.verticalExtent?.bottomY ?? 0,
   )
-  const installationBottom = Math.min(bottomY, 0)
   const installationTop = Math.max(
-    topY,
-    cabinHeight,
+    0,
+    cabinWithDoor?.height ?? 0,
+    highestLevel ?? 0,
+    shaft?.verticalExtent?.topY ?? 0,
     counterweight === undefined
-      ? Number.NEGATIVE_INFINITY
+      ? 0
       : counterweight.center[1] + counterweight.height / 2,
   )
 
   return {
-    status: 'ready',
-    model: {
-      cabin: {
-        width: cabinWidth,
-        depth: cabinDepth,
-        height: cabinHeight,
-        bottomY: metres(0),
-        centerY: cabinCenterY,
-        doorWidth: millimetresToMetres(doorWidthMm),
-        doorHeight: millimetresToMetres(doorHeightMm),
-        throughCar: input.cabin.throughCar,
-      },
-      shaft: {
-        width: shaftWidth,
-        depth: shaftDepth,
-        bottomY,
-        topY,
-        height: shaftHeight,
-        centerY: shaftCenterY,
-      },
-      levels: levelResult.elevations.map((elevationY, index) => ({
-        id: `level-${index + 1}`,
-        index,
-        elevationY,
-      })),
-      guideRails: {
-        xPositions: [metres(-cabinWidth / 2), metres(cabinWidth / 2)],
-        z: metres(0),
-        bottomY,
-        topY,
-      },
-      counterweight,
-      pit:
-        pitDepth > 0
-          ? {
-              width: shaftWidth,
-              depth: shaftDepth,
-              height: pitDepth,
-              centerY: metres(-pitDepth / 2),
-            }
-          : undefined,
-      bounds: {
-        width: metres(Math.max(shaftWidth, cabinWidth)),
-        depth: metres(Math.max(shaftDepth, cabinDepth)),
-        height: metres(installationTop - installationBottom),
-        centerY: metres(
-          installationBottom + (installationTop - installationBottom) / 2,
-        ),
-      },
+    cabin: cabinWithDoor,
+    shaft,
+    levels,
+    levelFootprint,
+    guideRails,
+    counterweight,
+    pit,
+    bounds: {
+      width: metres(Math.max(cabinWithDoor?.width ?? 0, shaft?.width ?? 0)),
+      depth: metres(Math.max(cabinWithDoor?.depth ?? 0, shaft?.depth ?? 0)),
+      height: metres(installationTop - installationBottom),
+      centerY: metres(
+        installationBottom + (installationTop - installationBottom) / 2,
+      ),
     },
   }
+}
+
+export function createPassengerInstallationModel(
+  input: PassengerGeometryPlanningInput,
+): PassengerInstallationModelResult {
+  const levelResult = createLevelElevations(input.levels)
+  const missingFields = collectMissingFields(
+    input,
+    levelResult.missingFields,
+  )
+  const invalidFields = collectInvalidFields(
+    input,
+    levelResult.invalidFields,
+  )
+  const model = createInstallationModel(input, levelResult.elevations)
+
+  if (invalidFields.length > 0) {
+    return {
+      status: 'invalid',
+      model,
+      missingFields,
+      invalidFields,
+    }
+  }
+
+  if (model === undefined) {
+    return { status: 'empty', missingFields }
+  }
+
+  if (missingFields.length > 0) {
+    return { status: 'partial', model, missingFields }
+  }
+
+  return { status: 'complete', model, missingFields: [] }
 }

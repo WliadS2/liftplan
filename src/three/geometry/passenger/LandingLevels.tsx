@@ -1,21 +1,24 @@
-import { Line } from '@react-three/drei'
+import { Line, PointMaterial, Points } from '@react-three/drei'
+import { useMemo } from 'react'
 import { DoubleSide } from 'three'
 import { TECHNICAL_MATERIALS } from '../../materials/technical-materials'
 import type {
   PassengerCabinModel,
+  PassengerDoorModel,
   PassengerLandingLevelModel,
+  PassengerLevelFootprintModel,
   PassengerShaftModel,
 } from './passenger-installation-model'
 
 interface LandingDoorOpeningProps {
-  readonly cabin: PassengerCabinModel
+  readonly door: PassengerDoorModel
   readonly elevationY: number
   readonly shaftDepth: number
   readonly side: 'front' | 'rear'
 }
 
 function LandingDoorOpening({
-  cabin,
+  door,
   elevationY,
   shaftDepth,
   side,
@@ -27,50 +30,77 @@ function LandingDoorOpening({
       color={TECHNICAL_MATERIALS.door}
       lineWidth={1}
       points={[
-        [-cabin.doorWidth / 2, elevationY, z],
-        [-cabin.doorWidth / 2, elevationY + cabin.doorHeight, z],
-        [cabin.doorWidth / 2, elevationY + cabin.doorHeight, z],
-        [cabin.doorWidth / 2, elevationY, z],
+        [-door.width / 2, elevationY, z],
+        [-door.width / 2, elevationY + door.height, z],
+        [door.width / 2, elevationY + door.height, z],
+        [door.width / 2, elevationY, z],
       ]}
     />
   )
 }
 
 export interface LandingLevelsProps {
-  readonly cabin: PassengerCabinModel
+  readonly cabin?: PassengerCabinModel
+  readonly footprint?: PassengerLevelFootprintModel
   readonly levels: readonly PassengerLandingLevelModel[]
-  readonly shaft: PassengerShaftModel
+  readonly shaft?: PassengerShaftModel
 }
 
-export function LandingLevels({ cabin, levels, shaft }: LandingLevelsProps) {
+export function LandingLevels({
+  cabin,
+  footprint,
+  levels,
+  shaft,
+}: LandingLevelsProps) {
+  const markerPositions = useMemo(
+    () =>
+      new Float32Array(
+        levels.flatMap((level) => [0, level.elevationY, 0]),
+      ),
+    [levels],
+  )
+
   return (
     <group>
+      {!footprint && levels.length > 0 && (
+        <Points positions={markerPositions} stride={3}>
+          <PointMaterial
+            color={TECHNICAL_MATERIALS.landing}
+            size={6}
+            sizeAttenuation={false}
+          />
+        </Points>
+      )}
       {levels.map((level) => (
         <group key={level.id}>
-          <mesh
-            position={[0, level.elevationY, 0]}
-            rotation={[-Math.PI / 2, 0, 0]}
-          >
-            <planeGeometry args={[shaft.width, shaft.depth]} />
-            <meshStandardMaterial
-              color={TECHNICAL_MATERIALS.landing}
-              opacity={0.12}
-              polygonOffset
-              polygonOffsetFactor={1}
-              roughness={0.85}
-              side={DoubleSide}
-              transparent
-            />
-          </mesh>
-          <LandingDoorOpening
-            cabin={cabin}
-            elevationY={level.elevationY}
-            shaftDepth={shaft.depth}
-            side="front"
-          />
-          {cabin.throughCar && (
+          {footprint && (
+            <mesh
+              position={[0, level.elevationY, 0]}
+              rotation={[-Math.PI / 2, 0, 0]}
+            >
+              <planeGeometry args={[footprint.width, footprint.depth]} />
+              <meshStandardMaterial
+                color={TECHNICAL_MATERIALS.landing}
+                opacity={0.12}
+                polygonOffset
+                polygonOffsetFactor={1}
+                roughness={0.85}
+                side={DoubleSide}
+                transparent
+              />
+            </mesh>
+          )}
+          {cabin?.door && shaft && (
             <LandingDoorOpening
-              cabin={cabin}
+              door={cabin.door}
+              elevationY={level.elevationY}
+              shaftDepth={shaft.depth}
+              side="front"
+            />
+          )}
+          {cabin?.door && cabin.throughCar === true && shaft && (
+            <LandingDoorOpening
+              door={cabin.door}
               elevationY={level.elevationY}
               shaftDepth={shaft.depth}
               side="rear"

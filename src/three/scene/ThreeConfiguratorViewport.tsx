@@ -19,14 +19,17 @@ export function ThreeConfiguratorViewport({
   const modelResult = geometryInput
     ? createPassengerInstallationModel(geometryInput)
     : undefined
+  const model = modelResult && 'model' in modelResult ? modelResult.model : undefined
 
   const frameKey =
-    modelResult?.status === 'ready'
+    model
       ? [
-          modelResult.model.bounds.width,
-          modelResult.model.bounds.depth,
-          modelResult.model.bounds.height,
-          modelResult.model.levels.length,
+          model.bounds.width,
+          model.bounds.depth,
+          model.bounds.height,
+          model.levels.length,
+          model.cabin ? 'cabin' : 'no-cabin',
+          model.shaft ? 'shaft' : 'no-shaft',
         ].join(':')
       : 'unavailable'
 
@@ -37,51 +40,63 @@ export function ThreeConfiguratorViewport({
     >
       <h2 id="viewport-heading">3D-Ansicht</h2>
 
-      {!modelResult || modelResult.status === 'incomplete' ? (
+      {!modelResult || modelResult.status === 'empty' ? (
         <ViewportFallback>
-          Für diese Konfiguration fehlen noch Planungsdaten.
+          Planungsdaten eingeben, um die 3D-Ansicht zu starten.
         </ViewportFallback>
-      ) : modelResult.status === 'invalid' ? (
+      ) : modelResult.status === 'invalid' && !model ? (
         <ViewportFallback>
           Die eingegebenen Planungsmaße können nicht dargestellt werden.
         </ViewportFallback>
       ) : (
-        <div className="viewport-canvas">
-          <Canvas
-            dpr={[1, 1.5]}
-            fallback={
-              <ViewportFallback>
-                3D-Ansicht konnte nicht geladen werden.
-              </ViewportFallback>
-            }
-            gl={{
-              alpha: false,
-              antialias: true,
-              powerPreference: 'high-performance',
-            }}
-          >
-            <color attach="background" args={['#eef1f4']} />
-            <PerspectiveCamera makeDefault fov={38} position={[4, 3, 6]} />
-            <OrbitControls
-              makeDefault
-              dampingFactor={0.08}
-              enableDamping
-              maxPolarAngle={Math.PI * 0.92}
-            />
-            <hemisphereLight
-              color="#ffffff"
-              groundColor="#94a3b8"
-              intensity={1.4}
-            />
-            <directionalLight intensity={2.1} position={[5, 8, 6]} />
-            <directionalLight intensity={0.7} position={[-4, 3, -5]} />
+        <>
+          <div className="viewport-canvas">
+            <Canvas
+              dpr={[1, 1.5]}
+              fallback={
+                <ViewportFallback>
+                  3D-Ansicht konnte nicht geladen werden.
+                </ViewportFallback>
+              }
+              gl={{
+                alpha: false,
+                antialias: true,
+                powerPreference: 'high-performance',
+              }}
+            >
+              <color attach="background" args={['#eef1f4']} />
+              <PerspectiveCamera makeDefault fov={38} position={[4, 3, 6]} />
+              <OrbitControls
+                makeDefault
+                dampingFactor={0.08}
+                enableDamping
+                maxPolarAngle={Math.PI * 0.92}
+              />
+              <hemisphereLight
+                color="#ffffff"
+                groundColor="#94a3b8"
+                intensity={1.4}
+              />
+              <directionalLight intensity={2.1} position={[5, 8, 6]} />
+              <directionalLight intensity={0.7} position={[-4, 3, -5]} />
 
-            <Bounds clip fit margin={1.2} observe>
-              <PassengerElevatorAssembly model={modelResult.model} />
-              <AutoFitCamera frameKey={frameKey} />
-            </Bounds>
-          </Canvas>
-        </div>
+              <Bounds clip fit margin={1.2} observe>
+                {model && <PassengerElevatorAssembly model={model} />}
+                <AutoFitCamera frameKey={frameKey} />
+              </Bounds>
+            </Canvas>
+          </div>
+          {modelResult.status === 'partial' && (
+            <p className="viewport-status">
+              Teilansicht – weitere Planungsdaten fehlen.
+            </p>
+          )}
+          {modelResult.status === 'invalid' && (
+            <p className="viewport-status" role="alert">
+              Teilansicht – ungültige Planungsdaten werden nicht dargestellt.
+            </p>
+          )}
+        </>
       )}
 
       <p className="panel-note">

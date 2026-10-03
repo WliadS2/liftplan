@@ -8,10 +8,12 @@ The first LiftPlan 3D assembly is a lightweight planning visualization for the p
 
 1. The passenger planning schema stores engineering dimensions in millimetres.
 2. The family geometry adapter creates a normalized `PassengerGeometryPlanningInput` without depending on React forms or Zustand.
-3. The pure passenger installation transform checks whether the explicit data is complete and renderable, then converts dimensions through `millimetresToMetres`.
+3. The pure passenger installation transform creates every independently renderable submodel, reports an `empty`, `partial`, `complete`, or `invalid` state, and converts dimensions through `millimetresToMetres`.
 4. React Three Fiber components render the resulting metre-based installation model.
 
 Missing dimensions remain missing. The transform does not insert hidden shaft, cabin, level, pit, or counterweight defaults.
+
+Partial models remain visible. Cabin geometry needs only its three explicit dimensions; doors, shaft footprint and envelope, levels, pit, guide rails, and counterweight are added only when their own placement and dimension inputs are available. A shaft with only width and depth is shown as its explicit footprint until known vertical extents are available. Levels without a known footprint use screen-sized point markers rather than an invented world-space width.
 
 ## Explicit planning inputs
 
