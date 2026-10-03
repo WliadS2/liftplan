@@ -16,12 +16,14 @@ export type {
   RegisteredLiftFamily,
 } from './configuration/lift-type-registry'
 export {
+  COUNTERWEIGHT_POSITIONS,
   createPassengerPlanningConfiguration,
   passengerPlanningConfigurationSchema,
   updatePassengerPlanningConfiguration,
   PASSENGER_PLANNING_SCHEMA_VERSION,
 } from './configuration/passenger-planning-configuration'
 export type {
+  CounterweightPosition,
   PassengerPlanningConfiguration,
   PassengerPlanningConfigurationUpdate,
 } from './configuration/passenger-planning-configuration'

@@ -1,4 +1,6 @@
+import { lazy, Suspense } from 'react'
 import {
+  COUNTERWEIGHT_POSITIONS,
   LIFT_FAMILIES,
   getLiftTypeDefinitions,
   isRegisteredLiftFamily,
@@ -8,15 +10,21 @@ import {
   kilograms,
   metresPerSecond,
   millimetres,
+  type Millimetres,
 } from '../../engineering'
 import { useProjectStore } from '../../projects'
-import {
-  ThreeConfiguratorViewport,
-  createLiftGeometryPlanningInput,
-} from '../../three'
+import { createLiftGeometryPlanningInput } from '../../three/geometry/lift-geometry-planning-input'
+import { ThreeSceneErrorBoundary } from '../../three/scene/ThreeSceneErrorBoundary'
 import './ProjectWorkspace.css'
 
 const liftTypes = getLiftTypeDefinitions()
+const ThreeConfiguratorViewport = lazy(async () => {
+  const module = await import(
+    '../../three/scene/ThreeConfiguratorViewport'
+  )
+
+  return { default: module.ThreeConfiguratorViewport }
+})
 
 function parseOptionalNumber(value: string): number | undefined {
   if (value.trim() === '') {
@@ -33,6 +41,28 @@ function formatValue(value: number | undefined, unit?: string): string {
   }
 
   return unit ? `${value} ${unit}` : String(value)
+}
+
+interface MillimetreFieldProps {
+  readonly label: string
+  readonly value?: Millimetres
+  readonly onChange: (value?: Millimetres) => void
+}
+
+function MillimetreField({ label, value, onChange }: MillimetreFieldProps) {
+  return (
+    <label className="field">
+      <span>{label} (mm)</span>
+      <input
+        type="number"
+        value={value ?? ''}
+        onChange={(event) => {
+          const parsed = parseOptionalNumber(event.target.value)
+          onChange(parsed === undefined ? undefined : millimetres(parsed))
+        }}
+      />
+    </label>
+  )
 }
 
 export function ProjectWorkspace() {
@@ -243,6 +273,48 @@ export function ProjectWorkspace() {
                 />
               </label>
 
+              <h3>Schacht und Ebenen</h3>
+
+              <MillimetreField
+                label="Schachtbreite"
+                value={project.configuration.shaftWidthMm}
+                onChange={(shaftWidthMm) =>
+                  updatePassengerConfiguration({ shaftWidthMm })
+                }
+              />
+
+              <MillimetreField
+                label="Schachttiefe"
+                value={project.configuration.shaftDepthMm}
+                onChange={(shaftDepthMm) =>
+                  updatePassengerConfiguration({ shaftDepthMm })
+                }
+              />
+
+              <MillimetreField
+                label="Geschosshöhe"
+                value={project.configuration.floorHeightMm}
+                onChange={(floorHeightMm) =>
+                  updatePassengerConfiguration({ floorHeightMm })
+                }
+              />
+
+              <MillimetreField
+                label="Grubentiefe"
+                value={project.configuration.pitDepthMm}
+                onChange={(pitDepthMm) =>
+                  updatePassengerConfiguration({ pitDepthMm })
+                }
+              />
+
+              <MillimetreField
+                label="Schachtkopf"
+                value={project.configuration.headroomMm}
+                onChange={(headroomMm) =>
+                  updatePassengerConfiguration({ headroomMm })
+                }
+              />
+
               <label className="field">
                 <span>Durchlader</span>
                 <select
@@ -278,6 +350,44 @@ export function ProjectWorkspace() {
                   }
                 />
               </label>
+
+              <h3>Schematisches Gegengewicht</h3>
+
+              <MillimetreField
+                label="Gegengewichtbreite"
+                value={project.configuration.counterweightWidthMm}
+                onChange={(counterweightWidthMm) =>
+                  updatePassengerConfiguration({ counterweightWidthMm })
+                }
+              />
+
+              <MillimetreField
+                label="Gegengewichthöhe"
+                value={project.configuration.counterweightHeightMm}
+                onChange={(counterweightHeightMm) =>
+                  updatePassengerConfiguration({ counterweightHeightMm })
+                }
+              />
+
+              <label className="field">
+                <span>Gegengewichtposition</span>
+                <select
+                  value={project.configuration.counterweightPosition ?? ''}
+                  onChange={(event) => {
+                    const counterweightPosition = COUNTERWEIGHT_POSITIONS.find(
+                      (position) => position === event.target.value,
+                    )
+                    updatePassengerConfiguration({
+                      counterweightPosition,
+                    })
+                  }}
+                >
+                  <option value="">Nicht angegeben</option>
+                  <option value="rear">Hinten</option>
+                  <option value="left">Links</option>
+                  <option value="right">Rechts</option>
+                </select>
+              </label>
             </div>
           ) : (
             <p className="coming-soon-message">
@@ -286,7 +396,18 @@ export function ProjectWorkspace() {
           )}
         </aside>
 
-        <ThreeConfiguratorViewport geometryInput={geometryInput} />
+        <ThreeSceneErrorBoundary>
+          <Suspense
+            fallback={
+              <section className="workspace-panel viewport-panel">
+                <h2>3D-Ansicht</h2>
+                <div className="viewport-fallback">3D-Ansicht wird geladen.</div>
+              </section>
+            }
+          >
+            <ThreeConfiguratorViewport geometryInput={geometryInput} />
+          </Suspense>
+        </ThreeSceneErrorBoundary>
 
         <aside className="workspace-panel data-panel" aria-labelledby="data-heading">
           <h2 id="data-heading">Technische Daten</h2>
@@ -340,6 +461,24 @@ export function ProjectWorkspace() {
                   <dd>
                     {formatValue(project.configuration.doorWidthMm, 'mm')} ×{' '}
                     {formatValue(project.configuration.doorHeightMm, 'mm')}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Schacht</dt>
+                  <dd>
+                    {formatValue(project.configuration.shaftWidthMm, 'mm')} ×{' '}
+                    {formatValue(project.configuration.shaftDepthMm, 'mm')}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Geschosshöhe</dt>
+                  <dd>{formatValue(project.configuration.floorHeightMm, 'mm')}</dd>
+                </div>
+                <div>
+                  <dt>Grube / Schachtkopf</dt>
+                  <dd>
+                    {formatValue(project.configuration.pitDepthMm, 'mm')} /{' '}
+                    {formatValue(project.configuration.headroomMm, 'mm')}
                   </dd>
                 </div>
                 <div>

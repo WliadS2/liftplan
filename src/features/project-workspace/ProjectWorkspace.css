@@ -67,6 +67,12 @@
   font-size: 1rem;
 }
 
+.configuration-panel h3 {
+  margin: 10px 0 0;
+  color: var(--text-heading);
+  font-size: 0.9rem;
+}
+
 .field-group {
   display: grid;
   gap: 12px;
@@ -96,7 +102,7 @@
   min-height: 540px;
 }
 
-.viewport-placeholder {
+.viewport-fallback {
   display: grid;
   min-height: 420px;
   place-items: center;
@@ -105,6 +111,13 @@
   padding: 24px;
   color: var(--text-muted);
   text-align: center;
+}
+
+.viewport-canvas {
+  height: 420px;
+  overflow: hidden;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
 }
 
 .panel-note,
@@ -148,8 +161,10 @@
     min-height: 280px;
   }
 
-  .viewport-placeholder {
+  .viewport-fallback,
+  .viewport-canvas {
     min-height: 180px;
+    height: 240px;
   }
 }
 

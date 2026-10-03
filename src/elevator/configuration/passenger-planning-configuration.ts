@@ -10,7 +10,11 @@ import {
 import type { LiftConfiguration } from '../models/lift-configuration'
 import { LIFT_FAMILIES } from '../types/lift-family'
 
-export const PASSENGER_PLANNING_SCHEMA_VERSION = 'passenger-planning-v1' as const
+export const PASSENGER_PLANNING_SCHEMA_VERSION = 'passenger-planning-v2' as const
+
+export const COUNTERWEIGHT_POSITIONS = ['rear', 'left', 'right'] as const
+
+export type CounterweightPosition = (typeof COUNTERWEIGHT_POSITIONS)[number]
 
 export interface PassengerPlanningConfiguration
   extends LiftConfiguration<
@@ -27,8 +31,16 @@ export interface PassengerPlanningConfiguration
   readonly cabinHeightMm?: Millimetres
   readonly doorWidthMm?: Millimetres
   readonly doorHeightMm?: Millimetres
+  readonly shaftWidthMm?: Millimetres
+  readonly shaftDepthMm?: Millimetres
+  readonly floorHeightMm?: Millimetres
+  readonly pitDepthMm?: Millimetres
+  readonly headroomMm?: Millimetres
   readonly throughCar?: boolean
   readonly driveConcept?: string
+  readonly counterweightWidthMm?: Millimetres
+  readonly counterweightHeightMm?: Millimetres
+  readonly counterweightPosition?: CounterweightPosition
 }
 
 const optionalFiniteNumber = z.number().finite().optional()
@@ -59,8 +71,16 @@ export const passengerPlanningConfigurationSchema = z
     cabinHeightMm: optionalMillimetres,
     doorWidthMm: optionalMillimetres,
     doorHeightMm: optionalMillimetres,
+    shaftWidthMm: optionalMillimetres,
+    shaftDepthMm: optionalMillimetres,
+    floorHeightMm: optionalMillimetres,
+    pitDepthMm: optionalMillimetres,
+    headroomMm: optionalMillimetres,
     throughCar: z.boolean().optional(),
     driveConcept: z.string().optional(),
+    counterweightWidthMm: optionalMillimetres,
+    counterweightHeightMm: optionalMillimetres,
+    counterweightPosition: z.enum(COUNTERWEIGHT_POSITIONS).optional(),
   })
   .strict()
 

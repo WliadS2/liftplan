@@ -49,7 +49,11 @@ The Personenaufzug definition is currently available as a planning-input draft. 
 
 Configuration schemas are structural only. They validate data types, finite numeric input, and the family/schema identity; they do not approve an installation or encode engineering limits. The validation adapter returns stable codes, paths, and message keys for German presentation code.
 
-`src/three/geometry/lift-geometry-planning-input.ts` converts a structurally valid family configuration into a normalized, render-neutral planning input. The current passenger adapter passes unit-aware millimetre and speed values through unchanged. A future renderer converts millimetres to metres only at its rendering boundary and never reads React form state directly.
+`src/three/geometry/lift-geometry-planning-input.ts` converts a structurally valid family configuration into a normalized, render-neutral planning input. The passenger adapter groups explicit cabin, shaft, level, and counterweight planning values while preserving their unit-aware millimetre types. Its level contract supports both the current uniform storey height and future explicit per-level elevations.
+
+`src/three/geometry/passenger/passenger-installation-model.ts` is the pure boundary between planning data and render-space geometry. It reports `ready`, `incomplete`, or `invalid` without reaching into React or Zustand, performs all millimetre-to-metre conversion through the engineering unit module, and produces a lightweight scene model. React Three Fiber components consume that model only; they do not calculate engineering dimensions or inspect application state.
+
+The current scene is a schematic planning visualization, not an engineering approval result. Renderability checks protect geometry construction but do not claim regulatory compliance, certified clearances, structural suitability, or installation approval.
 
 Future database, authentication, file storage, or network services belong behind ports owned by the relevant domain module. Infrastructure adapters may depend on those ports. Domain modules must not depend on a backend SDK.
 
