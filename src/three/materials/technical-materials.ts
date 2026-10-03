@@ -8,6 +8,13 @@ export const TECHNICAL_MATERIALS = {
   sill: '#475569',
   landing: '#475569',
   guideRail: '#334155',
+  carFrame: '#2563eb',
   counterweight: '#d97706',
+  counterweightFrame: '#92400e',
+  buffer: '#dc2626',
+  machine: '#475569',
+  sheave: '#7c3aed',
+  suspension: '#111827',
+  mechanicalZone: '#0ea5e9',
   pit: '#64748b',
 } as const

@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { useState } from 'react'
 import { AutoFitCamera } from '../camera/AutoFitCamera'
 import { PassengerElevatorAssembly } from '../geometry/passenger/PassengerElevatorAssembly'
+import { createPassengerMechanicalLayout } from '../geometry/passenger/mechanical/passenger-mechanical-layout'
 import { createPassengerInstallationModel } from '../geometry/passenger/passenger-installation-model'
 import type { LiftGeometryPlanningInput } from '../geometry/lift-geometry-planning-input'
 import type { ThreeViewMode } from './view-mode'
@@ -23,6 +24,10 @@ export function ThreeConfiguratorViewport({
     ? createPassengerInstallationModel(geometryInput)
     : undefined
   const model = modelResult && 'model' in modelResult ? modelResult.model : undefined
+  const mechanicalLayout =
+    geometryInput && model
+      ? createPassengerMechanicalLayout(geometryInput, model)
+      : undefined
 
   const frameKey =
     model
@@ -33,6 +38,12 @@ export function ThreeConfiguratorViewport({
           model.levels.length,
           model.cabin ? 'cabin' : 'no-cabin',
           model.shaft ? 'shaft' : 'no-shaft',
+          mechanicalLayout?.carFrame ? 'frame' : 'no-frame',
+          mechanicalLayout?.counterweight ? 'counterweight' : 'no-counterweight',
+          mechanicalLayout?.bounds.width,
+          mechanicalLayout?.bounds.depth,
+          mechanicalLayout?.bounds.height,
+          mechanicalLayout?.bounds.centerY,
           viewMode,
         ].join(':')
       : 'unavailable'
@@ -51,6 +62,13 @@ export function ThreeConfiguratorViewport({
             onClick={() => setViewMode('overview')}
           >
             Gesamtansicht
+          </button>
+          <button
+            aria-pressed={viewMode === 'mechanical'}
+            type="button"
+            onClick={() => setViewMode('mechanical')}
+          >
+            Mechanik
           </button>
           <button
             aria-pressed={viewMode === 'cutaway'}
@@ -103,8 +121,9 @@ export function ThreeConfiguratorViewport({
               <directionalLight intensity={0.7} position={[-4, 3, -5]} />
 
               <Bounds clip fit margin={1.2} observe>
-                {model && (
+                {model && mechanicalLayout && (
                   <PassengerElevatorAssembly
+                    mechanicalLayout={mechanicalLayout}
                     model={model}
                     viewMode={viewMode}
                   />

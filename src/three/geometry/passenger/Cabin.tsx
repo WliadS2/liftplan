@@ -36,19 +36,22 @@ export function Cabin({ cabin, viewMode }: CabinProps) {
         <boxGeometry args={[cabin.width, floorThickness, cabin.depth]} />
         <meshStandardMaterial
           color={TECHNICAL_MATERIALS.cabinFloor}
+          depthWrite={visibility.cabinShellOpacity >= 1}
           metalness={0.05}
+          opacity={visibility.cabinShellOpacity}
           roughness={0.82}
+          transparent={visibility.cabinShellOpacity < 1}
         />
       </mesh>
 
       <CabinWall
         dimensions={[cabin.width, floorThickness, cabin.depth]}
-        opacity={visibility.cabinCeilingOpacity}
         position={[
           0,
           cabin.bottomY + cabin.height - floorThickness / 2,
           0,
         ]}
+        opacity={visibility.cabinCeilingOpacity}
       />
 
       <CabinWall
@@ -58,6 +61,7 @@ export function Cabin({ cabin, viewMode }: CabinProps) {
           shellCenterY,
           0,
         ]}
+        opacity={visibility.cabinShellOpacity}
       />
 
       <CabinWall
@@ -68,6 +72,7 @@ export function Cabin({ cabin, viewMode }: CabinProps) {
           0,
         ]}
         visible={visibility.showRightCabinWall}
+        opacity={visibility.cabinShellOpacity}
       />
 
       {cabin.rearWall === 'closed' && (
@@ -82,6 +87,7 @@ export function Cabin({ cabin, viewMode }: CabinProps) {
             shellCenterY,
             -cabin.depth / 2 + wallThickness / 2,
           ]}
+          opacity={visibility.cabinShellOpacity}
         />
       )}
 

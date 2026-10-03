@@ -57,7 +57,9 @@ export function EntranceAssembly({
     direction *
     (cabin.depth / 2 - wallThickness - doorThickness / 2)
   const showWallSections = !isFront || visibility.showFrontWallSections
-  const doorOpacity = isFront ? visibility.frontDoorOpacity : 1
+  const doorOpacity = isFront
+    ? visibility.frontDoorOpacity
+    : visibility.cabinShellOpacity
 
   return (
     <group>
@@ -72,6 +74,7 @@ export function EntranceAssembly({
               wallZ,
             ]}
             visible={showWallSections}
+            opacity={visibility.cabinShellOpacity}
           />
         ))}
 
@@ -84,6 +87,7 @@ export function EntranceAssembly({
             wallZ,
           ]}
           visible={showWallSections}
+          opacity={visibility.cabinShellOpacity}
         />
       )}
 
@@ -111,8 +115,11 @@ export function EntranceAssembly({
         />
         <meshStandardMaterial
           color={TECHNICAL_MATERIALS.sill}
+          depthWrite={visibility.cabinShellOpacity >= 1}
           metalness={0.3}
+          opacity={visibility.cabinShellOpacity}
           roughness={0.48}
+          transparent={visibility.cabinShellOpacity < 1}
         />
       </mesh>
 
@@ -127,8 +134,11 @@ export function EntranceAssembly({
           />
           <meshStandardMaterial
             color={TECHNICAL_MATERIALS.doorFrame}
+            depthWrite={visibility.cabinShellOpacity >= 1}
             metalness={0.16}
+            opacity={visibility.cabinShellOpacity}
             roughness={0.6}
+            transparent={visibility.cabinShellOpacity < 1}
           />
         </mesh>
       )}

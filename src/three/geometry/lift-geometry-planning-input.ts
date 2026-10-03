@@ -6,6 +6,7 @@ import {
   type RegisteredLiftFamily,
 } from '../../elevator'
 import type { Millimetres } from '../../engineering'
+import type { PassengerMechanicalPlanningInput } from './passenger/mechanical/passenger-mechanical-planning-input'
 
 export interface UniformLevelPlanningInput {
   readonly kind: 'uniform'
@@ -45,6 +46,7 @@ export interface PassengerGeometryPlanningInput {
     readonly heightMm?: Millimetres
     readonly position?: CounterweightPosition
   }
+  readonly mechanical: PassengerMechanicalPlanningInput
 }
 
 export type LiftGeometryPlanningInput = PassengerGeometryPlanningInput
@@ -93,6 +95,10 @@ function createPassengerGeometryPlanningInput(
       widthMm: planning.counterweightWidthMm,
       heightMm: planning.counterweightHeightMm,
       position: planning.counterweightPosition,
+    },
+    mechanical: {
+      counterweightArrangement: planning.counterweightPosition,
+      driveConcept: planning.driveConcept,
     },
   }
 }

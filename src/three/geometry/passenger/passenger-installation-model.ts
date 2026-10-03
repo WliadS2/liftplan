@@ -86,13 +86,6 @@ export interface PassengerLevelFootprintModel {
   readonly depth: Metres
 }
 
-export interface PassengerGuideRailModel {
-  readonly xPositions: readonly [Metres, Metres]
-  readonly z: Metres
-  readonly bottomY: Metres
-  readonly topY: Metres
-}
-
 export interface PassengerCounterweightModel {
   readonly width: Metres
   readonly height: Metres
@@ -120,7 +113,6 @@ export interface PassengerInstallationModel {
   readonly shaft?: PassengerShaftModel
   readonly levels: readonly PassengerLandingLevelModel[]
   readonly levelFootprint?: PassengerLevelFootprintModel
-  readonly guideRails?: PassengerGuideRailModel
   readonly counterweight?: PassengerCounterweightModel
   readonly pit?: PassengerPitModel
   readonly bounds: PassengerInstallationBounds
@@ -538,19 +530,6 @@ function createInstallationModel(
       : undefined
   const counterweight =
     shaft === undefined ? undefined : createCounterweightModel(input, shaft)
-  const guideRails =
-    cabinAssembly !== undefined && shaft?.verticalExtent !== undefined
-      ? {
-          xPositions: [
-            metres(-cabinAssembly.width / 2),
-            metres(cabinAssembly.width / 2),
-          ] as const,
-          z: metres(0),
-          bottomY: shaft.verticalExtent.bottomY,
-          topY: shaft.verticalExtent.topY,
-        }
-      : undefined
-
   const hasGeometry =
     cabinAssembly !== undefined || shaft !== undefined || levels.length > 0
 
@@ -577,7 +556,6 @@ function createInstallationModel(
     shaft,
     levels,
     levelFootprint,
-    guideRails,
     counterweight,
     pit,
     bounds: {

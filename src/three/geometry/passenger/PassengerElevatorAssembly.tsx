@@ -1,20 +1,27 @@
 import { Cabin } from './Cabin'
-import { Counterweight } from './Counterweight'
-import { GuideRails } from './GuideRails'
 import { LandingLevels } from './LandingLevels'
 import { Pit, Shaft } from './Shaft'
-import type { ThreeViewMode } from '../../scene/view-mode'
+import {
+  getPassengerViewVisibility,
+  type ThreeViewMode,
+} from '../../scene/view-mode'
+import { PassengerMechanicalAssembly } from './mechanical/PassengerMechanicalAssembly'
+import type { PassengerMechanicalLayout } from './mechanical/passenger-mechanical-layout'
 import type { PassengerInstallationModel } from './passenger-installation-model'
 
 export interface PassengerElevatorAssemblyProps {
   readonly model: PassengerInstallationModel
+  readonly mechanicalLayout: PassengerMechanicalLayout
   readonly viewMode: ThreeViewMode
 }
 
 export function PassengerElevatorAssembly({
   model,
+  mechanicalLayout,
   viewMode,
 }: PassengerElevatorAssemblyProps) {
+  const visibility = getPassengerViewVisibility(viewMode)
+
   return (
     <group>
       {model.shaft && <Shaft shaft={model.shaft} viewMode={viewMode} />}
@@ -25,10 +32,10 @@ export function PassengerElevatorAssembly({
         levels={model.levels}
         shaft={model.shaft}
       />
-      {model.guideRails && <GuideRails guideRails={model.guideRails} />}
-      {model.counterweight && (
-        <Counterweight counterweight={model.counterweight} />
-      )}
+      <PassengerMechanicalAssembly
+        layout={mechanicalLayout}
+        opacity={visibility.mechanicalOpacity}
+      />
       {model.cabin && <Cabin cabin={model.cabin} viewMode={viewMode} />}
     </group>
   )

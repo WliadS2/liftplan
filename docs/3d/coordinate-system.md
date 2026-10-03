@@ -20,3 +20,9 @@ The current passenger installation places the cabin floor at the lowest served l
 The primary entrance is on the `+Z` shaft face. A through-car configuration adds the corresponding rear opening on the `-Z` face. The pit extends below the lowest finished-floor plane only when an explicit pit depth is present.
 
 The passenger cutaway view opens the model toward the default camera on the `+Z/+X` side. It removes the front wall sections and right cabin wall, makes the front door leaves and ceiling translucent, and retains the shaft edges without its transparent enclosure surface. This is a rendering visibility convention only; it does not change planning geometry.
+
+## Mechanical coordinates
+
+Mechanical planning points use the same canonical `X/Y/Z` axes and are stored in millimetres. The mechanical layout transform converts them to metre-based immutable tuples before rendering. Rail paths use bottom-to-top points along `+Y`; buffer positions refer to their base points; machine and sheave positions refer to their visual envelope centres; suspension paths retain their supplied point order.
+
+The current rear/left/right counterweight arrangement indicates only a side of the shaft. Until exact coordinates are supplied, its placement and the related rail positions are explicitly schematic. They must not be interpreted as clearances or approved mechanical coordinates.
