@@ -62,6 +62,8 @@ export default defineConfig([
       'src/three/geometry/passenger/doors/passenger-door-model.ts',
       'src/three/geometry/passenger/doors/cabin-entrance-shell.ts',
       'src/three/camera/passenger-camera-bounds.ts',
+      'src/three/camera/camera-fit.ts',
+      'src/three/camera/camera-interaction-policy.ts',
     ],
     rules: {
       'no-restricted-imports': [

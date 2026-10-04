@@ -1,29 +1,60 @@
-import { useBounds } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
-import { useLayoutEffect } from 'react'
-import { Box3, Vector3 } from 'three'
-import type { MechanicalBounds } from '../geometry/passenger/mechanical/passenger-mechanical-layout'
+import { OrbitControls } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
+import { useRef, type ElementRef } from 'react'
+import type { PassengerCameraFrame } from './passenger-camera-bounds'
+import { calculateCameraFit, CAMERA_MAX_POLAR_ANGLE, CAMERA_MIN_POLAR_ANGLE } from './camera-fit'
+import {
+  getCameraFrameTrigger, transitionCameraInteraction,
+  type CameraFrameRequest, type CameraInteractionState,
+} from './camera-interaction-policy'
 
 export interface AutoFitCameraProps {
-  readonly frameKey: string
-  readonly mechanicalBounds?: MechanicalBounds
+  readonly frame: PassengerCameraFrame
+  readonly request: Omit<CameraFrameRequest, 'viewportKey'>
 }
 
-export function AutoFitCamera({ frameKey, mechanicalBounds }: AutoFitCameraProps) {
-  const bounds = useBounds()
-  const camera = useThree((state) => state.camera)
+/** Owns camera framing and OrbitControls locally; it never mutates scene/model transforms. */
+export function AutoFitCamera({ frame, request }: AutoFitCameraProps) {
+  const controlsRef = useRef<ElementRef<typeof OrbitControls>>(null)
+  const previousRequest = useRef<CameraFrameRequest | undefined>(undefined)
+  const interactionState = useRef<CameraInteractionState>('auto')
 
-  useLayoutEffect(() => {
-    const box = mechanicalBounds
-      ? new Box3(new Vector3(...mechanicalBounds.min), new Vector3(...mechanicalBounds.max))
-      : undefined
-    // Preserve the orbit direction, not the old world-space camera position:
-    // a new focus center can be many storeys above the previous one.
-    const direction = camera.getWorldDirection(new Vector3()).negate()
-    bounds.refresh(box).clip()
-    const { center, distance } = bounds.getSize()
-    bounds.moveTo(center.clone().addScaledVector(direction, distance)).lookAt({ target: center })
-  }, [bounds, camera, frameKey, mechanicalBounds])
+  useFrame(({ camera, size }) => {
+    const nextRequest: CameraFrameRequest = { ...request, viewportKey: `${size.width}:${size.height}` }
+    const trigger = getCameraFrameTrigger(previousRequest.current, nextRequest)
+    const decision = transitionCameraInteraction(interactionState.current, trigger)
+    previousRequest.current = nextRequest
+    interactionState.current = decision.state
+    if (!decision.reframe || !controlsRef.current) return
 
-  return null
+    const fit = calculateCameraFit(frame.bounds, frame.target, size)
+    camera.up.set(...fit.up)
+    camera.position.set(...fit.position)
+    camera.near = fit.near
+    camera.far = fit.far
+    camera.lookAt(...fit.target)
+    camera.updateProjectionMatrix()
+    controlsRef.current.target.set(...fit.target)
+    controlsRef.current.minDistance = fit.minDistance
+    controlsRef.current.maxDistance = fit.maxDistance
+    controlsRef.current.update()
+  })
+
+  return <OrbitControls
+    ref={controlsRef}
+    makeDefault
+    enableDamping
+    dampingFactor={0.075}
+    enablePan
+    enableRotate
+    enableZoom
+    rotateSpeed={0.72}
+    zoomSpeed={0.9}
+    panSpeed={0.8}
+    minPolarAngle={CAMERA_MIN_POLAR_ANGLE}
+    maxPolarAngle={CAMERA_MAX_POLAR_ANGLE}
+    onStart={() => {
+      interactionState.current = transitionCameraInteraction(interactionState.current, 'user-interaction').state
+    }}
+  />
 }

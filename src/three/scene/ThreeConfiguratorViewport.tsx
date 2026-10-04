@@ -1,4 +1,4 @@
-import { Bounds, OrbitControls, PerspectiveCamera } from '@react-three/drei'
+import { PerspectiveCamera } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { useMemo, useState } from 'react'
 import { AutoFitCamera } from '../camera/AutoFitCamera'
@@ -10,7 +10,7 @@ import type { LiftGeometryPlanningInput } from '../geometry/lift-geometry-planni
 import type { ThreeViewMode } from './view-mode'
 import type { MechanicalPlanningIssueCode } from '../geometry/passenger/mechanical/passenger-mechanical-layout'
 import { createTractionDriveModel, type DriveIssueCode } from '../geometry/passenger/mechanical/traction-drive-model'
-import { getPassengerCameraBounds } from '../camera/passenger-camera-bounds'
+import { getPassengerCameraFrame, getPassengerCameraInstallationKey } from '../camera/passenger-camera-bounds'
 import { createPassengerSafetyModel, type SafetyIssueCode } from '../geometry/passenger/mechanical/passenger-safety-model'
 import { createPassengerDoorSystem, getDoorInspection, type DoorIssueCode } from '../geometry/passenger/doors/passenger-door-model'
 import type { PassengerEntranceSide } from '../geometry/passenger/passenger-installation-model'
@@ -91,6 +91,7 @@ export function ThreeConfiguratorViewport({
   const [viewMode, setViewMode] = useState<ThreeViewMode>(initialViewMode)
   const [selectedLevelId, setSelectedLevelId] = useState<string>()
   const [selectedEntranceSide, setSelectedEntranceSide] = useState<PassengerEntranceSide>('front')
+  const [cameraResetRevision, setCameraResetRevision] = useState(0)
   const modelResult = useMemo(() => geometryInput
     ? createPassengerInstallationModel(geometryInput)
     : undefined, [geometryInput])
@@ -112,32 +113,13 @@ export function ThreeConfiguratorViewport({
   const doorInspection = useMemo(() => doors && model
     ? getDoorInspection(doors, model.levels, selectedLevelId, selectedEntranceSide)
     : undefined, [doors, model, selectedLevelId, selectedEntranceSide])
-  const cameraBounds = useMemo(() => mechanicalComponents && drive
-    ? getPassengerCameraBounds(viewMode, mechanicalComponents, drive, safety, doors, doorInspection)
-    : undefined, [viewMode, mechanicalComponents, drive, safety, doors, doorInspection])
-
-  const frameKey =
-    model
-      ? [
-          model.bounds.width,
-          model.bounds.depth,
-          model.bounds.height,
-          model.levels.length,
-          model.cabin ? 'cabin' : 'no-cabin',
-          model.shaft ? 'shaft' : 'no-shaft',
-          mechanicalLayout?.carFrame ? 'frame' : 'no-frame',
-          mechanicalLayout?.counterweight ? 'counterweight' : 'no-counterweight',
-          mechanicalLayout?.bounds.width,
-          mechanicalLayout?.bounds.depth,
-          mechanicalLayout?.bounds.height,
-          mechanicalLayout?.bounds.centerY,
-          mechanicalComponents?.bounds.width,
-          mechanicalComponents?.bounds.height,
-          mechanicalComponents?.bounds.depth,
-          viewMode,
-          cameraBounds?.min.join(','), cameraBounds?.max.join(','),
-        ].join(':')
-      : 'unavailable'
+  const cameraFrame = useMemo(() => model && mechanicalComponents && drive
+    ? getPassengerCameraFrame(viewMode, model, mechanicalComponents, drive, safety, doors, doorInspection)
+    : undefined, [viewMode, model, mechanicalComponents, drive, safety, doors, doorInspection])
+  const cameraInstallationKey = useMemo(() => model && mechanicalComponents && drive
+    ? getPassengerCameraInstallationKey(model, mechanicalComponents, drive, safety, doors)
+    : 'unavailable', [model, mechanicalComponents, drive, safety, doors])
+  const doorSelectionKey = `${doorInspection?.level?.id ?? ''}:${doorInspection?.side ?? ''}`
 
   return (
     <section
@@ -189,6 +171,9 @@ export function ThreeConfiguratorViewport({
           >
             Schnittansicht
           </button>
+          <button type="button" onClick={() => setCameraResetRevision((revision) => revision + 1)}>
+            Ansicht zurücksetzen
+          </button>
         </div>
       </div>
 
@@ -226,13 +211,7 @@ export function ThreeConfiguratorViewport({
               }}
             >
               <color attach="background" args={['#eef1f4']} />
-              <PerspectiveCamera makeDefault fov={38} position={[4, 3, 6]} />
-              <OrbitControls
-                makeDefault
-                dampingFactor={0.08}
-                enableDamping
-                maxPolarAngle={Math.PI * 0.92}
-              />
+              <PerspectiveCamera makeDefault fov={38} near={0.01} far={100} position={[4, 3, 6]} up={[0, 1, 0]} />
               <hemisphereLight
                 color="#ffffff"
                 groundColor="#94a3b8"
@@ -241,21 +220,21 @@ export function ThreeConfiguratorViewport({
               <directionalLight intensity={2.1} position={[5, 8, 6]} />
               <directionalLight intensity={0.7} position={[-4, 3, -5]} />
 
-              <Bounds margin={1.15}>
-                {model && mechanicalLayout && mechanicalComponents && drive && safety && doors && doorInspection && (
-                  <PassengerElevatorAssembly
-                    mechanicalLayout={mechanicalLayout}
-                    mechanicalComponents={mechanicalComponents}
-                    drive={drive}
-                    safety={safety}
-                    doors={doors}
-                    doorInspection={doorInspection}
-                    model={model}
-                    viewMode={viewMode}
-                  />
-                )}
-                <AutoFitCamera frameKey={frameKey} mechanicalBounds={cameraBounds} />
-              </Bounds>
+              {model && mechanicalLayout && mechanicalComponents && drive && safety && doors && doorInspection && (
+                <PassengerElevatorAssembly
+                  mechanicalLayout={mechanicalLayout}
+                  mechanicalComponents={mechanicalComponents}
+                  drive={drive}
+                  safety={safety}
+                  doors={doors}
+                  doorInspection={doorInspection}
+                  model={model}
+                  viewMode={viewMode}
+                />
+              )}
+              {cameraFrame && <AutoFitCamera frame={cameraFrame} request={{
+                viewMode, installationKey: cameraInstallationKey, doorSelectionKey, resetRevision: cameraResetRevision,
+              }} />}
             </Canvas>
           </div>
           {modelResult.status === 'partial' && (

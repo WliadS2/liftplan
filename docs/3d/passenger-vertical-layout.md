@@ -47,11 +47,11 @@ Structural/spatial checks use canonical known shaft/pit limits rather than dupli
 
 ## Camera and development QA
 
-Gesamtansicht and Schnittansicht retain aggregate installation/component/drive/safety/door bounds. Mechanik focuses the actual car/counterweight frames, shoes, buffers and local safety/door context, excluding long rail tails and distant top equipment from automatic fitting. Antrieb focuses top machine/supports/traction and deflection wheels/brake rather than forcing the entire suspension span into the frame. Sicherheit includes the complete governor loop, top governor, car linkage and pit tension assembly; taller shafts necessarily produce a taller full-loop view. Orbit/zoom remain available.
+Gesamtansicht retains aggregate installation/component/drive/safety/door bounds. Schnittansicht focuses the current cabin/mechanical inspection region. Mechanik focuses the actual car/counterweight frames, shoes and local safety/door context, excluding long rail tails, pit parts and distant top equipment from automatic fitting. Antrieb focuses top machine/supports/traction and deflection wheels/brake rather than forcing the entire suspension span into the frame. Sicherheit includes the complete governor loop, top governor, car linkage and pit tension assembly; taller shafts necessarily produce a taller full-loop view. Orbit/zoom remain available.
 
 DEV-only `/dev/mechanical` adds a compact 2/6/10 stop selector for repeatable QA, not simulation control. Fixtures now store explicit semantic offsets, not a fixed installation-height snapshot. Sources remain `demo`; normal project creation/reset still supplies no fixture, inset, current-index or equipment dimensions. See [height reflow QA](../qa/passenger-height-reflow.md).
 
-Automatic reframing preserves the camera's current orbit direction and moves the focus to the new bounds centre. Reusing the old world-space camera position relative to a new centre could otherwise create a steep upward view when switching from the car to a high top-drive assembly. Fitting/clipping still use the existing Bounds API and selected subsystem bounds; no installation-specific camera offsets are introduced.
+Automatic reframing now uses semantic per-mode targets and a canonical Y-up three-quarter direction only for meaningful frame events. User orbit/zoom/pan is otherwise retained. Perspective fitting projects the selected bounds against the actual viewport aspect/FOV; clipping and distance limits scale with that frame. See [passenger camera interaction](./passenger-camera-interaction.md).
 
 ## Limits
 
