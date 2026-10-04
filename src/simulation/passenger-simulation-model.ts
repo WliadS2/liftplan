@@ -1,5 +1,6 @@
 import { metres, millimetresToMetres, type Millimetres } from '../engineering'
 import type { PassengerInstallationModel } from '../three/geometry/passenger/passenger-installation-model'
+import type { PassengerGeometryPlanningInput } from '../three/geometry/lift-geometry-planning-input'
 import type { PassengerMechanicalLayout, MechanicalBounds } from '../three/geometry/passenger/mechanical/passenger-mechanical-layout'
 import { componentBoxBounds, type PassengerMechanicalComponentModel } from '../three/geometry/passenger/mechanical/mechanical-component-model'
 import type { TractionDriveModel } from '../three/geometry/passenger/mechanical/traction-drive-model'
@@ -17,6 +18,7 @@ import {
   type VisualizationTiming,
 } from './passenger-simulation'
 import { PASSENGER_VISUALIZATION_TIMING } from './passenger-visualization-profile'
+import { validatePassengerSpatialGeometry } from '../collision/passenger-spatial-validation'
 
 /** Optional visualization setup, supplied separately from technical project data. */
 export interface PassengerVisualizationData {
@@ -30,6 +32,7 @@ export interface PassengerVisualizationData {
 }
 
 export interface PassengerSimulationInputs {
+  readonly planning: PassengerGeometryPlanningInput
   readonly installation: PassengerInstallationModel
   readonly layout: PassengerMechanicalLayout
   readonly components: PassengerMechanicalComponentModel
@@ -221,6 +224,16 @@ export function createPassengerSimulationModel(
     ...createInitialSimulationState(model), currentLevel: level.id, sourceLevel: level.id, targetLevel: level.id,
   })))
   if (poseIssues.length) return { status: 'invalid', issues: poseIssues }
+
+  const spatialValidation = validatePassengerSpatialGeometry(inputs, {
+    counterweightCenterEnvelope: counterweight?.envelope,
+  })
+  const blockingSpatialIssues = spatialValidation.issues.filter((entry) =>
+    entry.severity === 'error' && entry.blocksCabinTravel)
+  if (blockingSpatialIssues.length) return {
+    status: 'invalid',
+    issues: blockingSpatialIssues.map((entry) => ({ code: 'geometric-conflict', path: entry.code })),
+  }
 
   const issues = Object.values(capabilities).flatMap((entry) => entry.issues)
   return {

@@ -187,6 +187,31 @@
   line-height: 1.5;
 }
 
+.planning-status {
+  margin-bottom: 18px;
+  border-bottom: 1px solid #eaecf0;
+  padding-bottom: 14px;
+}
+
+.planning-status h3,
+.planning-status p {
+  margin: 0 0 8px;
+}
+
+.planning-status h3 {
+  color: var(--text-heading);
+  font-size: 0.9rem;
+}
+
+.planning-status details,
+.planning-status ul {
+  margin-top: 8px;
+}
+
+.planning-status ul {
+  padding-left: 20px;
+}
+
 .data-list {
   display: grid;
   gap: 10px;

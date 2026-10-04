@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { createPassengerMechanicalFixture } from '../../../../dev/fixtures/passenger-mechanical-fixture'
-import { createPassengerPlanningConfiguration, passengerPlanningConfigurationSchema } from '../../../../elevator'
+import {
+  createPassengerPlanningConfiguration,
+  passengerPlanningConfigurationSchema,
+  type PassengerPlanningConfiguration,
+} from '../../../../elevator'
 import { passengerDoorSystemDataSchema, type PassengerDoorSystemData } from '../../../../elevator/configuration/passenger-door-data'
 import { COMPONENT_DATA_SOURCES } from '../../../../elevator/configuration/mechanical-component-data'
 import { millimetres as mm } from '../../../../engineering'
@@ -19,12 +23,21 @@ import { createSheaveGeometry, createTechnicalCableGeometry } from '../mechanica
 
 function setup(throughCar = false, count = 2) {
   const configuration = { ...createPassengerMechanicalFixture('rear', throughCar), stopCount: count }
+  const normalized = normalizeConfiguration(configuration)
+  const data = normalized.input.doors!
+  const create = (doors: PassengerDoorSystemData | undefined) => createPassengerDoorSystem(doors, normalized.installation)
+  return { configuration, installation: normalized.installation, data, create, model: create(data) }
+}
+
+function normalizeConfiguration(configuration: PassengerPlanningConfiguration) {
   const input = createLiftGeometryPlanningInput(configuration)!
   const result = createPassengerInstallationModel(input)
   if (!('model' in result) || !result.model) throw new Error('Expected installation')
-  const installation = result.model, data = input.doors!
-  const create = (doors: PassengerDoorSystemData | undefined) => createPassengerDoorSystem(doors, installation)
-  return { configuration, installation, data, create, model: create(data) }
+  return {
+    input,
+    installation: result.model,
+    doors: createPassengerDoorSystem(input.doors, result.model),
+  }
 }
 const point = (x: number, y: number, z: number) => ({ xMm: mm(x), yMm: mm(y), zMm: mm(z) })
 const hasIssue = (model: ReturnType<typeof createPassengerDoorSystem>, code: string) => model.validation.issues.some((issue) => issue.code === code)
@@ -34,6 +47,7 @@ describe('explicit static cabin and landing doors', () => {
     const { model, configuration } = setup()
     expect(passengerPlanningConfigurationSchema.safeParse(configuration).success).toBe(true)
     expect(model.validation).toEqual({ state: 'valid', issues: [] })
+    expect(hasIssue(model, 'missing-door-reference')).toBe(false)
     expect(model.cabin).toHaveLength(1)
     expect(model.landings).toHaveLength(2)
     expect(model.cabin[0].operator?.pulleys).toHaveLength(2)
@@ -41,6 +55,29 @@ describe('explicit static cabin and landing doors', () => {
     expect(model.cabin[0].hangers?.cylinders).toHaveLength(4)
     expect(model.cabin[0].guides?.boxes).toHaveLength(2)
     expect(model.landings.every((entry) => entry.interlock && entry.coupling && entry.frame && entry.sill && entry.track)).toBe(true)
+  })
+
+  it('accepts a 2100 mm planning opening in a 2200 mm cabin without demo opening dimensions', () => {
+    const configuration: PassengerPlanningConfiguration = {
+      ...createPassengerPlanningConfiguration('Türhöhenprüfung'),
+      stopCount: 2,
+      floorHeightMm: mm(3000),
+      cabinWidthMm: mm(1100),
+      cabinDepthMm: mm(1400),
+      cabinHeightMm: mm(2200),
+      doorWidthMm: mm(900),
+      doorHeightMm: mm(2100),
+      throughCar: false,
+    }
+    const normalized = normalizeConfiguration(configuration)
+    expect(normalized.input.doors).toBeUndefined()
+    expect(normalized.installation.cabin?.entrances[0]?.opening).toEqual({
+      width: 0.9,
+      height: 2.1,
+      source: 'planning-door-dimensions',
+    })
+    expect(hasIssue(normalized.doors, 'door-height-exceeds-cabin-entrance')).toBe(false)
+    expect(hasIssue(normalized.doors, 'door-width-exceeds-cabin-entrance')).toBe(false)
   })
 
   it('creates two distinct centre-opening leaves following the explicit opening and thickness', () => {
@@ -98,12 +135,16 @@ describe('explicit static cabin and landing doors', () => {
     const { model } = setup(true, 3)
     expect(model.validation.issues).toEqual([])
     expect(model.cabin.map((entry) => entry.side)).toEqual(['front', 'rear'])
+    expect(model.cabin.map((entry) => entry.id)).toEqual(['cabin-front', 'cabin-rear'])
     expect(model.landings).toHaveLength(6)
     expect(model.cabin[0].origin[2]).toBe(0.7)
     expect(model.cabin[1].origin[2]).toBe(-0.7)
     expect(model.cabin[1].rotationY).toBe(Math.PI)
     expect(model.cabin[0].panels[0].closed.center).not.toEqual(model.cabin[1].panels[0].closed.center)
     expect(model.cabin[0].operator!.pulleys[0].id).not.toBe(model.cabin[1].operator!.pulleys[0].id)
+    expect(new Set(model.relationships.map((entry) => entry.cabinEntranceId))).toEqual(
+      new Set(['cabin-front', 'cabin-rear']),
+    )
   })
 
   it('supports separately supplied rear opening dimensions without changing cabin dimensions', () => {
@@ -115,7 +156,9 @@ describe('explicit static cabin and landing doors', () => {
     const result = createPassengerInstallationModel(input)
     if (!('model' in result) || !result.model) throw new Error('Expected installation')
     expect(result.model.cabin).toMatchObject({ width: 1.1, depth: 1.4, height: 2.2 })
-    expect(result.model.cabin!.entrances[1]).toMatchObject({ width: 0.8, height: 2 })
+    expect(result.model.cabin!.entrances[1]).toMatchObject({
+      opening: { width: 0.8, height: 2, source: 'explicit-cabin-entrance' },
+    })
     const model = createPassengerDoorSystem(input.doors, result.model)
     expect(model.cabin[1].panels[0]).toMatchObject({ width: 0.4, height: 2 })
   })
@@ -189,6 +232,9 @@ describe('explicit static cabin and landing doors', () => {
       { panelThicknessMm: mm(0) }, { panelDepthOffsetsMm: [mm(NaN), mm(40)] },
       { panelOverlapMm: mm(20) }, { panelCount: 3 }, { panelTravelMm: [point(0, 0, 0), point(470, 0, 0)] },
     ]) expect(hasIssue(create({ cabin: [{ ...car, operator: undefined, coupling: undefined, assembly: { ...assembly, ...patch } }] }), 'invalid-door-panel')).toBe(true)
+    expect(hasIssue(create({ cabin: [{ ...car, operator: undefined, coupling: undefined, assembly: {
+      ...assembly, panelOverlapMm: mm(20),
+    } }] }), 'door-panel-outside-entrance')).toBe(true)
     expect(hasIssue(create({ ...data, landings: [{ ...data.landings![0], cabinEntranceId: 'missing' }] }), 'missing-door-reference')).toBe(true)
     expect(hasIssue(create({ ...data, landings: [{ ...data.landings![0], side: 'rear' }] }), 'entrance-axis-mismatch')).toBe(true)
     expect(hasIssue(create({ ...data, landings: [{ ...data.landings![0], overrides: [{ levelId: 'level-99' }] }] }), 'invalid-door-level')).toBe(true)
@@ -276,13 +322,149 @@ describe('explicit static cabin and landing doors', () => {
     geometry.dispose()
   })
 
-  it('does not shrink the cabin or accept an explicit opening that cannot fit its shell', () => {
+  it('preserves the entrance identity and reports an explicit opening that cannot fit its shell', () => {
     const { configuration } = setup()
     const input = createLiftGeometryPlanningInput({ ...configuration, doors: { cabin: [{ ...configuration.doors!.cabin![0], opening: { widthMm: mm(1200), heightMm: mm(2100) } }] } })!
     const result = createPassengerInstallationModel(input)
     expect(result.status).toBe('invalid')
     if (!('model' in result) || !result.model) throw new Error('Expected cabin')
     expect(result.model.cabin!.width).toBe(1.1)
-    expect(result.model.cabin!.entrances).toEqual([])
+    expect(result.model.cabin!.entrances).toEqual([
+      expect.objectContaining({
+        id: 'cabin-front', side: 'front',
+        opening: { width: 1.2, height: 2.1, source: 'explicit-cabin-entrance' },
+      }),
+    ])
+    const model = createPassengerDoorSystem(input.doors, result.model)
+    expect(hasIssue(model, 'door-width-exceeds-cabin-entrance')).toBe(true)
+    expect(hasIssue(model, 'missing-door-reference')).toBe(false)
+  })
+
+  it('reports an oversized door height as a fit issue without losing the entrance', () => {
+    const configuration = { ...createPassengerMechanicalFixture(), doorHeightMm: mm(2300) }
+    const { installation, doors } = normalizeConfiguration(configuration)
+    expect(installation.cabin?.entrances).toEqual([
+      expect.objectContaining({
+        id: 'cabin-front',
+        opening: { width: 0.9, height: 2.3, source: 'planning-door-dimensions' },
+      }),
+    ])
+    expect(hasIssue(doors, 'door-height-exceeds-cabin-entrance')).toBe(true)
+    expect(hasIssue(doors, 'missing-door-reference')).toBe(false)
+  })
+
+  it('uses an explicitly supplied per-entrance height instead of the common planning height', () => {
+    const fixture = createPassengerMechanicalFixture()
+    const cabinDoor = fixture.doors!.cabin![0]
+    const configuration: PassengerPlanningConfiguration = {
+      ...fixture,
+      doorHeightMm: mm(2100),
+      doors: { ...fixture.doors, cabin: [{
+        ...cabinDoor,
+        opening: { widthMm: mm(900), heightMm: mm(2300) },
+      }] },
+    }
+    const { installation, doors } = normalizeConfiguration(configuration)
+    expect(installation.cabin?.entrances[0]?.opening).toEqual({
+      width: 0.9,
+      height: 2.3,
+      source: 'explicit-cabin-entrance',
+    })
+    expect(hasIssue(doors, 'door-height-exceeds-cabin-entrance')).toBe(true)
+  })
+
+  it('keeps semantic entrance and landing references stable across repeated door-width edits', () => {
+    const fixture = createPassengerMechanicalFixture()
+    const models = [800, 900, 1000, 2300].map((width) =>
+      normalizeConfiguration({ ...fixture, doorWidthMm: mm(width) }))
+    expect(models.map(({ installation }) => installation.cabin?.entrances[0]?.id)).toEqual([
+      'cabin-front', 'cabin-front', 'cabin-front', 'cabin-front',
+    ])
+    expect(models.every(({ doors }) => doors.cabin[0]?.id === 'cabin-front')).toBe(true)
+    expect(models.every(({ doors }) => doors.landings.every((landing) => landing.cabinEntranceId === 'cabin-front'))).toBe(true)
+    expect(models.every(({ doors }) => !hasIssue(doors, 'missing-door-reference'))).toBe(true)
+  })
+
+  it('keeps the normalized entrance height synchronized across repeated planning edits', () => {
+    const fixture = createPassengerMechanicalFixture()
+    const models = [2000, 2100, 2200, 2300].map((height) =>
+      normalizeConfiguration({ ...fixture, doorHeightMm: mm(height) }))
+    expect(models.map(({ installation }) => installation.cabin?.entrances[0]?.opening)).toEqual([
+      { width: 0.9, height: 2, source: 'planning-door-dimensions' },
+      { width: 0.9, height: 2.1, source: 'planning-door-dimensions' },
+      { width: 0.9, height: 2.2, source: 'planning-door-dimensions' },
+      { width: 0.9, height: 2.3, source: 'planning-door-dimensions' },
+    ])
+    expect(hasIssue(models[0].doors, 'door-height-exceeds-cabin-entrance')).toBe(false)
+    expect(hasIssue(models[1].doors, 'door-height-exceeds-cabin-entrance')).toBe(false)
+    expect(hasIssue(models[2].doors, 'door-height-exceeds-cabin-entrance')).toBe(false)
+    expect(hasIssue(models[3].doors, 'door-height-exceeds-cabin-entrance')).toBe(true)
+  })
+
+  it('keeps demo frame and header geometry separate from the usable opening', () => {
+    const fixture = createPassengerMechanicalFixture()
+    const { installation, doors } = normalizeConfiguration(fixture)
+    const normalizedOpening = installation.cabin?.entrances[0]?.opening
+    const cabinDoor = doors.cabin[0]
+    expect(fixture.doors?.cabin?.[0].opening).toBeUndefined()
+    expect(normalizedOpening).toEqual({ width: 0.9, height: 2.1, source: 'planning-door-dimensions' })
+    expect(cabinDoor.openingWidth).toBe(0.9)
+    expect(cabinDoor.openingHeight).toBe(2.1)
+    expect(cabinDoor.frame?.bounds.max[1]).toBeGreaterThan(2.1)
+    expect(hasIssue(doors, 'door-height-exceeds-cabin-entrance')).toBe(false)
+  })
+
+  it('keeps semantic door relationships stable when cabin dimensions change', () => {
+    const fixture = createPassengerMechanicalFixture()
+    const models = [
+      fixture,
+      { ...fixture, cabinWidthMm: mm(1300) },
+      { ...fixture, cabinDepthMm: mm(1600) },
+    ].map(normalizeConfiguration)
+    for (const { installation, doors } of models) {
+      expect(installation.cabin?.entrances[0]?.id).toBe('cabin-front')
+      expect(doors.cabin[0]?.id).toBe('cabin-front')
+      expect(doors.relationships.every((relationship) => relationship.cabinEntranceId === 'cabin-front')).toBe(true)
+      expect(hasIssue(doors, 'missing-door-reference')).toBe(false)
+    }
+  })
+
+  it('treats disabled rear demo records as dormant and restores distinct identities when enabled', () => {
+    const enabledFixture = createPassengerMechanicalFixture('rear', true)
+    const disabled = normalizeConfiguration({ ...enabledFixture, throughCar: false })
+    expect(disabled.doors.cabin.map((entry) => entry.id)).toEqual(['cabin-front'])
+    expect(disabled.doors.landings.every((entry) => entry.side === 'front')).toBe(true)
+    expect(hasIssue(disabled.doors, 'missing-door-reference')).toBe(false)
+
+    const enabled = normalizeConfiguration(enabledFixture)
+    expect(enabled.doors.cabin.map((entry) => entry.id)).toEqual(['cabin-front', 'cabin-rear'])
+    expect(enabled.doors.cabin[0].id).not.toBe(enabled.doors.cabin[1].id)
+    expect(new Set(enabled.doors.relationships.map((entry) => entry.cabinEntranceId))).toEqual(
+      new Set(['cabin-front', 'cabin-rear']),
+    )
+  })
+
+  it('keeps landing references coherent when the stop count changes', () => {
+    const fixture = createPassengerMechanicalFixture()
+    for (const stopCount of [2, 6, 10]) {
+      const { doors } = normalizeConfiguration({ ...fixture, stopCount })
+      expect(doors.landings).toHaveLength(stopCount)
+      expect(doors.landings.every((entry) => entry.cabinEntranceId === 'cabin-front')).toBe(true)
+      expect(hasIssue(doors, 'missing-door-reference')).toBe(false)
+    }
+  })
+
+  it('does not create stale door references while editing the development fixture', () => {
+    const fixture = createPassengerMechanicalFixture('rear', true)
+    const edits: PassengerPlanningConfiguration[] = [
+      { ...fixture, doorWidthMm: mm(2300) },
+      { ...fixture, doorHeightMm: mm(2300) },
+      { ...fixture, cabinWidthMm: mm(1000) },
+      { ...fixture, cabinDepthMm: mm(1600) },
+      { ...fixture, throughCar: false },
+      { ...fixture, stopCount: 6 },
+    ]
+    expect(edits.map(normalizeConfiguration).every(({ doors }) =>
+      !hasIssue(doors, 'missing-door-reference'))).toBe(true)
   })
 })

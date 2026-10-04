@@ -33,6 +33,9 @@ const doorMessages: Record<DoorIssueCode, string> = {
   'invalid-door-interlock': 'Die Verriegelungsdarstellung passt nicht zur zugehörigen Schachttür.',
   'invalid-door-level': 'Eine Schachttür verweist auf ungültige Haltestellendaten.',
   'entrance-axis-mismatch': 'Kabinen- und Schachtzugang liegen nicht auf derselben Zugangsachse.',
+  'door-width-exceeds-cabin-entrance': 'Die angegebene Türbreite passt nicht in den Kabinenzugang.',
+  'door-height-exceeds-cabin-entrance': 'Die angegebene Türhöhe passt nicht in den Kabinenzugang.',
+  'door-panel-outside-entrance': 'Ein Türblatt liegt außerhalb des zugehörigen Zugangs.',
 }
 
 const safetyMessages: Record<SafetyIssueCode, string> = {
@@ -128,9 +131,9 @@ export function ThreeConfiguratorViewport({
   const doorSelectionKey = `${doorInspection?.level?.id ?? ''}:${doorInspection?.side ?? ''}`
   const simulationResult = useMemo((): SimulationModelResult | undefined => {
     return model && mechanicalLayout && mechanicalComponents && drive && safety && doors
-      ? createPassengerSimulationModel({ installation: model, layout: mechanicalLayout, components: mechanicalComponents, drive, safety, doors }, visualizationData)
+      ? createPassengerSimulationModel({ planning: geometryInput!, installation: model, layout: mechanicalLayout, components: mechanicalComponents, drive, safety, doors }, visualizationData)
       : { status: 'unavailable', issues: [{ code: 'unavailable-data', path: 'installation' }] }
-  }, [model, mechanicalLayout, mechanicalComponents, drive, safety, doors, visualizationData])
+  }, [geometryInput, model, mechanicalLayout, mechanicalComponents, drive, safety, doors, visualizationData])
   const simulation = useMemo(() => simulationResult?.status === 'available' ? createPassengerSimulationController(simulationResult.model) : undefined, [simulationResult])
 
   return (
@@ -248,7 +251,7 @@ export function ThreeConfiguratorViewport({
                 /></PassengerSimulationDriver>
               )}
               {cameraFrame && <AutoFitCamera frame={cameraFrame} simulation={simulation} simulationInputs={model && mechanicalLayout && mechanicalComponents && drive && safety && doors ? {
-                installation: model, layout: mechanicalLayout, components: mechanicalComponents, drive, safety, doors,
+                planning: geometryInput!, installation: model, layout: mechanicalLayout, components: mechanicalComponents, drive, safety, doors,
               } : undefined} request={{
                 viewMode, installationKey: cameraInstallationKey, doorSelectionKey, resetRevision: cameraResetRevision,
               }} />}

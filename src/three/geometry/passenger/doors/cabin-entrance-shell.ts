@@ -9,11 +9,12 @@ export function createCabinEntranceShell(cabin: PassengerCabinModel, entrance: P
 }[] {
   const thickness = Math.min(visualizationWallThickness, cabin.depth / 4)
   const z = (entrance.side === 'front' ? 1 : -1) * (cabin.depth / 2 - thickness / 2)
-  const leftEdge = entrance.centerX - entrance.width / 2, rightEdge = entrance.centerX + entrance.width / 2
-  const leftWidth = leftEdge + cabin.width / 2, rightWidth = cabin.width / 2 - rightEdge, headerHeight = cabin.height - entrance.height
+  const { width, height } = entrance.opening
+  const leftEdge = entrance.centerX - width / 2, rightEdge = entrance.centerX + width / 2
+  const leftWidth = leftEdge + cabin.width / 2, rightWidth = cabin.width / 2 - rightEdge, headerHeight = cabin.height - height
   return [
-    ...(leftWidth > 0 ? [{ id: 'left-shell', center: p(-cabin.width / 2 + leftWidth / 2, cabin.bottomY + entrance.height / 2, z), size: p(leftWidth, entrance.height, thickness) }] : []),
-    ...(rightWidth > 0 ? [{ id: 'right-shell', center: p(rightEdge + rightWidth / 2, cabin.bottomY + entrance.height / 2, z), size: p(rightWidth, entrance.height, thickness) }] : []),
-    ...(headerHeight > 0 ? [{ id: 'header-shell', center: p(0, cabin.bottomY + entrance.height + headerHeight / 2, z), size: p(cabin.width, headerHeight, thickness) }] : []),
+    ...(leftWidth > 0 ? [{ id: 'left-shell', center: p(-cabin.width / 2 + leftWidth / 2, cabin.bottomY + height / 2, z), size: p(leftWidth, height, thickness) }] : []),
+    ...(rightWidth > 0 ? [{ id: 'right-shell', center: p(rightEdge + rightWidth / 2, cabin.bottomY + height / 2, z), size: p(rightWidth, height, thickness) }] : []),
+    ...(headerHeight > 0 ? [{ id: 'header-shell', center: p(0, cabin.bottomY + height + headerHeight / 2, z), size: p(cabin.width, headerHeight, thickness) }] : []),
   ]
 }

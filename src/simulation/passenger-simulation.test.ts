@@ -29,7 +29,7 @@ function normalize(configuration: PassengerPlanningConfiguration) {
   const drive = createTractionDriveModel(input.mechanical.drive, installation, layout, components)
   const safety = createPassengerSafetyModel(input.mechanical.safety, installation, layout, components, drive.machine)
   const doors = createPassengerDoorSystem(input.doors, installation)
-  return { installation, layout, components, drive, safety, doors }
+  return { planning: input, installation, layout, components, drive, safety, doors }
 }
 function normalConfiguration(stopCount = 6): PassengerPlanningConfiguration {
   return {
@@ -243,7 +243,7 @@ describe('deterministic passenger kinematic visualization', () => {
       status: 'available', availability: 'partial', model: { capabilities: { cabinMovement: { available: true }, suspensionUpdate: { available: false } } },
     })
     expect(createPassengerSimulationModel(normalize(createPassengerMechanicalFixture()), PASSENGER_SIMULATION_DEMO_DATA)).toMatchObject({
-      status: 'available', availability: 'partial', model: { capabilities: { cabinMovement: { available: true }, suspensionUpdate: { available: false } } },
+      status: 'invalid', issues: [expect.objectContaining({ code: 'geometric-conflict', path: 'fixed-obstacle-in-cabin-sweep' })],
     })
   })
 

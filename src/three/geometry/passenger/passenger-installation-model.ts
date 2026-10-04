@@ -42,6 +42,10 @@ export interface PassengerDoorModel {
   readonly height: Metres
 }
 
+export interface PassengerEntranceOpeningModel extends PassengerDoorModel {
+  readonly source: 'planning-door-dimensions' | 'explicit-cabin-entrance'
+}
+
 export type PassengerEntranceSide = 'front' | 'rear'
 
 export interface PassengerDoorLeafModel {
@@ -52,9 +56,11 @@ export interface PassengerDoorLeafModel {
   readonly height: Metres
 }
 
-export interface PassengerEntranceModel extends PassengerDoorModel {
+export interface PassengerEntranceModel {
+  readonly id: string
   readonly side: PassengerEntranceSide
   readonly centerX: Metres
+  readonly opening: PassengerEntranceOpeningModel
   readonly doorLeaves: readonly [
     PassengerDoorLeafModel,
     PassengerDoorLeafModel,
@@ -223,31 +229,32 @@ function createLevelElevations(levels: LevelPlanningInput): LevelElevationResult
 }
 
 function createEntranceModel(
+  id: string,
   side: PassengerEntranceSide,
-  door: PassengerDoorModel,
+  opening: PassengerEntranceOpeningModel,
   centerX = metres(0),
 ): PassengerEntranceModel {
-  const leafWidth = metres(door.width / 2)
+  const leafWidth = metres(opening.width / 2)
 
   return {
+    id,
     side,
     centerX,
-    width: door.width,
-    height: door.height,
+    opening,
     doorLeaves: [
       {
-        id: `${side}-door-left`,
+        id: `${id}-door-left`,
         side,
         position: 'left',
         width: leafWidth,
-        height: door.height,
+        height: opening.height,
       },
       {
-        id: `${side}-door-right`,
+        id: `${id}-door-right`,
         side,
         position: 'right',
         width: leafWidth,
-        height: door.height,
+        height: opening.height,
       },
     ],
   }
@@ -398,17 +405,16 @@ function createInstallationModel(
         }
       : undefined
 
-  const door =
+  const plannedOpening =
     cabin !== undefined &&
     input.cabin.doorWidthMm !== undefined &&
     input.cabin.doorHeightMm !== undefined &&
     isPositive(input.cabin.doorWidthMm) &&
-    isPositive(input.cabin.doorHeightMm) &&
-    millimetresToMetres(input.cabin.doorWidthMm) <= cabin.width &&
-    millimetresToMetres(input.cabin.doorHeightMm) <= cabin.height
+    isPositive(input.cabin.doorHeightMm)
       ? {
           width: millimetresToMetres(input.cabin.doorWidthMm),
           height: millimetresToMetres(input.cabin.doorHeightMm),
+          source: 'planning-door-dimensions' as const,
         }
       : undefined
 
@@ -419,11 +425,14 @@ function createInstallationModel(
           ...cabin,
           entrances: (['front', ...(cabin.throughCar === true ? ['rear'] : [])] as PassengerEntranceSide[]).flatMap((side) => {
             const record = input.doors?.cabin?.find((entry) => entry.side === side)
-            const opening = record?.opening ? { width: millimetresToMetres(record.opening.widthMm), height: millimetresToMetres(record.opening.heightMm) } : door
+            const opening: PassengerEntranceOpeningModel | undefined = record?.opening ? {
+              width: millimetresToMetres(record.opening.widthMm),
+              height: millimetresToMetres(record.opening.heightMm),
+              source: 'explicit-cabin-entrance',
+            } : plannedOpening
             const centerX = record ? millimetresToMetres(record.axisXMm) : metres(0)
-            return opening && isPositive(opening.width) && isPositive(opening.height) && Number.isFinite(centerX) &&
-              opening.width / 2 + Math.abs(centerX) <= cabin.width / 2 && opening.height <= cabin.height
-              ? [createEntranceModel(side, opening, centerX)] : []
+            return opening && isPositive(opening.width) && isPositive(opening.height) && Number.isFinite(centerX)
+              ? [createEntranceModel(record?.id ?? `cabin-${side}`, side, opening, centerX)] : []
           }),
           rearWall:
             cabin.throughCar === true

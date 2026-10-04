@@ -55,7 +55,8 @@ export interface DoorEntranceRelationship {
 export type DoorIssueCode = 'invalid-door-shape' | 'unsupported-door-type' | 'duplicate-door-identity'
   | 'missing-door-reference' | 'invalid-door-panel' | 'invalid-door-sill' | 'unmounted-door-component'
   | 'invalid-door-operator' | 'invalid-door-drive-path' | 'invalid-door-coupling' | 'invalid-door-interlock'
-  | 'invalid-door-level' | 'entrance-axis-mismatch'
+  | 'invalid-door-level' | 'entrance-axis-mismatch' | 'door-width-exceeds-cabin-entrance'
+  | 'door-height-exceeds-cabin-entrance' | 'door-panel-outside-entrance'
 export interface PassengerDoorSystemModel {
   readonly cabin: readonly DoorEntranceModel[]; readonly landings: readonly DoorEntranceModel[]
   readonly relationships: readonly DoorEntranceRelationship[]; readonly bounds?: MechanicalBounds
@@ -178,6 +179,13 @@ export function createPassengerDoorSystem(data: PassengerDoorSystemData | undefi
           panels.push({ id: part.id, index: i, source: assembly.source, width: panelWidth, height, thickness: mm(assembly.panelThicknessMm),
             closed: { center, rotationY }, open: { center: openCenter, rotationY }, travel: p(...openCenter.map((v, axis) => v - center[axis]) as [number, number, number]), box: part })
         }
+        if (panels.some((panel) => {
+          const localX = Math.abs(panel.closed.center[0] - origin[0])
+          const localBottom = panel.closed.center[1] - panel.height / 2 - origin[1]
+          const localTop = panel.closed.center[1] + panel.height / 2 - origin[1]
+          return localX + panel.width / 2 > width / 2 + GEOMETRY_EPSILON ||
+            localBottom < -GEOMETRY_EPSILON || localTop > height + GEOMETRY_EPSILON
+        })) issue('door-panel-outside-entrance', id, 'panels.closed')
         if (panels.length === 2 && driveBoundsOverlap(componentBoxBounds(panels[0].box), componentBoxBounds(panels[1].box))) { issue('invalid-door-panel', id, 'panels.overlap'); panels.length = 0 }
       }
       const t = assembly.track
@@ -306,19 +314,34 @@ export function createPassengerDoorSystem(data: PassengerDoorSystemData | undefi
     return { ...base, operator, coupling, interlock, bounds: combine([base.bounds, ...[operator, coupling, interlock].flatMap((part) => part ? [part.bounds] : [])]) }
   }
 
+  const enabledSides = new Set<PassengerEntranceSide>(installation.cabin
+    ? ['front', ...(installation.cabin.throughCar === true ? ['rear'] as const : [])]
+    : [])
   const sides = new Set<PassengerEntranceSide>()
   for (const record of data?.cabin ?? []) {
     if (sides.has(record.side)) issue('duplicate-door-identity', record.id, 'side')
     sides.add(record.side)
-    if (!installation.cabin?.entrances.some((entry) => entry.side === record.side)) issue('missing-door-reference', record.id, 'entrance')
+    if (enabledSides.has(record.side) && !installation.cabin?.entrances.some((entry) => entry.id === record.id)) {
+      issue('missing-door-reference', record.id, 'entrance')
+    }
   }
   for (const opening of installation.cabin?.entrances ?? []) {
-    const record = data?.cabin?.find((entry) => entry.side === opening.side), c = installation.cabin!
-    const base = entrance(record?.id ?? `cabin-${opening.side}`, 'cabin', opening.side, p(opening.centerX, c.bottomY, (opening.side === 'front' ? 1 : -1) * c.depth / 2), opening.width, opening.height,
+    const record = data?.cabin?.find((entry) => entry.id === opening.id), c = installation.cabin!
+    if (opening.opening.width / 2 + Math.abs(opening.centerX) > c.width / 2) {
+      issue('door-width-exceeds-cabin-entrance', opening.id, 'opening.width')
+    }
+    if (opening.opening.height > c.height) issue('door-height-exceeds-cabin-entrance', opening.id, 'opening.height')
+    const base = entrance(opening.id, 'cabin', opening.side, p(opening.centerX, c.bottomY, (opening.side === 'front' ? 1 : -1) * c.depth / 2), opening.opening.width, opening.opening.height,
       record?.source ?? 'planning', record?.reference, record?.assembly)
     if (base) cabin.push(attachments(base, record?.operator, record?.coupling))
   }
   for (const series of data?.landings ?? []) {
+    const referencedActiveEntrance = cabin.find((entry) => entry.id === series.cabinEntranceId)
+    if (referencedActiveEntrance && referencedActiveEntrance.side !== series.side) {
+      issue('entrance-axis-mismatch', series.id, 'side')
+      continue
+    }
+    if (!enabledSides.has(series.side)) continue
     const car = cabin.find((entry) => entry.id === series.cabinEntranceId)
     if (!car) { issue('missing-door-reference', series.id, 'cabinEntranceId'); continue }
     if (car.side !== series.side) { issue('entrance-axis-mismatch', series.id, 'side'); continue }

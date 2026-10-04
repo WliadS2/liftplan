@@ -7,6 +7,7 @@ export type SimulationPhase = 'idle' | 'door-closing' | 'moving' | 'arriving' | 
 export type TravelDirection = 'up' | 'down' | 'none'
 export type SimulationIssueCode = 'unavailable-data' | 'invalid-timing' | 'unsupported-suspension'
   | 'invalid-level' | 'same-level' | 'invalid-transition' | 'doors-open' | 'outside-envelope' | 'non-finite-pose' | 'invalid-clock' | 'invalid-route'
+  | 'geometric-conflict'
 export interface SimulationIssue { readonly code: SimulationIssueCode; readonly path: string }
 export interface VisualizationTiming {
   readonly source: 'demo' | 'visualization'

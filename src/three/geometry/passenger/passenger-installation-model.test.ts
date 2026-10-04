@@ -127,7 +127,9 @@ describe('passenger geometry planning', () => {
     )
 
     expect(result.status).toBe('partial')
-    expect(frontEntrance).toMatchObject({ width: 0.9, height: 2.1 })
+    expect(frontEntrance).toMatchObject({
+      opening: { width: 0.9, height: 2.1, source: 'planning-door-dimensions' },
+    })
     expect(frontEntrance?.doorLeaves).toHaveLength(2)
     expect(frontEntrance?.doorLeaves).toEqual([
       expect.objectContaining({ position: 'left', width: 0.45, height: 2.1 }),
@@ -192,8 +194,7 @@ describe('passenger geometry planning', () => {
     expect(model.cabin?.entrances).toHaveLength(1)
     expect(model.cabin?.entrances[0]).toMatchObject({
       side: 'front',
-      width: 0.9,
-      height: 2.1,
+      opening: { width: 0.9, height: 2.1, source: 'planning-door-dimensions' },
     })
     expect(model.levels.map((level) => level.elevationY)).toEqual([0, 3, 6])
     expect(model.shaft?.verticalExtent).toMatchObject({
@@ -244,7 +245,7 @@ describe('passenger geometry planning', () => {
     expect(cutaway.shaftEnvelopeOpacity).toBe(0)
   })
 
-  it('keeps valid cabin geometry visible when door dimensions are invalid', () => {
+  it('keeps the semantic cabin entrance visible when door dimensions are invalid', () => {
     const result = createPassengerInstallationModel(
       createPlanningInput({
         cabinWidthMm: millimetres(1100),
@@ -258,7 +259,22 @@ describe('passenger geometry planning', () => {
 
     expect(result.status).toBe('invalid')
     expect(model.cabin).toBeDefined()
-    expect(model.cabin?.entrances).toEqual([])
+    expect(model.cabin?.entrances).toEqual([
+      expect.objectContaining({
+        id: 'cabin-front', side: 'front',
+        opening: { width: 1.2, height: 2.1, source: 'planning-door-dimensions' },
+      }),
+    ])
+  })
+
+  it('uses the single planning door height as the usable entrance height without a separate entrance value', () => {
+    const model = getRenderedModel(createPassengerInstallationModel(createCompletePlanningInput()))
+    expect(model.cabin).toMatchObject({ height: 2.2 })
+    expect(model.cabin?.entrances[0]?.opening).toEqual({
+      width: 0.9,
+      height: 2.1,
+      source: 'planning-door-dimensions',
+    })
   })
 
   it('generates uniform level elevations through centralized unit conversion', () => {

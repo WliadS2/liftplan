@@ -28,6 +28,7 @@ const errors: Record<SimulationIssueCode, string> = {
   'non-finite-pose': 'Die Bewegung enthält ungültige Koordinaten.',
   'invalid-clock': 'Die Zeitfortschreibung der Fahrdemo ist ungültig.',
   'invalid-route': 'Der Seilverlauf passt nicht zum angegebenen Bewegungsbereich.',
+  'geometric-conflict': 'Die Fahrt ist wegen eines räumlichen Planungskonflikts nicht möglich.',
 }
 
 const capabilityMessages: Record<Exclude<PassengerSimulationCapabilityName, 'cabinMovement'>, string> = {

@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useMemo } from 'react'
 import {
   COUNTERWEIGHT_POSITIONS,
   RAIL_ORIENTATIONS,
@@ -17,6 +17,8 @@ import {
 import { useProjectStore } from '../../projects'
 import { createLiftGeometryPlanningInput } from '../../three/geometry/lift-geometry-planning-input'
 import { ThreeSceneErrorBoundary } from '../../three/scene/ThreeSceneErrorBoundary'
+import { createPassengerSpatialValidationFromPlanningInput } from '../../collision/passenger-spatial-validation'
+import { getSpatialIssueMessage, SPATIAL_STATUS_LABELS } from './spatial-validation-messages'
 import './ProjectWorkspace.css'
 
 const liftTypes = getLiftTypeDefinitions()
@@ -85,7 +87,20 @@ export function ProjectWorkspace() {
   )
   const resetProject = useProjectStore((state) => state.resetProject)
 
-  const geometryInput = createLiftGeometryPlanningInput(project.configuration)
+  const geometryInput = useMemo(
+    () => createLiftGeometryPlanningInput(project.configuration),
+    [project.configuration],
+  )
+  const spatialValidation = useMemo(
+    () => geometryInput ? createPassengerSpatialValidationFromPlanningInput(geometryInput) : undefined,
+    [geometryInput],
+  )
+  const spatialIssues = spatialValidation?.issues.filter((entry, index, all) =>
+    all.findIndex((candidate) => candidate.code === entry.code &&
+      candidate.affectedLevelId === entry.affectedLevelId) === index) ?? []
+  const spatialConflicts = spatialIssues.filter((issue) => issue.severity === 'error').length
+  const spatialWarnings = spatialIssues.filter((issue) => issue.severity === 'warning').length
+  const spatialUnknown = spatialIssues.filter((issue) => issue.severity === 'info').length
   const isPassengerLift =
     project.configuration.family === LIFT_FAMILIES.passenger
   const passengerConfiguration = isPassengerLift ? project.configuration : undefined
@@ -461,6 +476,24 @@ export function ProjectWorkspace() {
 
         <aside className="workspace-panel data-panel" aria-labelledby="data-heading">
           <h2 id="data-heading">Technische Daten</h2>
+          <section className="planning-status" aria-labelledby="planning-status-heading">
+            <h3 id="planning-status-heading">Planungsstatus</h3>
+            <p><strong>{SPATIAL_STATUS_LABELS[spatialValidation?.status ?? 'unknown']}</strong></p>
+            <p>
+              {spatialConflicts} {spatialConflicts === 1 ? 'Konflikt' : 'Konflikte'} ·{' '}
+              {spatialWarnings} {spatialWarnings === 1 ? 'Hinweis' : 'Hinweise'}
+              {spatialUnknown > 0 ? ` · ${spatialUnknown} noch nicht bewertet` : ''}
+            </p>
+            {spatialIssues.length > 0 && <details>
+              <summary>Prüfhinweise</summary>
+              <ul>
+                {spatialIssues.map((issue, index) => <li key={`${issue.code}-${issue.affectedLevelId ?? index}`}>
+                  {getSpatialIssueMessage(issue)}
+                </li>)}
+              </ul>
+            </details>}
+            <p className="panel-note">Geometrische Planungsprüfung, keine technische oder normative Freigabe.</p>
+          </section>
           <dl className="data-list">
             <div>
               <dt>Projekt</dt>
