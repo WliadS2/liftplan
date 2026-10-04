@@ -82,14 +82,18 @@ export function MechanicalComponentMeshes({ model, opacity, showCounterweight = 
   const rails = useMemo(() => [...(model.carRails ?? []), ...(model.counterweightRails ?? [])], [model.carRails, model.counterweightRails])
   return <group>
     <ProfiledRails rails={rails} opacity={opacity} hiddenIds={showCounterweight ? [] : model.counterweightRails?.map((r) => r.id)} />
-    {model.carSling && <ComponentBoxes parts={model.carSling.boxes} opacity={opacity} />}
-    <GuideShoes shoes={model.carGuideShoes} opacity={opacity} />
+    <group name="simulation-car-mechanics">
+      {model.carSling && <ComponentBoxes parts={model.carSling.boxes} opacity={opacity} />}
+      <GuideShoes shoes={model.carGuideShoes} opacity={opacity} />
+    </group>
     <group visible={showCounterweight}>
+    <group name="simulation-counterweight-mechanics">
     {model.counterweightFrame && <group>
       <ComponentBoxes parts={model.counterweightFrame.boxes} opacity={opacity} />
       <WeightStack slabs={model.counterweightFrame.slabs} opacity={opacity} />
     </group>}
     <GuideShoes shoes={model.counterweightGuideShoes} opacity={opacity} />
+    </group>
     {model.counterweightBuffers && <DetailedBuffers buffers={model.counterweightBuffers} opacity={opacity} />}
     </group>
     {model.carBuffers && <DetailedBuffers buffers={model.carBuffers} opacity={opacity} />}

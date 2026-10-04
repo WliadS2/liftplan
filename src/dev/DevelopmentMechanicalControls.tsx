@@ -30,6 +30,7 @@ export function DevelopmentMechanicalControls() {
       >
         Demo zurücksetzen
       </button>
+      <a href="/dev/mechanical">Fahrdemo öffnen</a>
     </div>
   )
 }

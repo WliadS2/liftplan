@@ -59,7 +59,9 @@ export function PassengerElevatorAssembly({
         opacity={visibility.mechanicalOpacity}
       /></group>
       <PassengerDoorMeshes model={doors} inspection={doorInspection} viewMode={viewMode} />
-      {model.cabin && <Cabin key={`cabin-${viewMode}`} cabin={model.cabin} viewMode={viewMode} />}
+      <group name="simulation-car-shell">
+        {model.cabin && <Cabin key={`cabin-${viewMode}`} cabin={model.cabin} viewMode={viewMode} />}
+      </group>
     </group>
   )
 }

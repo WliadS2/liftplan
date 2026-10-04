@@ -4,6 +4,8 @@ import { BoxGeometry, CylinderGeometry, MeshStandardMaterial } from 'three'
 import { MECHANICAL_MATERIALS, TECHNICAL_MATERIALS } from '../../../materials/technical-materials'
 import { createSheaveGeometry, createTechnicalCableGeometry } from '../mechanical/traction-geometry'
 import type { DoorCylinder, DoorInspection, PassengerDoorSystemModel } from './passenger-door-model'
+import { getDoorPanelParts } from './passenger-door-model'
+import { doorPanelGroupName } from '../../../../simulation/passenger-motion-bindings'
 import type { ThreeViewMode } from '../../../scene/view-mode'
 import { getDoorViewVisibility } from '../../../scene/view-mode'
 import type { ComponentBox } from '../mechanical/mechanical-component-model'
@@ -37,13 +39,20 @@ export function PassengerDoorMeshes({ model, viewMode, inspection }: {
   </group>)
   return <group name="passenger-door-system">{entrances.map((entry) => {
     const policy = getDoorViewVisibility(viewMode, entry.role === 'cabin' ? entry.side === inspection.side : entry.id === inspection.landing?.id)
-    const groups = [entry.frame, entry.sill, entry.track, entry.hangers, entry.guides, entry.operator, entry.coupling, entry.interlock].filter((part) => !!part)
+    const groups = [entry.frame, entry.sill, entry.track, entry.operator, entry.interlock].filter((part) => !!part)
     return <group key={entry.id} name={entry.id}>
       {!entry.panels.length && <Line points={entry.outline} lineWidth={1} color={TECHNICAL_MATERIALS.doorEdge} />}
-      {entry.panels.map((panel) => <mesh key={panel.id} name={panel.id} position={panel.closed.center} rotation={[0, panel.closed.rotationY, 0]}
+      {entry.panels.map((panel) => {
+        const attached = getDoorPanelParts(entry, panel)
+        return <group key={panel.id} name={doorPanelGroupName(panel.id)}>
+        <mesh name={panel.id} position={panel.closed.center} rotation={[0, panel.closed.rotationY, 0]}
         scale={panel.box.size} geometry={resources.box} material={materials.get(policy.panelOpacity)![panel.box.material]}>
         <Edges color={TECHNICAL_MATERIALS.doorEdge} opacity={policy.panelOpacity} transparent={policy.panelOpacity < 1} />
-      </mesh>)}
+        </mesh>
+        {boxes(attached.boxes, policy.componentOpacity)}
+        {cylinders(attached.cylinders, policy.componentOpacity)}
+        </group>
+      })}
       {groups.flatMap((group) => [...boxes(group.boxes, policy.componentOpacity), ...cylinders(group.cylinders, policy.componentOpacity)])}
       {entry.operator?.pulleys.map((wheel) => <mesh key={wheel.id} name={`${entry.id}-${wheel.id}`} position={wheel.center} rotation={[0, wheel.rotationY, 0]}
         geometry={resources.wheelGeometry.get(JSON.stringify(wheel.latheProfile))} material={materials.get(policy.componentOpacity)!.doorOperator} />)}

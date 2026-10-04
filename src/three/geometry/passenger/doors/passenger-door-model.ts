@@ -67,6 +67,18 @@ export interface DoorInspection {
   readonly cabinAtLevel: boolean; readonly bounds?: MechanicalBounds
 }
 
+/** Explicit generated attachment identities keep each carrier/guide/coupling rigidly attached to its panel. */
+export function getDoorPanelParts(entry: DoorEntranceModel, panel: DoorPanelModel) {
+  const index = panel.index
+  return {
+    boxes: [...entry.hangers?.boxes.filter((part) => part.id === `${entry.id}-carrier-${index}` || part.id === `${entry.id}-hanger-connector-${index}`) ?? [],
+      ...entry.guides?.boxes.filter((part) => part.id === `${entry.id}-bottom-guide-${index}`) ?? [],
+      ...entry.coupling?.panelId === panel.id ? entry.coupling.boxes : []],
+    cylinders: [...entry.hangers?.cylinders.filter((part) => part.id.startsWith(`${entry.id}-hanger-${index}-`)) ?? [],
+      ...entry.coupling?.panelId === panel.id ? entry.coupling.cylinders : []],
+  }
+}
+
 const combine = (bounds: readonly MechanicalBounds[]) => createMechanicalBounds(bounds.flatMap((b) => [b.min, b.max]))
 const touches = (a: MechanicalBounds, b: MechanicalBounds) => [0, 1, 2].every((i) => a.min[i] <= b.max[i] + GEOMETRY_EPSILON && a.max[i] >= b.min[i] - GEOMETRY_EPSILON)
 const finite = (point: MechanicalPoint) => point.every(Number.isFinite)

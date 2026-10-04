@@ -46,9 +46,9 @@ The compact Haltestelle selector resolves IDs against normalized levels. Durchla
 
 Identical boxes share unit geometry, simplified cylinders share unit geometry, and identical wheel profiles share cached geometry. Materials are shared by role/opacity; resources are disposed on replacement/unmount. Visibility changes do not rebuild geometry. Instancing remains a future optimization.
 
-## Future animation contract
+## Animation contract
 
-Every leaf exposes identity, closed transform, open transform and normalized world-space travel. Open position is closed position plus **explicit** local travel rotated into the entrance frame. Rendering uses the closed transform only. No animation, timing, forces, mass, nudging, obstruction detection, light curtain, electrical chain, certified interlock, fire rating, manufacturer-specific mechanism, travelling cable, cabinet, cabin movement, collision simulation or EN 81 validation is implemented.
+Every leaf exposes identity, closed transform, open transform and normalized world-space travel. Open position is closed position plus **explicit** local travel rotated into the entrance frame. Normal planning rendering uses the closed transform. The separate [development kinematic layer](./passenger-kinematic-simulation.md) interpolates those transforms and moves the corresponding panel carriers, guides and coupling. It coordinates cabin and served landing doors only after exact level arrival. No forces, mass, nudging, obstruction detection, light curtain, electrical chain, certified interlock, fire rating, manufacturer-specific mechanism, travelling cable, cabinet, collision simulation or EN 81 validation is implemented.
 
 ## Development data and tests
 

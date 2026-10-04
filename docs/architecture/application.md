@@ -16,7 +16,7 @@ LiftPlan separates product presentation, domain configuration, engineering truth
 | `src/elevator/rules` | Family-specific technical rule implementations | Elevator models and engineering contracts |
 | `src/elevator/calculations` | Pure family-specific calculations | Elevator models, approved rules, and engineering units |
 | `src/collision` | Pure collision models and queries | Engineering and geometry-neutral domain inputs |
-| `src/simulation` | Mechanical simulation models and orchestration | Engineering, calculations, and collision contracts |
+| `src/simulation` | Pure kinematic runtime state, stepping and pose contracts | Engineering units and read-only render-neutral installation/layout contracts; no rendering runtime or project store |
 | `src/three` | Three.js scene, visual geometry, assets, materials, camera, and interaction | Read-only domain outputs and explicit unit conversion |
 | `src/projects` | Project use cases and future persistence ports | Elevator public contracts |
 | `src/documents` | Export models and future document generation | Project and domain read models |
@@ -66,6 +66,12 @@ The optional `doors` contract in `passenger-door-data.ts` supplies independent c
 `passenger-vertical-model.ts` supplies the canonical installation vertical references and immutable semantic-placement resolution. Optional explicit level elevations/current cabin index are domain configuration; optional world-point anchors are serialized with component data. Mechanical/drive/safety transforms resolve these against installation geometry before using their existing factories. Missing anchors remain structured missing data; validation continues using physical shaft/pit bounds. No coordinate correction is implemented in React. See [vertical layout](../3d/passenger-vertical-layout.md).
 
 Future database, authentication, file storage, or network services belong behind ports owned by the relevant domain module. Infrastructure adapters may depend on those ports. Domain modules must not depend on a backend SDK.
+
+## Passenger kinematic visualization
+
+Normalized installation/layout output feeds `src/simulation/passenger-simulation-model.ts` with separately supplied, explicitly classified visualization setup and timing. `passenger-simulation.ts` owns the deterministic state machine, elapsed-time stepping, guards and pose. `passenger-motion-bindings.ts` supplies render-neutral attachment offsets. None of these modules accesses React, Three.js objects or the project store. Render-neutral type imports from the existing pure geometry models are the current input contract; geometry factories are not called while stepping.
+
+The viewport creates a local external simulation controller only when explicit development setup exists. One `PassengerSimulationDriver` advances that controller and applies its pose to the scene. Only the development controls subscribe to phase/command notifications. Runtime motion never writes planning configuration or pushes frame updates through Zustand. `/dev/mechanical` uses a separate motion-capable demo fixture; production excludes its route, setup and controls. See [simulation architecture](../3d/passenger-kinematic-simulation.md).
 
 ## Ownership
 

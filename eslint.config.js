@@ -64,6 +64,7 @@ export default defineConfig([
       'src/three/camera/passenger-camera-bounds.ts',
       'src/three/camera/camera-fit.ts',
       'src/three/camera/camera-interaction-policy.ts',
+      'src/three/camera/passenger-simulation-camera-frame.ts',
     ],
     rules: {
       'no-restricted-imports': [
