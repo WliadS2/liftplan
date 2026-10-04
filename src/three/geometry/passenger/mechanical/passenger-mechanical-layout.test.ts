@@ -78,7 +78,8 @@ describe('explicit passenger mechanical layout', () => {
     expect(model.bounds.max).toEqual([1.3, 6, 1.5])
     expect(model.bounds.height).toBeCloseTo(7.2)
     const debug = getPassengerMechanicalDebugPositions(model)
-    expect(debug.machinePosition).toEqual([-0.8, 5.55, -0.6])
+    // Detailed traction placement now belongs to the separate pure drive model.
+    expect(debug.machinePosition).toBeUndefined()
     expect(debug.counterweightRailB).toBeDefined()
     expect(debug.frameBounds).toEqual(model.carFrame?.bounds)
   })
@@ -102,7 +103,8 @@ describe('explicit passenger mechanical layout', () => {
     expect(passengerPlanningConfigurationSchema.safeParse(fixture).success).toBe(true)
     const model = layout(fixture)
     expect(model.validation).toEqual({ state: 'valid', issues: [] })
-    for (const key of ['carFrame', 'carRails', 'counterweight', 'counterweightRails', 'carBuffers', 'counterweightBuffers', 'machine', 'tractionSheave', 'suspension'] as const) expect(model[key]).toBeDefined()
+    for (const key of ['carFrame', 'carRails', 'counterweight', 'counterweightRails', 'carBuffers', 'counterweightBuffers'] as const) expect(model[key]).toBeDefined()
+    expect(fixture.mechanical?.drive).toBeDefined()
     expect(model.zones.map((z) => z.kind)).toEqual(['bottom', 'top'])
   })
   it('emphasizes mechanics with reduced shaft, cabin, door, pit and landing obstruction', () => {

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { millimetres } from '../../engineering'
 import { mechanicalComponentDataSchema } from './mechanical-component-data'
+import { tractionDriveDataSchema } from './traction-drive-data'
 
 export const COUNTERWEIGHT_ARRANGEMENTS = ['rear', 'left', 'right'] as const
 export const RAIL_ORIENTATIONS = ['x', 'z'] as const
@@ -17,6 +18,7 @@ const envelope = z.object({
 // Structural schema only; spatial checks belong to the pure layout transform.
 export const passengerMechanicalPlanningSchema = z.object({
   components: mechanicalComponentDataSchema.optional(),
+  drive: tractionDriveDataSchema.optional(),
   carRailOrientation: z.enum(RAIL_ORIENTATIONS).optional(),
   carRailSpacingMm: dimension.optional(),
   carRailAxisMm: planPosition.optional(),

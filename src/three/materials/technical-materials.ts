@@ -28,4 +28,9 @@ export const MECHANICAL_MATERIALS = {
   liner: { color: '#262d32', metalness: 0, roughness: 0.85 },
   buffer: { color: '#5f6e76', metalness: 0.4, roughness: 0.5 },
   plunger: { color: '#a0abb2', metalness: 0.65, roughness: 0.28 },
+  machine: { color: '#53626b', metalness: 0.35, roughness: 0.6 },
+  support: { color: '#79858b', metalness: 0.4, roughness: 0.55 },
+  sheave: { color: '#8e989e', metalness: 0.5, roughness: 0.4 },
+  rope: { color: '#39434a', metalness: 0.35, roughness: 0.6 },
+  hitch: { color: '#b0b5b6', metalness: 0.4, roughness: 0.5 },
 } as const

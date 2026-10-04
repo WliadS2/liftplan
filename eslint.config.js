@@ -53,6 +53,10 @@ export default defineConfig([
       'src/three/geometry/passenger/mechanical/passenger-mechanical-layout.ts',
       'src/three/geometry/passenger/mechanical/mechanical-component-model.ts',
       'src/three/geometry/passenger/mechanical/rail-profile.ts',
+      'src/three/geometry/passenger/mechanical/drive-geometry.ts',
+      'src/three/geometry/passenger/mechanical/sheave-model.ts',
+      'src/three/geometry/passenger/mechanical/traction-drive-model.ts',
+      'src/three/camera/passenger-camera-bounds.ts',
     ],
     rules: {
       'no-restricted-imports': [

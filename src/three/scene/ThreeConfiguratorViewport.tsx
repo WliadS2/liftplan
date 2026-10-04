@@ -9,6 +9,21 @@ import { createPassengerInstallationModel } from '../geometry/passenger/passenge
 import type { LiftGeometryPlanningInput } from '../geometry/lift-geometry-planning-input'
 import type { ThreeViewMode } from './view-mode'
 import type { MechanicalPlanningIssueCode } from '../geometry/passenger/mechanical/passenger-mechanical-layout'
+import { createTractionDriveModel, type DriveIssueCode } from '../geometry/passenger/mechanical/traction-drive-model'
+import { getPassengerCameraBounds } from '../camera/passenger-camera-bounds'
+
+const driveMessages: Record<DriveIssueCode, string> = {
+  'invalid-drive-shape': 'Eine Antriebskomponente enthält widersprüchliche Geometriedaten.',
+  'outside-drive-envelope': 'Eine Antriebskomponente liegt außerhalb des angegebenen Schachts.',
+  'unsupported-machine': 'Für die Maschine fehlt eine passende explizite Auflagerung.',
+  'machine-sheave-axis-mismatch': 'Welle und Treibscheibe passen räumlich nicht zusammen.',
+  'invalid-suspension-data': 'Die expliziten Seil- und Anschlussdaten passen nicht zusammen.',
+  'missing-route-reference': 'Ein Seilverlauf verweist auf eine fehlende Scheibe oder einen Anschluss.',
+  'zero-length-route': 'Der Seilverlauf enthält einen Abschnitt ohne Länge.',
+  'non-tangent-route': 'Der Seilverlauf schließt nicht tangential an die Scheibe an.',
+  'rope-intersects-solid': 'Der Seilverlauf überschneidet eine bekannte Baugruppe.',
+  'unsupported-hitch': 'Für diesen Anschlusstyp ist noch keine Geometrie verfügbar.',
+}
 
 const mechanicalPlanningMessages: Record<MechanicalPlanningIssueCode, string> = {
   'non-finite-coordinate': 'Eine mechanische Position enthält ungültige Koordinaten.',
@@ -50,6 +65,12 @@ export function ThreeConfiguratorViewport({
   const mechanicalComponents = useMemo(() => mechanicalLayout
     ? createPassengerMechanicalComponents(geometryInput?.mechanical.components, mechanicalLayout)
     : undefined, [geometryInput, mechanicalLayout])
+  const drive = useMemo(() => model && mechanicalLayout && mechanicalComponents
+    ? createTractionDriveModel(geometryInput?.mechanical.drive, model, mechanicalLayout, mechanicalComponents)
+    : undefined, [geometryInput, model, mechanicalLayout, mechanicalComponents])
+  const cameraBounds = useMemo(() => mechanicalComponents && drive
+    ? getPassengerCameraBounds(viewMode, mechanicalComponents, drive)
+    : undefined, [viewMode, mechanicalComponents, drive])
 
   const frameKey =
     model
@@ -70,6 +91,7 @@ export function ThreeConfiguratorViewport({
           mechanicalComponents?.bounds.height,
           mechanicalComponents?.bounds.depth,
           viewMode,
+          cameraBounds?.min.join(','), cameraBounds?.max.join(','),
         ].join(':')
       : 'unavailable'
 
@@ -94,6 +116,13 @@ export function ThreeConfiguratorViewport({
             onClick={() => setViewMode('mechanical')}
           >
             Mechanik
+          </button>
+          <button
+            aria-pressed={viewMode === 'drive'}
+            type="button"
+            onClick={() => setViewMode('drive')}
+          >
+            Antrieb
           </button>
           <button
             aria-pressed={viewMode === 'cutaway'}
@@ -146,15 +175,16 @@ export function ThreeConfiguratorViewport({
               <directionalLight intensity={0.7} position={[-4, 3, -5]} />
 
               <Bounds margin={1.15}>
-                {model && mechanicalLayout && mechanicalComponents && (
+                {model && mechanicalLayout && mechanicalComponents && drive && (
                   <PassengerElevatorAssembly
                     mechanicalLayout={mechanicalLayout}
                     mechanicalComponents={mechanicalComponents}
+                    drive={drive}
                     model={model}
                     viewMode={viewMode}
                   />
                 )}
-                <AutoFitCamera frameKey={frameKey} mechanicalBounds={mechanicalComponents?.bounds ?? mechanicalLayout?.bounds} />
+                <AutoFitCamera frameKey={frameKey} mechanicalBounds={cameraBounds} />
               </Bounds>
             </Canvas>
           </div>
@@ -183,6 +213,8 @@ export function ThreeConfiguratorViewport({
           {mechanicalComponents && mechanicalComponents.issues.length > 0 && (
             <p className="viewport-status" role="alert">Einzelne Bauteile können mit den angegebenen Geometriedaten nicht dargestellt werden.</p>
           )}
+          {drive?.missingData.length ? <p className="viewport-status">Antriebsdarstellung unvollständig – explizite Bauteil- oder Seildaten fehlen.</p> : null}
+          {drive?.validation.issues.map((issue, index) => <p key={`drive-${index}`} className="viewport-status" role="alert">{driveMessages[issue.code]}</p>)}
         </>
       )}
 

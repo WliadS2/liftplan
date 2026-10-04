@@ -57,6 +57,8 @@ Configuration schemas are structural only. They validate data types, finite nume
 
 The current scene is a schematic planning visualization, not an engineering approval result. Renderability checks protect geometry construction but do not claim regulatory compliance, certified clearances, structural suitability, or installation approval.
 
+The optional `mechanical.drive` contract is domain-owned in `traction-drive-data.ts`. A separate pure `traction-drive-model.ts` normalizes explicit machine/mount/sheave/hitch/suspension data, retaining provenance and ordered analytic rope segments. Reusable Three factories materialize the sheave lathe and independent rope tubes; React only binds meshes. Drive camera bounds are also pure. Ratios, rope count/diameter and routing never come from rated load or defaults. See the [mechanical architecture](../3d/passenger-mechanical-architecture.md) for coordinates, 1:1/2:1 contracts and geometric-check limitations.
+
 Future database, authentication, file storage, or network services belong behind ports owned by the relevant domain module. Infrastructure adapters may depend on those ports. Domain modules must not depend on a backend SDK.
 
 ## Ownership

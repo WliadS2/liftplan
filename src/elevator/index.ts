@@ -30,6 +30,8 @@ export type {
 export { passengerMechanicalPlanningSchema, RAIL_ORIENTATIONS } from './configuration/passenger-mechanical-planning'
 export type { PassengerMechanicalPlanningInput, RailOrientation } from './configuration/passenger-mechanical-planning'
 export { COMPONENT_DATA_SOURCES, mechanicalComponentDataSchema } from './configuration/mechanical-component-data'
+export { tractionDriveDataSchema } from './configuration/traction-drive-data'
+export type { TractionDriveData, TractionMachineData, SheaveData, HitchData, SuspensionData } from './configuration/traction-drive-data'
 export type {
   ComponentDataSource, MechanicalComponentData, RailProfileData,
   SlidingGuideShoeData, FutureGuideType, CarSlingData, CounterweightFrameData,

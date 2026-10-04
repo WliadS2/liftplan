@@ -1,4 +1,4 @@
-export const THREE_VIEW_MODES = ['overview', 'mechanical', 'cutaway'] as const
+export const THREE_VIEW_MODES = ['overview', 'mechanical', 'drive', 'cutaway'] as const
 
 export type ThreeViewMode = (typeof THREE_VIEW_MODES)[number]
 
@@ -8,7 +8,7 @@ export const PASSENGER_VIEW_MODE_CATALOG = [
   { id: 'shaft', label: 'Schacht', implemented: false },
   { id: 'mechanical', label: 'Mechanik', implemented: true },
   { id: 'doors', label: 'Türen', implemented: false },
-  { id: 'drive', label: 'Antrieb', implemented: false },
+  { id: 'drive', label: 'Antrieb', implemented: true },
   { id: 'cutaway', label: 'Schnittansicht', implemented: true },
   { id: 'exploded', label: 'Explosionsansicht', implemented: false },
 ] as const
@@ -45,11 +45,11 @@ export function getPassengerViewVisibility(
     }
   }
 
-  if (viewMode === 'mechanical') {
+  if (viewMode === 'mechanical' || viewMode === 'drive') {
     return {
       showRightCabinWall: true,
       showFrontWallSections: true,
-      cabinShellOpacity: 0.085,
+      cabinShellOpacity: viewMode === 'drive' ? 0.035 : 0.085,
       cabinCeilingOpacity: 0.025,
       frontDoorOpacity: 0.025,
       shaftEnvelopeOpacity: 0,

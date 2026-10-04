@@ -3,17 +3,14 @@ import { TECHNICAL_MATERIALS } from '../../../materials/technical-materials'
 import type { PassengerMechanicalLayout, PassengerRailSystemLayout } from './passenger-mechanical-layout'
 import type { PassengerMechanicalComponentModel } from './mechanical-component-model'
 import { MechanicalComponentMeshes } from './MechanicalComponentMeshes'
-import { visualizationSheaveDepth } from './mechanical-visualization'
+import type { TractionDriveModel } from './traction-drive-model'
+import { TractionDriveMeshes } from './TractionDriveMeshes'
 
 export interface PassengerMechanicalAssemblyProps {
   readonly layout: PassengerMechanicalLayout
   readonly components: PassengerMechanicalComponentModel
+  readonly drive: TractionDriveModel
   readonly opacity?: number
-}
-
-function MechanicalMaterial({ color, opacity }: { readonly color: string; readonly opacity: number }) {
-  return <meshStandardMaterial color={color} depthWrite={opacity >= 1} metalness={0.38}
-    opacity={opacity} roughness={0.48} transparent={opacity < 1} />
 }
 
 /** Axis lines deliberately carry no rail-profile dimensions when component data is absent. */
@@ -22,7 +19,7 @@ function RailAxes({ system, opacity }: { readonly system: PassengerRailSystemLay
     color={TECHNICAL_MATERIALS.guideRail} lineWidth={1} opacity={opacity} transparent={opacity < 1} />)}</group>
 }
 
-export function PassengerMechanicalAssembly({ layout, components, opacity = 1 }: PassengerMechanicalAssemblyProps) {
+export function PassengerMechanicalAssembly({ layout, components, drive, opacity = 1 }: PassengerMechanicalAssemblyProps) {
   return <group>
     <MechanicalComponentMeshes model={components} opacity={opacity} />
     {layout.carRails && !components.carRails && <RailAxes system={layout.carRails} opacity={opacity} />}
@@ -36,16 +33,13 @@ export function PassengerMechanicalAssembly({ layout, components, opacity = 1 }:
       <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       <Edges color={TECHNICAL_MATERIALS.counterweightFrame} />
     </mesh>}
-    {layout.machine && <mesh position={layout.machine.center}>
+    <TractionDriveMeshes model={drive} />
+    {layout.machine && !drive.machine && <mesh position={layout.machine.center}>
       <boxGeometry args={layout.machine.size} />
-      <MechanicalMaterial color={TECHNICAL_MATERIALS.machine} opacity={opacity} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       <Edges color={TECHNICAL_MATERIALS.machine} />
     </mesh>}
-    {layout.tractionSheave && <mesh position={layout.tractionSheave.center} rotation={[Math.PI / 2, 0, 0]}>
-      <cylinderGeometry args={[layout.tractionSheave.diameter / 2, layout.tractionSheave.diameter / 2, visualizationSheaveDepth, 32]} />
-      <MechanicalMaterial color={TECHNICAL_MATERIALS.sheave} opacity={opacity} />
-    </mesh>}
-    {layout.suspension && <Line color={TECHNICAL_MATERIALS.suspension} lineWidth={2} opacity={opacity}
+    {layout.suspension && !drive.suspension && <Line color={TECHNICAL_MATERIALS.suspension} lineWidth={1} opacity={opacity}
       points={layout.suspension.path} transparent={opacity < 1} />}
     {layout.zones.map((zone) => <mesh key={zone.kind} position={[0, zone.centerY, 0]}>
       <boxGeometry args={[zone.width, zone.height, zone.depth]} />
