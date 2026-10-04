@@ -5,7 +5,7 @@ import { ComponentBoxes } from './MechanicalComponentMeshes'
 import { createSheaveGeometry, createSuspensionRopeGeometry } from './traction-geometry'
 import type { TractionDriveModel } from './traction-drive-model'
 
-export function TractionDriveMeshes({ model }: { readonly model: TractionDriveModel }) {
+export function TractionDriveMeshes({ model, showRopes = true }: { readonly model: TractionDriveModel; readonly showRopes?: boolean }) {
   const resources = useMemo(() => ({
     sheaves: model.sheaves.map((s) => createSheaveGeometry(s)),
     ropes: model.suspension?.ropes.map(createSuspensionRopeGeometry) ?? [],
@@ -25,6 +25,6 @@ export function TractionDriveMeshes({ model }: { readonly model: TractionDriveMo
       {/* This child can rotate around local Z later without changing the mount transform. */}
       <mesh name={`sheave-rotor-${s.id}`} geometry={resources.sheaves[i]} material={materials.sheave} />
     </group>)}
-    {model.suspension?.ropes.map((rope, i) => <mesh key={rope.id} name={rope.id} geometry={resources.ropes[i]} material={materials.rope} />)}
+    {model.suspension?.ropes.map((rope, i) => <mesh key={rope.id} name={rope.id} visible={showRopes} geometry={resources.ropes[i]} material={materials.rope} />)}
   </group>
 }

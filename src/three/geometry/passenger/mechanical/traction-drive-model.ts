@@ -6,6 +6,7 @@ import type { ComponentBox, MechanicalMaterialRole, PassengerMechanicalComponent
 import { componentBoxBounds } from './mechanical-component-model'
 import { createMechanicalBounds, type MechanicalBounds, type MechanicalPoint, type PassengerMechanicalLayout } from './passenger-mechanical-layout'
 import { createSheaveModel, sheaveContactPoint, sheaveContactTangent, type SheaveModel } from './sheave-model'
+import type { CableSegment } from './cable-segment'
 import {
   drivePoint as p, toDrivePoint, toDriveSize, transformDrivePoint, positiveDriveDimensions,
   driveBoxBounds, driveBoundsOverlap, nearDriveValue, driveDistance, ropeSegmentIntersects, GEOMETRY_EPSILON,
@@ -49,10 +50,7 @@ export interface HitchModel {
   readonly terminationLength: Metres
   readonly bounds: MechanicalBounds
 }
-export type RopeSegment =
-  | { readonly kind: 'line'; readonly start: MechanicalPoint; readonly end: MechanicalPoint }
-  | { readonly kind: 'arc'; readonly sheaveId: string; readonly center: MechanicalPoint; readonly rotationY: number;
-      readonly radius: Metres; readonly axialOffset: Metres; readonly entryAngle: number; readonly exitAngle: number }
+export type RopeSegment = CableSegment
 export interface RopePathModel {
   readonly id: string
   readonly grooveIndex: number

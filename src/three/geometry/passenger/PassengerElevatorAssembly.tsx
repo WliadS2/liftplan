@@ -10,12 +10,14 @@ import type { PassengerMechanicalLayout } from './mechanical/passenger-mechanica
 import type { PassengerMechanicalComponentModel } from './mechanical/mechanical-component-model'
 import type { PassengerInstallationModel } from './passenger-installation-model'
 import type { TractionDriveModel } from './mechanical/traction-drive-model'
+import type { PassengerSafetyModel } from './mechanical/passenger-safety-model'
 
 export interface PassengerElevatorAssemblyProps {
   readonly model: PassengerInstallationModel
   readonly mechanicalLayout: PassengerMechanicalLayout
   readonly mechanicalComponents: PassengerMechanicalComponentModel
   readonly drive: TractionDriveModel
+  readonly safety: PassengerSafetyModel
   readonly viewMode: ThreeViewMode
 }
 
@@ -24,6 +26,7 @@ export function PassengerElevatorAssembly({
   mechanicalLayout,
   mechanicalComponents,
   drive,
+  safety,
   viewMode,
 }: PassengerElevatorAssemblyProps) {
   const visibility = getPassengerViewVisibility(viewMode)
@@ -46,6 +49,9 @@ export function PassengerElevatorAssembly({
         layout={mechanicalLayout}
         components={mechanicalComponents}
         drive={drive}
+        safety={safety}
+        showCounterweight={visibility.showCounterweight}
+        showTractionRopes={visibility.showTractionRopes}
         opacity={visibility.mechanicalOpacity}
       />
       {model.cabin && <Cabin key={`cabin-${viewMode}`} cabin={model.cabin} viewMode={viewMode} />}

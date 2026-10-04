@@ -33,4 +33,10 @@ export const MECHANICAL_MATERIALS = {
   sheave: { color: '#8e989e', metalness: 0.5, roughness: 0.4 },
   rope: { color: '#39434a', metalness: 0.35, roughness: 0.6 },
   hitch: { color: '#b0b5b6', metalness: 0.4, roughness: 0.5 },
+  governor: { color: '#7b8589', metalness: 0.4, roughness: 0.52 },
+  governorRope: { color: '#6a5648', metalness: 0.25, roughness: 0.68 },
+  safetyGear: { color: '#6c7371', metalness: 0.35, roughness: 0.55 },
+  linkage: { color: '#969b92', metalness: 0.45, roughness: 0.45 },
+  tension: { color: '#85827b', metalness: 0.32, roughness: 0.6 },
+  brake: { color: '#686771', metalness: 0.35, roughness: 0.55 },
 } as const

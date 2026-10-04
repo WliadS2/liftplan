@@ -24,7 +24,8 @@ export function createTractionDriveDemo(arrangement: CounterweightPosition): Tra
       bearingSupport: localBox(0, -50, -210, 350, 400, 200),
       base: localBox(0, -300, -580, 550, 100, 940),
       motor: { centerMm: point(0, 0, -835), diameterMm: mm(450), lengthMm: mm(250) },
-      shaft: { centerMm: point(0, 0, -150), diameterMm: mm(80), lengthMm: mm(540) },
+      // Explicit demo extension for the separately supplied outboard brake surface.
+      shaft: { centerMm: point(0, 0, -150), diameterMm: mm(80), lengthMm: mm(750) },
     },
     mount: {
       source: 'demo', reference: 'explicit-qa-wall-spanning-beams',

@@ -12,6 +12,7 @@ import { createTRailProfile, type TRailProfile } from './rail-profile'
 
 export type MechanicalMaterialRole = 'frame' | 'rail' | 'weight' | 'shoe' | 'liner' | 'buffer' | 'plunger'
   | 'machine' | 'support' | 'sheave' | 'rope' | 'hitch'
+  | 'governor' | 'governorRope' | 'safetyGear' | 'linkage' | 'tension' | 'brake'
 export interface ComponentBox {
   readonly id: string
   readonly source: ComponentDataSource

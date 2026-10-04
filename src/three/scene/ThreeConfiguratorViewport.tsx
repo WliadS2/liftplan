@@ -11,6 +11,23 @@ import type { ThreeViewMode } from './view-mode'
 import type { MechanicalPlanningIssueCode } from '../geometry/passenger/mechanical/passenger-mechanical-layout'
 import { createTractionDriveModel, type DriveIssueCode } from '../geometry/passenger/mechanical/traction-drive-model'
 import { getPassengerCameraBounds } from '../camera/passenger-camera-bounds'
+import { createPassengerSafetyModel, type SafetyIssueCode } from '../geometry/passenger/mechanical/passenger-safety-model'
+
+const safetyMessages: Record<SafetyIssueCode, string> = {
+  'invalid-safety-shape': 'Eine Sicherheitsbaugruppe enthält widersprüchliche Geometriedaten.',
+  'outside-safety-envelope': 'Eine Sicherheitsbaugruppe liegt außerhalb des angegebenen Schachts oder der Grube.',
+  'unmounted-safety-wheel': 'Für eine Sicherheitsrolle fehlt eine passende explizite Befestigung.',
+  'missing-safety-rail': 'Eine Fangvorrichtung verweist auf eine fehlende Kabinenschiene.',
+  'duplicate-safety-gear': 'Die Fangvorrichtungen benötigen unterschiedliche Seiten und Schienen.',
+  'unsupported-safety-gear': 'Für diesen Fangvorrichtungstyp fehlt eine explizite Bauteilgeometrie.',
+  'detached-safety-gear': 'Eine Fangvorrichtung passt nicht an den angegebenen Tragrahmen.',
+  'invalid-safety-linkage': 'Das Gestänge passt nicht zu den angegebenen Anschlussstellen.',
+  'invalid-governor-rope': 'Für das Begrenzerseil passen Rollen, Durchmesser oder Anschlüsse nicht zusammen.',
+  'zero-length-safety-route': 'Der Begrenzerseilverlauf enthält einen Abschnitt ohne Länge.',
+  'non-tangent-safety-route': 'Das Begrenzerseil schließt nicht tangential an eine Rolle an.',
+  'safety-rope-intersects-solid': 'Das Begrenzerseil überschneidet eine bekannte Baugruppe.',
+  'invalid-machine-brake': 'Die explizite Maschinenbremse passt nicht an die angegebene Maschine.',
+}
 
 const driveMessages: Record<DriveIssueCode, string> = {
   'invalid-drive-shape': 'Eine Antriebskomponente enthält widersprüchliche Geometriedaten.',
@@ -68,9 +85,12 @@ export function ThreeConfiguratorViewport({
   const drive = useMemo(() => model && mechanicalLayout && mechanicalComponents
     ? createTractionDriveModel(geometryInput?.mechanical.drive, model, mechanicalLayout, mechanicalComponents)
     : undefined, [geometryInput, model, mechanicalLayout, mechanicalComponents])
+  const safety = useMemo(() => model && mechanicalLayout && mechanicalComponents
+    ? createPassengerSafetyModel(geometryInput?.mechanical.safety, model, mechanicalLayout, mechanicalComponents, drive?.machine)
+    : undefined, [geometryInput, model, mechanicalLayout, mechanicalComponents, drive])
   const cameraBounds = useMemo(() => mechanicalComponents && drive
-    ? getPassengerCameraBounds(viewMode, mechanicalComponents, drive)
-    : undefined, [viewMode, mechanicalComponents, drive])
+    ? getPassengerCameraBounds(viewMode, mechanicalComponents, drive, safety)
+    : undefined, [viewMode, mechanicalComponents, drive, safety])
 
   const frameKey =
     model
@@ -125,6 +145,13 @@ export function ThreeConfiguratorViewport({
             Antrieb
           </button>
           <button
+            aria-pressed={viewMode === 'safety'}
+            type="button"
+            onClick={() => setViewMode('safety')}
+          >
+            Sicherheit
+          </button>
+          <button
             aria-pressed={viewMode === 'cutaway'}
             type="button"
             onClick={() => setViewMode('cutaway')}
@@ -175,11 +202,12 @@ export function ThreeConfiguratorViewport({
               <directionalLight intensity={0.7} position={[-4, 3, -5]} />
 
               <Bounds margin={1.15}>
-                {model && mechanicalLayout && mechanicalComponents && drive && (
+                {model && mechanicalLayout && mechanicalComponents && drive && safety && (
                   <PassengerElevatorAssembly
                     mechanicalLayout={mechanicalLayout}
                     mechanicalComponents={mechanicalComponents}
                     drive={drive}
+                    safety={safety}
                     model={model}
                     viewMode={viewMode}
                   />
@@ -215,6 +243,9 @@ export function ThreeConfiguratorViewport({
           )}
           {drive?.missingData.length ? <p className="viewport-status">Antriebsdarstellung unvollständig – explizite Bauteil- oder Seildaten fehlen.</p> : null}
           {drive?.validation.issues.map((issue, index) => <p key={`drive-${index}`} className="viewport-status" role="alert">{driveMessages[issue.code]}</p>)}
+          {safety?.missingData.length ? <p className="viewport-status">Sicherheitsdarstellung unvollständig – explizite Bauteil- oder Seildaten fehlen.</p> : null}
+          {viewMode === 'safety' && !geometryInput?.mechanical.safety && <p className="viewport-status">Keine expliziten Planungsdaten für Sicherheitsbaugruppen vorhanden.</p>}
+          {safety?.validation.issues.map((issue, index) => <p key={`safety-${index}`} className="viewport-status" role="alert">{safetyMessages[issue.code]}</p>)}
         </>
       )}
 

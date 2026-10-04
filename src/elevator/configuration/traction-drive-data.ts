@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { millimetres } from '../../engineering'
 import { COMPONENT_DATA_SOURCES } from './mechanical-component-data'
+import { rotationalWheelDataSchema } from './rotational-wheel-data'
 
 const dimension = z.number().finite().transform(millimetres)
 const provenance = { source: z.enum(COMPONENT_DATA_SOURCES), reference: z.string().optional() }
@@ -23,14 +24,8 @@ export const machineMountDataSchema = z.object({
   supports: z.array(z.object({ ...box.shape, rotationYRad: z.number().finite() }).strict()).min(1).readonly(),
 }).strict()
 
-export const sheaveDataSchema = z.object({
-  ...provenance, id: z.string().min(1), ...transform,
+export const sheaveDataSchema = rotationalWheelDataSchema.extend({
   role: z.enum(['traction', 'deflection', 'car', 'counterweight']),
-  diameterMm: dimension, widthMm: dimension,
-  hubDiameterMm: dimension, hubWidthMm: dimension, shaftDiameterMm: dimension,
-  grooves: z.object({
-    count: z.number().int().positive(), spacingMm: dimension, depthMm: dimension, widthMm: dimension,
-  }).strict().optional(),
 }).strict()
 
 export const hitchDataSchema = z.object({

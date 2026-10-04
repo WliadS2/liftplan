@@ -1,12 +1,12 @@
-import type { SheaveData } from '../../../../elevator/configuration/traction-drive-data'
+import type { RotationalWheelData, RotationalWheelRole } from '../../../../elevator/configuration/rotational-wheel-data'
 import { metres, millimetresToMetres, type Metres } from '../../../../engineering'
 import { createMechanicalBounds, type MechanicalBounds, type MechanicalPoint } from './passenger-mechanical-layout'
 import { driveBoxBounds, drivePoint, positiveDriveDimensions, toDrivePoint, transformDrivePoint } from './drive-geometry'
 
 export interface SheaveModel {
   readonly id: string
-  readonly role: SheaveData['role']
-  readonly source: SheaveData['source']
+  readonly role: RotationalWheelRole
+  readonly source: RotationalWheelData['source']
   readonly reference?: string
   readonly center: MechanicalPoint
   readonly rotationY: number
@@ -24,7 +24,7 @@ export interface SheaveModel {
   readonly bounds: MechanicalBounds
 }
 
-export function createSheaveModel(data: SheaveData): SheaveModel | undefined {
+export function createSheaveModel(data: RotationalWheelData & { readonly role: RotationalWheelRole }): SheaveModel | undefined {
   const mm = millimetresToMetres
   const r = mm(data.diameterMm) / 2, w = mm(data.widthMm), hub = mm(data.hubDiameterMm) / 2
   const hw = mm(data.hubWidthMm), shaft = mm(data.shaftDiameterMm) / 2

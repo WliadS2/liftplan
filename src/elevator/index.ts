@@ -31,6 +31,8 @@ export { passengerMechanicalPlanningSchema, RAIL_ORIENTATIONS } from './configur
 export type { PassengerMechanicalPlanningInput, RailOrientation } from './configuration/passenger-mechanical-planning'
 export { COMPONENT_DATA_SOURCES, mechanicalComponentDataSchema } from './configuration/mechanical-component-data'
 export { tractionDriveDataSchema } from './configuration/traction-drive-data'
+export { passengerSafetyDataSchema } from './configuration/passenger-safety-data'
+export type { PassengerSafetyData, SafetyWheelAssemblyData, SafetyGearData, GovernorRopeData, GovernorLinkageData, MachineBrakeData } from './configuration/passenger-safety-data'
 export type { TractionDriveData, TractionMachineData, SheaveData, HitchData, SuspensionData } from './configuration/traction-drive-data'
 export type {
   ComponentDataSource, MechanicalComponentData, RailProfileData,

@@ -22,7 +22,7 @@ export function ComponentBoxes({ parts, opacity }: { readonly parts: readonly Co
   ))}</group>
 }
 
-export function ProfiledRails({ rails, opacity }: { readonly rails: readonly DetailedRail[]; readonly opacity: number }) {
+export function ProfiledRails({ rails, opacity, hiddenIds = [] }: { readonly rails: readonly DetailedRail[]; readonly opacity: number; readonly hiddenIds?: readonly string[] }) {
   // Identical profile/length pairs share one extrusion, including the separate rail systems.
   const signature = JSON.stringify([...new Set(rails.map((rail) => JSON.stringify([rail.profile.points, rail.length])))])
   const geometries = useMemo(() => {
@@ -35,7 +35,7 @@ export function ProfiledRails({ rails, opacity }: { readonly rails: readonly Det
   }, [signature])
   useEffect(() => () => { for (const geometry of geometries.values()) geometry.dispose() }, [geometries])
   return <group>{rails.map((rail) => (
-    <mesh key={rail.id} name={rail.id} position={rail.origin} rotation={[0, rail.rotationY, 0]}
+    <mesh key={rail.id} name={rail.id} visible={!hiddenIds.includes(rail.id)} position={rail.origin} rotation={[0, rail.rotationY, 0]}
       geometry={geometries.get(JSON.stringify([rail.profile.points, rail.length]))}>
       <ComponentMaterial role="rail" opacity={opacity} />
     </mesh>
@@ -78,18 +78,20 @@ export function DetailedBuffers({ buffers, opacity }: { readonly buffers: Buffer
   </group>
 }
 
-export function MechanicalComponentMeshes({ model, opacity }: { readonly model: PassengerMechanicalComponentModel; readonly opacity: number }) {
+export function MechanicalComponentMeshes({ model, opacity, showCounterweight = true }: { readonly model: PassengerMechanicalComponentModel; readonly opacity: number; readonly showCounterweight?: boolean }) {
   const rails = useMemo(() => [...(model.carRails ?? []), ...(model.counterweightRails ?? [])], [model.carRails, model.counterweightRails])
   return <group>
-    <ProfiledRails rails={rails} opacity={opacity} />
+    <ProfiledRails rails={rails} opacity={opacity} hiddenIds={showCounterweight ? [] : model.counterweightRails?.map((r) => r.id)} />
     {model.carSling && <ComponentBoxes parts={model.carSling.boxes} opacity={opacity} />}
     <GuideShoes shoes={model.carGuideShoes} opacity={opacity} />
+    <group visible={showCounterweight}>
     {model.counterweightFrame && <group>
       <ComponentBoxes parts={model.counterweightFrame.boxes} opacity={opacity} />
       <WeightStack slabs={model.counterweightFrame.slabs} opacity={opacity} />
     </group>}
     <GuideShoes shoes={model.counterweightGuideShoes} opacity={opacity} />
-    {model.carBuffers && <DetailedBuffers buffers={model.carBuffers} opacity={opacity} />}
     {model.counterweightBuffers && <DetailedBuffers buffers={model.counterweightBuffers} opacity={opacity} />}
+    </group>
+    {model.carBuffers && <DetailedBuffers buffers={model.carBuffers} opacity={opacity} />}
   </group>
 }

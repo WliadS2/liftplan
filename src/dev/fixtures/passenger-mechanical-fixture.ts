@@ -6,6 +6,7 @@ import {
 import { kilograms, metresPerSecond, millimetres } from '../../engineering'
 import { createMechanicalDemoComponents } from './mechanical-demo-components'
 import { createTractionDriveDemo } from './traction-drive-demo'
+import { createPassengerSafetyDemo } from './passenger-safety-demo'
 
 // Demo/test coordinates only. Never imported by production default factories or the project store.
 export function createPassengerMechanicalFixture(
@@ -17,6 +18,7 @@ export function createPassengerMechanicalFixture(
     right: { xMm: millimetres(1050), yMm: millimetres(0), zMm: millimetres(0) },
   }
   const offset = offsets[arrangement]
+  const drive = createTractionDriveDemo(arrangement)
   return {
     ...createPassengerPlanningConfiguration('Mechanische Demo – Testdaten'),
     capacityKg: kilograms(630), passengerCount: 8,
@@ -29,7 +31,8 @@ export function createPassengerMechanicalFixture(
     counterweightPosition: arrangement,
     mechanical: {
       components: createMechanicalDemoComponents(),
-      drive: createTractionDriveDemo(arrangement),
+      drive,
+      safety: createPassengerSafetyDemo(drive),
       carRailOrientation: 'x', carRailSpacingMm: millimetres(1500),
       carRailAxisMm: { xMm: millimetres(0), zMm: millimetres(0) },
       counterweightArrangement: arrangement, counterweightOffsetMm: offset,

@@ -22,4 +22,10 @@ This glossary is the initial source of truth for customer-facing German terminol
 | Schachtkopf | Upper shaft area above the top served level | Technical dimensions require approved engineering input |
 | Tür | Generic term for a lift or landing door | Use a more specific approved term when context requires it |
 | Antrieb | Drive system of the lift | Do not imply a drive technology unless configured |
+| Sicherheit | View of explicitly represented mechanical safety components | Visualization only, not a safety approval |
+| Geschwindigkeitsbegrenzer | Explicit generic governor assembly | No tripping-speed selection or certification implied |
+| Begrenzerseil | Separate governor rope loop | Not the traction suspension ropes |
+| Spannrolle | Explicit pit tension-pulley assembly | No tension-force or mass calculation implied |
+| Fangvorrichtung | Explicit car-rail-associated generic safety gear | No certified mechanism or capacity implied |
+| Maschinenbremse | Explicit generic machine-shaft brake representation | Separate from car safety gear; no brake sizing implied |
 | Durchlader | Configuration with access from more than one cabin side | Door arrangement must be explicit in the family configuration |
