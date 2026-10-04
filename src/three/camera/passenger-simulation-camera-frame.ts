@@ -13,7 +13,7 @@ export function getPassengerSimulationCameraFrame(mode: ThreeViewMode, fallback:
   const car = inputs.components.carSling?.bounds, cw = inputs.components.counterweightFrame?.bounds
   const bounds = createMechanicalBounds([
     ...car ? [shifted(car, pose.cabinOffsetY)] : [],
-    ...cw ? [shifted(cw, pose.counterweightOffsetY)] : [],
+    ...(cw && pose.counterweightOffsetY !== undefined ? [shifted(cw, pose.counterweightOffsetY)] : []),
     ...inputs.doors.cabin.map((entry) => shifted(entry.bounds, pose.cabinOffsetY)),
     ...inputs.safety.linkage ? [shifted(inputs.safety.linkage.bounds, pose.cabinOffsetY)] : [],
   ].flatMap((entry) => [entry.min, entry.max]))

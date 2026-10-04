@@ -1,20 +1,34 @@
 import { metres, millimetresToMetres, type Millimetres } from '../engineering'
 import type { PassengerInstallationModel } from '../three/geometry/passenger/passenger-installation-model'
-import type { PassengerMechanicalLayout } from '../three/geometry/passenger/mechanical/passenger-mechanical-layout'
+import type { PassengerMechanicalLayout, MechanicalBounds } from '../three/geometry/passenger/mechanical/passenger-mechanical-layout'
 import { componentBoxBounds, type PassengerMechanicalComponentModel } from '../three/geometry/passenger/mechanical/mechanical-component-model'
 import type { TractionDriveModel } from '../three/geometry/passenger/mechanical/traction-drive-model'
 import type { PassengerSafetyModel } from '../three/geometry/passenger/mechanical/passenger-safety-model'
 import type { PassengerDoorSystemModel } from '../three/geometry/passenger/doors/passenger-door-model'
-import { createInitialSimulationState, createSimulationPose, validateSimulationPose,
-  type PassengerSimulationModel, type SimulationIssue, type VisualizationTiming } from './passenger-simulation'
+import {
+  createInitialSimulationState,
+  createSimulationPose,
+  validateSimulationPose,
+  type PassengerSimulationCapabilities,
+  type PassengerSimulationCapabilityName,
+  type PassengerSimulationModel,
+  type SimulationIssue,
+  type SimulationRope,
+  type VisualizationTiming,
+} from './passenger-simulation'
+import { PASSENGER_VISUALIZATION_TIMING } from './passenger-visualization-profile'
 
-/** Explicit visualization setup, supplied separately from the planning project. */
+/** Optional visualization setup, supplied separately from technical project data. */
 export interface PassengerVisualizationData {
   readonly source: 'demo' | 'visualization'
-  readonly initialLevelIndex: number
-  readonly counterweightInitialCenter: { readonly anchor: 'highest-landing'; readonly offsetMm: Millimetres }
-  readonly timing: VisualizationTiming
+  readonly initialLevelIndex?: number
+  readonly counterweightInitialCenter?: {
+    readonly anchor: 'highest-landing'
+    readonly offsetMm: Millimetres
+  }
+  readonly timing?: VisualizationTiming
 }
+
 export interface PassengerSimulationInputs {
   readonly installation: PassengerInstallationModel
   readonly layout: PassengerMechanicalLayout
@@ -23,69 +37,196 @@ export interface PassengerSimulationInputs {
   readonly safety: PassengerSafetyModel
   readonly doors: PassengerDoorSystemModel
 }
-export type SimulationModelResult = { readonly status: 'available'; readonly model: PassengerSimulationModel }
-  | { readonly status: 'unavailable' | 'invalid'; readonly issues: readonly SimulationIssue[] }
 
-/** First motion contract supports explicit vertical 1:1 suspension with a single fixed traction wrap. */
-export function createPassengerSimulationModel(inputs: PassengerSimulationInputs, data?: PassengerVisualizationData): SimulationModelResult {
-  if (!data) return { status: 'unavailable', issues: [{ code: 'unavailable-data', path: 'visualization' }] }
-  const { installation: i, layout, components: c, drive: d, safety: s, doors } = inputs
-  const initial = i.levels[data.initialLevelIndex], region = i.vertical.travelRegion, shaft = i.shaft?.verticalExtent
-  const traction = d.sheaves.find((sheave) => sheave.role === 'traction'), suspension = d.suspension
-  if (!initial || !region || !shaft || !i.cabin || !layout.counterweight || !c.carSling || !c.counterweightFrame ||
-    !traction || !suspension || !s.governor || !s.tension || !s.governorRope || !s.linkage || !doors.cabin.length || i.levels.length < 2) {
-    return { status: 'unavailable', issues: [{ code: 'unavailable-data', path: 'installation' }] }
+export type SimulationModelResult = {
+  readonly status: 'available'
+  readonly availability: 'complete' | 'partial'
+  readonly model: PassengerSimulationModel
+  readonly issues: readonly SimulationIssue[]
+} | {
+  readonly status: 'unavailable' | 'invalid'
+  readonly issues: readonly SimulationIssue[]
+}
+
+const capability = (available: boolean, path: string): PassengerSimulationCapabilities[PassengerSimulationCapabilityName] => ({
+  available,
+  issues: available ? [] : [{ code: 'unavailable-data', path }],
+})
+
+function validTiming(timing: VisualizationTiming): boolean {
+  return [timing.doorOpeningSeconds, timing.doorClosingSeconds, timing.dwellSeconds,
+    timing.travelSeconds, timing.arrivalSeconds].every((value) => Number.isFinite(value) && value > 0)
+}
+
+function boundsOffsets(bounds: readonly MechanicalBounds[], referenceY: number) {
+  return {
+    min: Math.min(...bounds.map((entry) => entry.min[1])) - referenceY,
+    max: Math.max(...bounds.map((entry) => entry.max[1])) - referenceY,
   }
-  const issues: SimulationIssue[] = []
-  if ([layout.validation, d.validation, s.validation, doors.validation].some((validation) => validation.state === 'invalid') || c.issues.length) {
-    issues.push({ code: 'unavailable-data', path: 'invalid-layout' })
+}
+
+function supportedSuspension(inputs: PassengerSimulationInputs) {
+  const traction = inputs.drive.sheaves.find((sheave) => sheave.role === 'traction')
+  const suspension = inputs.drive.suspension
+  if (!traction || !suspension || suspension.ratio !== '1:1' || suspension.ropes.length === 0) return undefined
+  if (suspension.ropes.some((rope) => rope.segments.length !== 3 || rope.segments[0].kind !== 'line' ||
+    rope.segments[1].kind !== 'arc' || rope.segments[1].sheaveId !== traction.id || rope.segments[2].kind !== 'line')) return undefined
+  const ropes: SimulationRope[] = []
+  for (const rope of suspension.ropes) {
+    const start = inputs.drive.hitches.find((hitch) => hitch.id === rope.startHitchId)
+    const end = inputs.drive.hitches.find((hitch) => hitch.id === rope.endHitchId)
+    if (start?.attachment !== 'car' || end?.attachment !== 'counterweight') return undefined
+    ropes.push({ id: rope.id, segments: rope.segments, startAttachment: 'car', endAttachment: 'counterweight' })
   }
-  if ([data.timing.doorOpeningSeconds, data.timing.doorClosingSeconds, data.timing.dwellSeconds,
-    data.timing.travelSeconds, data.timing.arrivalSeconds].some((value) => !Number.isFinite(value) || value <= 0)) issues.push({ code: 'invalid-timing', path: 'timing' })
-  if (i.levels.some((level, index) => !Number.isFinite(level.elevationY) || (index > 0 && level.elevationY <= i.levels[index - 1].elevationY))) issues.push({ code: 'invalid-level', path: 'levels' })
-  if (suspension.ratio !== '1:1' || suspension.ropes.some((rope) => rope.segments.length !== 3 || rope.segments[0].kind !== 'line' ||
-    rope.segments[1].kind !== 'arc' || rope.segments[1].sheaveId !== traction.id || rope.segments[2].kind !== 'line')) {
-    return { status: 'invalid', issues: [...issues, { code: 'unsupported-suspension', path: 'suspension' }] }
-  }
-  const referenceCabinY = i.cabin.bottomY, referenceCounterweightY = layout.counterweight.center[1]
-  const initialCounterweightY = metres(i.vertical.highestLandingY! + millimetresToMetres(data.counterweightInitialCenter.offsetMm))
-  const carBounds = [c.carSling.bounds, ...c.carGuideShoes.flatMap((shoe) => shoe.boxes.map(componentBoxBounds)),
-    ...s.gears.map((gear) => gear.bounds), s.linkage.bounds, ...doors.cabin.map((entry) => entry.bounds),
-    ...d.hitches.filter((hitch) => hitch.attachment === 'car').map((hitch) => hitch.bounds)]
-  const cwBounds = [c.counterweightFrame.bounds, ...c.counterweightGuideShoes.flatMap((shoe) => shoe.boxes.map(componentBoxBounds)),
-    ...d.hitches.filter((hitch) => hitch.attachment === 'counterweight').map((hitch) => hitch.bounds)]
-  const carMinOffset = Math.min(...carBounds.map((bounds) => bounds.min[1])) - referenceCabinY
-  const carMaxOffset = Math.max(...carBounds.map((bounds) => bounds.max[1])) - referenceCabinY
-  const cwMinOffset = Math.min(...cwBounds.map((bounds) => bounds.min[1])) - referenceCounterweightY
-  const cwMaxOffset = Math.max(...cwBounds.map((bounds) => bounds.max[1])) - referenceCounterweightY
-  const cwEnvelope = { minY: metres(shaft.bottomY - cwMinOffset), maxY: metres(shaft.topY - cwMaxOffset) }
-  if (region.bottomY + carMinOffset < shaft.bottomY || region.topY + carMaxOffset > shaft.topY) issues.push({ code: 'outside-envelope', path: 'cabinAssembly' })
-  if (doors.cabin.some((entry) => entry.panels.length !== 2) || i.levels.some((level) => doors.cabin.some((entry) =>
-    !doors.landings.some((landing) => landing.levelId === level.id && landing.cabinEntranceId === entry.id && landing.panels.length === 2)))) {
-    issues.push({ code: 'unavailable-data', path: 'doors' })
-  }
-  const ropes = suspension.ropes.map((rope) => {
-    const start = d.hitches.find((hitch) => hitch.id === rope.startHitchId)!, end = d.hitches.find((hitch) => hitch.id === rope.endHitchId)!
-    if (start?.attachment !== 'car' || end?.attachment !== 'counterweight') issues.push({ code: 'unsupported-suspension', path: rope.id })
-    return { id: rope.id, segments: rope.segments, startAttachment: 'car' as const, endAttachment: 'counterweight' as const }
-  })
   const arc = suspension.ropes[0].segments[1]
-  if (arc.kind !== 'arc') return { status: 'invalid', issues: [{ code: 'invalid-route', path: 'suspension' }] }
-  const model: PassengerSimulationModel = { levels: i.levels, initialLevelId: initial.id, referenceCabinY, referenceCounterweightY,
-    initialCounterweightY, cabinEnvelope: { minY: region.bottomY, maxY: region.topY }, counterweightEnvelope: cwEnvelope,
-    counterweightTravelFactor: -1, tractionSheaveId: traction.id, tractionContactRadius: arc.radius,
-    tractionRotationSign: arc.exitAngle > arc.entryAngle ? 1 : -1, suspensionRopes: ropes,
-    governorSegments: s.governorRope.segments, governorLinkagePoint: s.linkage.ropeConnection, timing: data.timing }
-  for (const level of i.levels) {
-    const pose = createSimulationPose(model, { ...createInitialSimulationState(model), currentLevel: level.id, sourceLevel: level.id, targetLevel: level.id })
-    issues.push(...validateSimulationPose(model, pose))
-    // Both endpoints must remain below their explicit fixed top contacts; no reversed or invented rope path.
-    for (const rope of pose.suspensionRopes) {
-      const first = rope.segments[0], last = rope.segments.at(-1)!
-      if (first.kind !== 'line' || last.kind !== 'line' || first.start[1] >= first.end[1] || last.end[1] >= last.start[1]) issues.push({ code: 'invalid-route', path: rope.id })
-    }
-    const movingLinkageY = s.linkage.ropeConnection[1] + pose.cabinOffsetY
-    if (movingLinkageY <= s.tension!.wheel.center[1] || movingLinkageY >= s.governor!.wheel.center[1]) issues.push({ code: 'invalid-route', path: 'governor' })
+  if (arc.kind !== 'arc') return undefined
+  return { traction, ropes, arc }
+}
+
+function doorsCanMove(inputs: PassengerSimulationInputs): boolean {
+  const { doors, installation } = inputs
+  if (doors.validation.state === 'invalid' || doors.cabin.length === 0) return false
+  return doors.cabin.every((entry) => entry.panels.length > 0 && installation.levels.every((level) =>
+    doors.landings.some((landing) => landing.levelId === level.id &&
+      landing.cabinEntranceId === entry.id && landing.panels.length > 0)))
+}
+
+/**
+ * Builds the shared visual-motion model. Only cabin travel is fundamental;
+ * mechanical, drive, rope, governor, and door animations are independent capabilities.
+ */
+export function createPassengerSimulationModel(
+  inputs: PassengerSimulationInputs,
+  data?: PassengerVisualizationData,
+): SimulationModelResult {
+  const { installation, layout, components, drive, safety } = inputs
+  const timing = data?.timing ?? PASSENGER_VISUALIZATION_TIMING
+  if (!validTiming(timing)) return { status: 'invalid', issues: [{ code: 'invalid-timing', path: 'visualization.timing' }] }
+
+  const initialIndex = data?.initialLevelIndex ?? installation.vertical.cabinLevelIndex ?? 0
+  const initial = installation.levels[initialIndex]
+  const region = installation.vertical.travelRegion
+  const basicIssues: SimulationIssue[] = []
+  if (installation.levels.length < 2) basicIssues.push({ code: 'unavailable-data', path: 'levels' })
+  if (!initial) basicIssues.push({ code: 'unavailable-data', path: 'currentLevel' })
+  if (!installation.cabin) basicIssues.push({ code: 'unavailable-data', path: 'cabin' })
+  if (!region) basicIssues.push({ code: 'unavailable-data', path: 'cabin.travelEnvelope' })
+  if (basicIssues.length) return { status: 'unavailable', issues: basicIssues }
+  if (installation.levels.some((level, index) => !Number.isFinite(level.elevationY) ||
+    (index > 0 && level.elevationY <= installation.levels[index - 1].elevationY))) {
+    return { status: 'invalid', issues: [{ code: 'invalid-level', path: 'levels' }] }
   }
-  return issues.length ? { status: 'invalid', issues } : { status: 'available', model }
+
+  const cabin = installation.cabin!
+  const shaft = installation.shaft?.verticalExtent
+  if (shaft && installation.levels.some((level) => level.elevationY < shaft.bottomY || level.elevationY + cabin.height > shaft.topY)) {
+    return { status: 'invalid', issues: [{ code: 'outside-envelope', path: 'cabin.travelEnvelope' }] }
+  }
+
+  const suspension = supportedSuspension(inputs)
+  const counterweightLayout = layout.counterweight
+  const counterweightReferenceY = counterweightLayout?.center[1]
+  const initialCounterweightY = counterweightReferenceY === undefined ? undefined
+    : data?.counterweightInitialCenter
+      ? metres(installation.vertical.highestLandingY! + millimetresToMetres(data.counterweightInitialCenter.offsetMm))
+      : counterweightReferenceY
+  const counterweightBounds = counterweightLayout ? [
+    counterweightLayout.bounds,
+    ...(components.counterweightFrame ? [components.counterweightFrame.bounds] : []),
+    ...components.counterweightGuideShoes.flatMap((shoe) => shoe.boxes.map(componentBoxBounds)),
+    ...drive.hitches.filter((hitch) => hitch.attachment === 'counterweight').map((hitch) => hitch.bounds),
+  ] : []
+  let counterweight = undefined as PassengerSimulationModel['counterweight']
+  if (suspension && counterweightLayout && counterweightReferenceY !== undefined && initialCounterweightY !== undefined && shaft) {
+    const offsets = boundsOffsets(counterweightBounds, counterweightReferenceY)
+    const envelope = { minY: metres(shaft.bottomY - offsets.min), maxY: metres(shaft.topY - offsets.max) }
+    const initialElevation = initial!.elevationY
+    const fitsEveryLevel = installation.levels.every((level) => {
+      const y = initialCounterweightY - (level.elevationY - initialElevation)
+      return y >= envelope.minY && y <= envelope.maxY
+    })
+    if (fitsEveryLevel) counterweight = {
+      referenceY: counterweightReferenceY,
+      initialY: initialCounterweightY,
+      envelope,
+      travelFactor: -1,
+    }
+  }
+
+  let suspensionRopes = counterweight && suspension ? suspension.ropes : []
+  let governorSegments = safety.governor && safety.tension && safety.governorRope && safety.linkage &&
+    safety.validation.state !== 'invalid' ? safety.governorRope.segments : []
+  let governorLinkagePoint = governorSegments.length ? safety.linkage!.ropeConnection : undefined
+
+  let capabilities: PassengerSimulationCapabilities = {
+    cabinMovement: capability(true, 'cabin'),
+    counterweightMovement: capability(!!counterweight, 'counterweight.relationship'),
+    doorMovement: capability(doorsCanMove(inputs), 'doors.panelTransforms'),
+    tractionRotation: capability(!!suspension, 'traction.contactGeometry'),
+    suspensionUpdate: capability(suspensionRopes.length > 0, 'suspension.route'),
+    governorUpdate: capability(governorSegments.length > 0, 'governor.route'),
+  }
+
+  const traction = suspension ? {
+    sheaveId: suspension.traction.id,
+    contactRadius: suspension.arc.radius,
+    rotationSign: (suspension.arc.exitAngle > suspension.arc.entryAngle ? 1 : -1) as -1 | 1,
+  } : undefined
+
+  const buildModel = (): PassengerSimulationModel => ({
+    levels: installation.levels,
+    initialLevelId: initial!.id,
+    referenceCabinY: cabin.bottomY,
+    cabinEnvelope: { minY: region!.bottomY, maxY: region!.topY },
+    capabilities,
+    counterweight,
+    traction,
+    suspensionRopes,
+    governorSegments,
+    governorLinkagePoint,
+    timing,
+  })
+
+  // Optional routes are checked at every stop. A bad optional route is removed,
+  // while valid cabin movement remains available.
+  let model = buildModel()
+  if (suspensionRopes.length) {
+    const valid = installation.levels.every((level) => {
+      const pose = createSimulationPose(model, {
+        ...createInitialSimulationState(model), currentLevel: level.id, sourceLevel: level.id, targetLevel: level.id,
+      })
+      return pose.suspensionRopes.every((rope) => {
+        const first = rope.segments[0]
+        const last = rope.segments.at(-1)!
+        return first.kind === 'line' && last.kind === 'line' && first.start[1] < first.end[1] && last.end[1] < last.start[1]
+      })
+    })
+    if (!valid) suspensionRopes = []
+  }
+  if (governorSegments.length) {
+    const valid = installation.levels.every((level) => {
+      const offset = level.elevationY - cabin.bottomY
+      const movingY = governorLinkagePoint![1] + offset
+      return movingY > safety.tension!.wheel.center[1] && movingY < safety.governor!.wheel.center[1]
+    })
+    if (!valid) { governorSegments = []; governorLinkagePoint = undefined }
+  }
+  capabilities = {
+    ...capabilities,
+    suspensionUpdate: capability(suspensionRopes.length > 0, 'suspension.route'),
+    governorUpdate: capability(governorSegments.length > 0, 'governor.route'),
+  }
+  model = buildModel()
+  const poseIssues = installation.levels.flatMap((level) => validateSimulationPose(model, createSimulationPose(model, {
+    ...createInitialSimulationState(model), currentLevel: level.id, sourceLevel: level.id, targetLevel: level.id,
+  })))
+  if (poseIssues.length) return { status: 'invalid', issues: poseIssues }
+
+  const issues = Object.values(capabilities).flatMap((entry) => entry.issues)
+  return {
+    status: 'available',
+    availability: issues.length ? 'partial' : 'complete',
+    model,
+    issues,
+  }
 }

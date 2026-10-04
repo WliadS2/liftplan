@@ -4,7 +4,7 @@ Date: 2026-10-04. Chrome, local `/dev/mechanical`, explicit synthetic simulation
 
 ## Automated verification
 
-`pnpm test`: 12 files, 165 tests passed. Existing domain/geometry/camera tests remain green. New pure simulation tests cover the exact cycle, invalid transitions/levels/timing/envelopes, open-door travel rejection, positive/negative travel, canonical exact arrival after partitioned ticks, 0..1 progress, inverse counterweight travel, finite pose, all arrangements, rope endpoints/fixed contacts, door attachments/current landing isolation, pause/resume/reset, command rejection without motion interruption, clock-fault freezing/reset, immutable project/default data, bounded UI notifications and explicit camera sampling. `pnpm lint` and `pnpm build` passed. Production assets contain no simulation control labels, inspector labels or synthetic fixture markers. The existing large Three.js chunk warning remains.
+`pnpm test`: 12 files, 173 tests passed. Existing domain/geometry/camera tests remain green. Pure simulation tests cover the exact cycle, invalid transitions/levels/timing/envelopes, open-door travel rejection, positive/negative travel, canonical exact arrival after partitioned ticks, 0..1 progress, inverse counterweight travel, finite pose, all arrangements, rope endpoints/fixed contacts, door attachments/current landing isolation, pause/resume/reset, command rejection without motion interruption, clock-fault freezing/reset, immutable project/default data, bounded UI notifications and explicit camera sampling. Regression coverage adds cabin-only normal projects, panel animation without operator geometry, complete capability data, structured incomplete requirements, optional-subsystem degradation, playback-profile isolation, and normal 2/6/10-stop up/down travel. `pnpm lint` and `pnpm build` passed. Production assets contain the normal simulation controls but no sampled development inspector or synthetic fixture markers. The existing large Three.js chunk warning remains.
 
 ## Chrome observations
 
@@ -22,7 +22,10 @@ Date: 2026-10-04. Chrome, local `/dev/mechanical`, explicit synthetic simulation
 | Resume | Continues the same cycle/target and opens only after arrival |
 | View changes during travel | Gesamtansicht, Mechanik, Antrieb, Sicherheit, Türen and Schnittansicht render the same centralized runtime; Antrieb retains close fixed-drive framing |
 | Camera ownership | Manual orbit during a 10-stop trip stays Y-up and does not snap back on ordinary ticks; local modes sample runtime pose only on explicit framing events |
-| Normal project | Opens with absent planning dimensions and no fixture values; development unavailable notice is shown; simulation setup is not inserted by normal project creation |
+| Normal project, incomplete | Opens with absent planning dimensions and no fixture values; precise missing level/cabin/travel information is shown; no simulation setup is inserted into project state |
+| Normal project, six stops | Entered cabin, shaft, floor-height, pit and headroom planning data manually; “Fahrdemo teilweise verfügbar.” appeared; controls listed stops 1–6; travel completed 1→6 and 6→1 while mechanical/drive/door details remained absent |
+| Progressive capability UI | Missing counterweight, door, traction, suspension and governor functions remain in the collapsed “Fehlende Teilfunktionen” disclosure and do not block cabin movement |
+| Full development fixture | `/dev/mechanical` reports “Fahrdemo verfügbar.”; start, pause, resume and exact arrival remain operational with the complete mechanical visualization |
 
 Exact numeric readings above are synthetic fixture observations, not engineering values. High trip speed on a 10-stop fixture follows its explicit eight-second visual duration, independent of rated project speed. At endpoints the current car and counterweight are far apart, so a mode framing both must show a tall region. Local inspection does not automatically follow the moving car.
 

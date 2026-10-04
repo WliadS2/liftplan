@@ -1,6 +1,6 @@
 import { PerspectiveCamera } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AutoFitCamera } from '../camera/AutoFitCamera'
 import { PassengerElevatorAssembly } from '../geometry/passenger/PassengerElevatorAssembly'
 import { createPassengerMechanicalLayout } from '../geometry/passenger/mechanical/passenger-mechanical-layout'
@@ -17,9 +17,7 @@ import type { PassengerEntranceSide } from '../geometry/passenger/passenger-inst
 import { createPassengerSimulationModel, type PassengerVisualizationData, type SimulationModelResult } from '../../simulation/passenger-simulation-model'
 import { createPassengerSimulationController } from '../../simulation/passenger-simulation'
 import { PassengerSimulationDriver } from './PassengerSimulationDriver'
-
-const DevelopmentSimulationControls = import.meta.env.DEV ? lazy(async () => ({ default: (await import('../../dev/DevelopmentSimulationControls')).DevelopmentSimulationControls })) : undefined
-const DevelopmentSimulationUnavailable = import.meta.env.DEV ? lazy(async () => ({ default: (await import('../../dev/DevelopmentSimulationControls')).DevelopmentSimulationUnavailable })) : undefined
+import { PassengerSimulationControls, PassengerSimulationUnavailable } from './PassengerSimulationControls'
 
 const doorMessages: Record<DoorIssueCode, string> = {
   'invalid-door-shape': 'Eine Türbaugruppe enthält widersprüchliche Geometriedaten.',
@@ -129,7 +127,6 @@ export function ThreeConfiguratorViewport({
     : 'unavailable', [model, mechanicalComponents, drive, safety, doors])
   const doorSelectionKey = `${doorInspection?.level?.id ?? ''}:${doorInspection?.side ?? ''}`
   const simulationResult = useMemo((): SimulationModelResult | undefined => {
-    if (!import.meta.env.DEV) return undefined
     return model && mechanicalLayout && mechanicalComponents && drive && safety && doors
       ? createPassengerSimulationModel({ installation: model, layout: mechanicalLayout, components: mechanicalComponents, drive, safety, doors }, visualizationData)
       : { status: 'unavailable', issues: [{ code: 'unavailable-data', path: 'installation' }] }
@@ -201,8 +198,8 @@ export function ThreeConfiguratorViewport({
         </select></label>}
       </div>}
 
-      {DevelopmentSimulationControls && simulation && <Suspense fallback={null}><DevelopmentSimulationControls key={cameraInstallationKey} controller={simulation} /></Suspense>}
-      {DevelopmentSimulationUnavailable && simulationResult && simulationResult.status !== 'available' && <Suspense fallback={null}><DevelopmentSimulationUnavailable codes={simulationResult.issues.map((issue) => issue.code)} /></Suspense>}
+      {simulation && <PassengerSimulationControls key={cameraInstallationKey} controller={simulation} />}
+      {simulationResult && simulationResult.status !== 'available' && <PassengerSimulationUnavailable issues={simulationResult.issues} />}
 
       {!modelResult || modelResult.status === 'empty' ? (
         <ViewportFallback>

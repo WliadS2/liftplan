@@ -4,7 +4,13 @@
 
 `configuration/layout → normalized installation → simulation model → state machine → simulation pose → Three.js transforms` is the complete motion pipeline. This is deterministic kinematic visualization, not an elevator dynamics simulation, equipment recommendation or performance/EN 81 result. Rated project speed does not drive the animation.
 
-`src/simulation` stays independent of React, Three.js runtime, engineering calculations and Zustand. The input adapter reads existing immutable normalized levels, shaft extents, component bounds, analytic cable segments and door transforms. Visualization setup is a separate record with `demo | visualization` provenance. Missing data remains unavailable. Unsupported or impossible layouts return structured `{ code, path }` issues; there is no implicit correction or fallback physical relationship.
+`src/simulation` stays independent of React, Three.js runtime, engineering calculations and Zustand. The input adapter reads existing immutable normalized levels, shaft extents, component bounds, analytic cable segments and door transforms. Missing fundamental motion data remains unavailable. Missing or invalid optional subsystem data removes only that capability and returns structured `{ code, path }` information; there is no implicit correction or fallback physical relationship.
+
+## Progressive capabilities
+
+`cabinMovement` is the fundamental capability. It requires at least two ordered finite level elevations, a normalized cabin with a valid initial level, and a cabin-floor travel envelope. When a shaft vertical extent is present, the full cabin must fit at every served level. The target level is checked again at command dispatch.
+
+`doorMovement`, `counterweightMovement`, `tractionRotation`, `suspensionUpdate`, and `governorUpdate` are independent. Door movement needs explicit cabin and corresponding landing panel transforms, but no operator model. Counterweight movement needs an explicit normalized 1:1 relationship, position and valid envelope. Traction rotation needs explicit traction contact geometry. Suspension and governor updates need their respective analytic routes and moving attachments. Failure in any optional capability leaves cabin movement usable. The model result distinguishes complete and partial availability and retains a structured reason per missing capability.
 
 ## State machine and clock
 
@@ -18,13 +24,13 @@ One R3F callback in `PassengerSimulationDriver` advances the controller and appl
 
 ## Pose and rigid attachments
 
-The pose contains canonical world-metre `cabinY` (floor), `counterweightY` (centre), offsets from static layout references, traction rotation, cabin and active landing door progress, active landing ID, phase, direction, travel progress, four normalized suspension routes and the separate governor route.
+The pose always contains canonical world-metre `cabinY` (floor), its static-layout offset, phase, direction and travel progress. Counterweight position/offset and traction rotation are optional. Suspension and governor route lists are empty when their capabilities are absent. Door progress remains zero and has no active landing when door movement is unavailable.
 
 Named moving groups translate cabin shell, sling, cabin guide shoes, safety gear/linkage and car hitches/terminations together. Each cabin entrance carries panels, fixed frame/sill/track, operator and coupling with the car. Counterweight frame, slab instances, shoes and its hitches/terminations share the inverse offset. Rails, buffers, machine/supports, governor, pit tension assembly, landing doors and machine brake remain fixed. No geometry layout or project coordinate is mutated.
 
 ## Counterweight and traction
 
-The first supported runtime contract is the normalized explicit 1:1 route: car hitch → fixed traction wrap → counterweight hitch, with vertical endpoint spans and one fixed contact arc. The suspension ratio/reference identifies the inverse equal-displacement relationship; mass never participates. The separate visualization record explicitly defines the initial counterweight centre relative to the highest normalized landing. Its centre envelope is derived from supplied shaft bounds and complete frame/shoe/hitch bounds. Every served level is checked before simulation is enabled.
+The first supported counterweight contract is the normalized explicit 1:1 route: car hitch → fixed traction wrap → counterweight hitch, with vertical endpoint spans and one fixed contact arc. The suspension ratio/reference identifies the inverse equal-displacement relationship; mass never participates. A normal project uses its explicit normalized counterweight position. The development fixture may separately define its synthetic initial counterweight centre. The centre envelope is derived from supplied shaft bounds and known weight/frame/shoe/hitch bounds. Every served level is checked before this capability is enabled; failure does not disable cabin travel.
 
 Other routes, including 2:1 moving-pulley systems, remain structurally representable in static geometry but are rejected by this first runtime adapter. No unprovided relationship is guessed.
 
@@ -44,11 +50,13 @@ Between levels the active landing ID is absent and all door progress is zero. Ex
 
 ## Development access and timing
 
-Run `pnpm dev` and open `/dev/mechanical` directly or choose “Fahrdemo öffnen” from the development workspace controls. The compact viewport controls supply “Zielhaltestelle”, “Fahrt starten”, “Pause”, “Fortsetzen” and “Zurücksetzen”. The same route supports 2/6/10 stops and rear/left/right arrangements.
+Every sufficiently configured normal passenger project exposes the compact viewport controls “Zielhaltestelle”, “Fahrt starten”, “Pause”, “Fortsetzen” and “Zurücksetzen”. It reports either “Fahrdemo verfügbar.” or “Fahrdemo teilweise verfügbar.”; missing optional functions are listed in one collapsed disclosure. Run `pnpm dev` and open `/dev/mechanical` for the richer fixture. The same route supports 2/6/10 stops and rear/left/right arrangements.
+
+`src/simulation/passenger-visualization-profile.ts` contains the built-in screen-animation timing for normal projects. Its values control only interpolation on screen. They are not stored in the project/configuration, do not use rated speed, are excluded from engineering validation and technical specifications, and do not represent real elevator performance.
 
 `src/dev/fixtures/passenger-simulation-demo.ts` wraps the existing mechanical fixture. Only this motion QA variant supplies 4000 mm synthetic headroom, an initial counterweight centre at highest landing + 1100 mm, and explicitly demo-classified durations: 2 s closing, 8 s travel for any selected trip, 0.4 s arrival, 2 s opening and 3 s dwell. These are synthetic test values, not standards, recommendations, manufacturer values or engineering performance. The larger demo headroom keeps the explicit moving suspension endpoints below the top wraps throughout travel; the existing static mechanical fixture remains unchanged.
 
-Neither motion setup nor timing is inserted in project defaults or normal fixture loading. A normal/incomplete planning viewport reports unavailable visualization data. Route, setup, controls and German demo messages are excluded from production by `import.meta.env.DEV`; core rendering contracts remain reusable.
+Neither playback profile nor demo setup is inserted in project defaults, Zustand, or normal fixture loading. Normal project controls are part of the visual configurator; only the sampled “Bewegungsdaten” inspector and `/dev/mechanical` fixture route are development-only. Production contains the shared simulation engine and normal controls, but not the synthetic fixture values.
 
 ## Camera and performance
 
@@ -60,6 +68,6 @@ A small optional development-only “Bewegungsdaten” disclosure shows cabin fl
 
 ## Guards, verification and limitations
 
-Tests cover the complete cycle, upward/downward exact arrival, normalized progress, inverse envelopes, finite pose, 2/6/10 stops, all counterweight arrangements, through-car door coordination, immutable planning inputs, route attachments, pause/resume/reset, invalid commands/timing/data, UI notification frequency and explicit camera-frame sampling. See [browser QA](../qa/passenger-kinematic-simulation.md).
+Tests cover the complete cycle, upward/downward exact arrival, normalized progress, inverse envelopes, finite pose, 2/6/10-stop normal projects, basic cabin-only availability, doors without operator geometry, full capability fixtures, optional subsystem degradation, all counterweight arrangements, through-car door coordination, immutable planning inputs, profile isolation, route attachments, pause/resume/reset, invalid commands/timing/data, UI notification frequency and explicit camera-frame sampling. See [browser QA](../qa/passenger-kinematic-simulation.md).
 
 The current guards enforce known coordinate/envelope/state relationships only. No full dynamic collision, pulley/hitch clearance engine, acceleration/jerk model, braking/traction/rope-force/motor/energy model, load-dependent movement, emergency stop, safety gear activation, governor trip, electrical controller dispatch, door obstruction/light curtain, multi-car control or EN 81 performance verification exists.

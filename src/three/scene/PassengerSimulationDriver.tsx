@@ -23,9 +23,11 @@ export function PassengerSimulationDriver({ controller, doors, children }: {
     controller.advance(deltaSeconds)
     const pose = controller.getPose(), nodes = objects.current, v = vectors.current
     for (const name of CAR_MOTION_GROUPS) { const object = nodes.get(name); if (object) object.position.y = pose.cabinOffsetY }
-    for (const name of COUNTERWEIGHT_MOTION_GROUPS) { const object = nodes.get(name); if (object) object.position.y = pose.counterweightOffsetY }
-    const rotor = nodes.get(`sheave-rotor-${controller.model.tractionSheaveId}`)
-    if (rotor) rotor.rotation.z = pose.tractionSheaveRotation
+    if (pose.counterweightOffsetY !== undefined) {
+      for (const name of COUNTERWEIGHT_MOTION_GROUPS) { const object = nodes.get(name); if (object) object.position.y = pose.counterweightOffsetY }
+    }
+    const rotor = controller.model.traction ? nodes.get(`sheave-rotor-${controller.model.traction.sheaveId}`) : undefined
+    if (rotor && pose.tractionSheaveRotation !== undefined) rotor.rotation.z = pose.tractionSheaveRotation
     for (const binding of getDoorMotionBindings(doors, pose)) {
       const entrance = nodes.get(binding.entryId)
       if (entrance) entrance.position.y = binding.offsetY
@@ -43,7 +45,7 @@ export function PassengerSimulationDriver({ controller, doors, children }: {
       })
     }
     for (const rope of pose.suspensionRopes) updateCable(rope.id, rope.segments)
-    updateCable('governor-rope-loop', pose.governorSegments)
+    if (pose.governorSegments.length) updateCable('governor-rope-loop', pose.governorSegments)
   }, -2)
   return <group ref={root}>{children}</group>
 }
