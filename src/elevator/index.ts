@@ -29,6 +29,12 @@ export type {
 } from './configuration/passenger-planning-configuration'
 export { passengerMechanicalPlanningSchema, RAIL_ORIENTATIONS } from './configuration/passenger-mechanical-planning'
 export type { PassengerMechanicalPlanningInput, RailOrientation } from './configuration/passenger-mechanical-planning'
+export { COMPONENT_DATA_SOURCES, mechanicalComponentDataSchema } from './configuration/mechanical-component-data'
+export type {
+  ComponentDataSource, MechanicalComponentData, RailProfileData,
+  SlidingGuideShoeData, FutureGuideType, CarSlingData, CounterweightFrameData,
+  BufferComponentData,
+} from './configuration/mechanical-component-data'
 export { validateLiftConfiguration } from './configuration/structural-validation'
 export type {
   StructuralValidationIssue,

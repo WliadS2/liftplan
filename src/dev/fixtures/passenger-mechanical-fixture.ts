@@ -4,6 +4,7 @@ import {
   type PassengerPlanningConfiguration,
 } from '../../elevator'
 import { kilograms, metresPerSecond, millimetres } from '../../engineering'
+import { createMechanicalDemoComponents } from './mechanical-demo-components'
 
 // Demo/test coordinates only. Never imported by production default factories or the project store.
 export function createPassengerMechanicalFixture(
@@ -26,6 +27,7 @@ export function createPassengerMechanicalFixture(
     counterweightWidthMm: millimetres(700), counterweightHeightMm: millimetres(1800), counterweightDepthMm: millimetres(220),
     counterweightPosition: arrangement,
     mechanical: {
+      components: createMechanicalDemoComponents(),
       carRailOrientation: 'x', carRailSpacingMm: millimetres(1500),
       carRailAxisMm: { xMm: millimetres(0), zMm: millimetres(0) },
       counterweightArrangement: arrangement, counterweightOffsetMm: offset,

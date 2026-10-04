@@ -19,6 +19,14 @@ describe('passenger mechanical planning structure', () => {
     expect(passengerMechanicalPlanningSchema.safeParse({ balanceFactor: 0.5 }).success).toBe(false)
     expect(passengerMechanicalPlanningSchema.safeParse({ carRailPositionsMm: [{ xMm: 0, zMm: 0 }] }).success).toBe(false)
   })
+  it('requires explicit component provenance and structurally complete component records', () => {
+    const fixture = createPassengerMechanicalFixture()
+    const profile = fixture.mechanical!.components!.railProfile!
+    expect(passengerMechanicalPlanningSchema.safeParse({ components: { railProfile: profile } }).success).toBe(true)
+    expect(passengerMechanicalPlanningSchema.safeParse({ components: { railProfile: { ...profile, source: undefined } } }).success).toBe(false)
+    expect(passengerMechanicalPlanningSchema.safeParse({ components: { railProfile: { ...profile, source: 'standard' } } }).success).toBe(false)
+    expect(passengerMechanicalPlanningSchema.safeParse({ components: { railProfile: { ...profile, headWidthMm: Infinity } } }).success).toBe(false)
+  })
   it('round-trips fixture mechanical inputs through project state without creating defaults', () => {
     const store = createProjectStore()
     const fixture = createPassengerMechanicalFixture()

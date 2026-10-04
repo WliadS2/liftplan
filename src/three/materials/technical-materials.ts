@@ -18,3 +18,14 @@ export const TECHNICAL_MATERIALS = {
   mechanicalZone: '#a0adb7',
   pit: '#64748b',
 } as const
+
+// Restrained PBR visualization palette; appearance carries no engineering/source meaning.
+export const MECHANICAL_MATERIALS = {
+  frame: { color: '#5e707c', metalness: 0.45, roughness: 0.48 },
+  rail: { color: '#75858e', metalness: 0.65, roughness: 0.32 },
+  weight: { color: '#99978f', metalness: 0.22, roughness: 0.7 },
+  shoe: { color: '#46535d', metalness: 0.3, roughness: 0.55 },
+  liner: { color: '#262d32', metalness: 0, roughness: 0.85 },
+  buffer: { color: '#5f6e76', metalness: 0.4, roughness: 0.5 },
+  plunger: { color: '#a0abb2', metalness: 0.65, roughness: 0.28 },
+} as const

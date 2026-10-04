@@ -1,9 +1,10 @@
 import { Bounds, OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AutoFitCamera } from '../camera/AutoFitCamera'
 import { PassengerElevatorAssembly } from '../geometry/passenger/PassengerElevatorAssembly'
 import { createPassengerMechanicalLayout } from '../geometry/passenger/mechanical/passenger-mechanical-layout'
+import { createPassengerMechanicalComponents } from '../geometry/passenger/mechanical/mechanical-component-model'
 import { createPassengerInstallationModel } from '../geometry/passenger/passenger-installation-model'
 import type { LiftGeometryPlanningInput } from '../geometry/lift-geometry-planning-input'
 import type { ThreeViewMode } from './view-mode'
@@ -38,14 +39,17 @@ export function ThreeConfiguratorViewport({
   initialViewMode = 'overview',
 }: ThreeConfiguratorViewportProps) {
   const [viewMode, setViewMode] = useState<ThreeViewMode>(initialViewMode)
-  const modelResult = geometryInput
+  const modelResult = useMemo(() => geometryInput
     ? createPassengerInstallationModel(geometryInput)
-    : undefined
+    : undefined, [geometryInput])
   const model = modelResult && 'model' in modelResult ? modelResult.model : undefined
-  const mechanicalLayout =
+  const mechanicalLayout = useMemo(() =>
     geometryInput && model
       ? createPassengerMechanicalLayout(geometryInput, model)
-      : undefined
+      : undefined, [geometryInput, model])
+  const mechanicalComponents = useMemo(() => mechanicalLayout
+    ? createPassengerMechanicalComponents(geometryInput?.mechanical.components, mechanicalLayout)
+    : undefined, [geometryInput, mechanicalLayout])
 
   const frameKey =
     model
@@ -62,6 +66,9 @@ export function ThreeConfiguratorViewport({
           mechanicalLayout?.bounds.depth,
           mechanicalLayout?.bounds.height,
           mechanicalLayout?.bounds.centerY,
+          mechanicalComponents?.bounds.width,
+          mechanicalComponents?.bounds.height,
+          mechanicalComponents?.bounds.depth,
           viewMode,
         ].join(':')
       : 'unavailable'
@@ -139,14 +146,15 @@ export function ThreeConfiguratorViewport({
               <directionalLight intensity={0.7} position={[-4, 3, -5]} />
 
               <Bounds margin={1.15}>
-                {model && mechanicalLayout && (
+                {model && mechanicalLayout && mechanicalComponents && (
                   <PassengerElevatorAssembly
                     mechanicalLayout={mechanicalLayout}
+                    mechanicalComponents={mechanicalComponents}
                     model={model}
                     viewMode={viewMode}
                   />
                 )}
-                <AutoFitCamera frameKey={frameKey} mechanicalBounds={mechanicalLayout?.bounds} />
+                <AutoFitCamera frameKey={frameKey} mechanicalBounds={mechanicalComponents?.bounds ?? mechanicalLayout?.bounds} />
               </Bounds>
             </Canvas>
           </div>
@@ -168,6 +176,13 @@ export function ThreeConfiguratorViewport({
               {mechanicalPlanningMessages[issue.code]}
             </p>
           ))}
+          {mechanicalComponents && mechanicalComponents.missingData.length > 0 &&
+            (mechanicalLayout?.carRails || mechanicalLayout?.counterweight) && (
+              <p className="viewport-status">Bauteildarstellung unvollständig – explizite Geometriedaten fehlen.</p>
+            )}
+          {mechanicalComponents && mechanicalComponents.issues.length > 0 && (
+            <p className="viewport-status" role="alert">Einzelne Bauteile können mit den angegebenen Geometriedaten nicht dargestellt werden.</p>
+          )}
         </>
       )}
 
