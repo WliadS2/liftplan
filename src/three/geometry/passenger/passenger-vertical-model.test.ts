@@ -53,13 +53,13 @@ describe('semantic installation-height reflow', () => {
     const highest = (count - 1) * 3
     expect(i.levels.map((level) => level.elevationY)).toEqual(Array.from({ length: count }, (_, j) => j * 3))
     expect(i.vertical).toMatchObject({ lowestLandingY: 0, highestLandingY: highest, pitBottomY: -1.2,
-      shaftTopY: highest + 3, topMechanicalY: highest + 2, cabinLevelIndex: 0, cabinElevationY: 0,
-      travelRegion: { bottomY: 0, topY: highest }, headroomRegion: { bottomY: highest, topY: highest + 3 } })
-    expect(i.shaft!.verticalExtent!.height).toBeCloseTo(highest + 4.2)
-    expect(d.machine!.origin[1]).toBeCloseTo(highest + 2.4)
+      shaftTopY: highest + 4, topMechanicalY: highest + 3, cabinLevelIndex: 0, cabinElevationY: 0,
+      travelRegion: { bottomY: 0, topY: highest }, headroomRegion: { bottomY: highest, topY: highest + 4 } })
+    expect(i.shaft!.verticalExtent!.height).toBeCloseTo(highest + 5.2)
+    expect(d.machine!.origin[1]).toBeCloseTo(highest + 3.4)
     expect(d.sheaves[0].center[1]).toBe(d.machine!.origin[1])
-    expect(d.supports[0].center[1]).toBeCloseTo(highest + 1.61)
-    expect(s.governor!.wheel.center[1]).toBeCloseTo(highest + 2.6)
+    expect(d.supports[0].center[1]).toBeCloseTo(highest + 2.61)
+    expect(s.governor!.wheel.center[1]).toBeCloseTo(highest + 3.6)
     expect(s.governor!.bounds.max[1]).toBeLessThan(i.vertical.shaftTopY!)
     expect(d.machine!.bounds.max[1]).toBeLessThan(i.vertical.shaftTopY!)
     expect(l.carBuffers!.basePositions.map((p) => p[1])).toEqual([-1.2, -1.2])
@@ -81,11 +81,11 @@ describe('semantic installation-height reflow', () => {
     for (const door of doors.landings) expect(door.origin[1]).toBe(i.levels.find((level) => level.id === door.levelId)!.elevationY)
     for (const rope of d.suspension!.ropes) {
       expect(rope.points.every((p) => p.every(Number.isFinite))).toBe(true)
-      expect(rope.points[1][1]).toBeCloseTo(highest + 2.4)
+      expect(rope.points[1][1]).toBeCloseTo(highest + 3.4)
       expect(rope.points[0][1]).toBeCloseTo(2.49)
     }
     expect(s.governorRope!.points.every((p) => p.every(Number.isFinite))).toBe(true)
-    expect(s.governorRope!.bounds.max[1]).toBeCloseTo(highest + 2.803)
+    expect(s.governorRope!.bounds.max[1]).toBeCloseTo(highest + 3.803)
     const overview = getPassengerCameraBounds('overview', c, d, s, doors)
     expect(overview.min[1]).toBeLessThanOrEqual(i.vertical.pitBottomY!)
     expect(overview.max[1]).toBeGreaterThanOrEqual(i.vertical.shaftTopY!)
@@ -100,7 +100,7 @@ describe('semantic installation-height reflow', () => {
   it('reflows explicit storey height, headroom and pit changes independently', () => {
     const base = { ...createPassengerMechanicalFixture(), stopCount: 6 }
     const original = normalize(base)
-    for (const config of [{ ...base, floorHeightMm: mm(3500) }, { ...base, headroomMm: mm(4000) }, { ...base, pitDepthMm: mm(1600) }]) {
+    for (const config of [{ ...base, floorHeightMm: mm(3500) }, { ...base, headroomMm: mm(4500) }, { ...base, pitDepthMm: mm(1600) }]) {
       const model = normalize(config)
       valid(model)
       const { vertical: v } = model.installation
@@ -138,7 +138,7 @@ describe('semantic installation-height reflow', () => {
     expect(model.installation.vertical.pitBottomY).toBeCloseTo(-0.2)
     expect(model.installation.pit!.centerY).toBeCloseTo(0.4)
     expect(model.installation.cabin!.bottomY).toBe(4)
-    expect(model.drive.machine!.origin[1]).toBeCloseTo(10.9)
+    expect(model.drive.machine!.origin[1]).toBeCloseTo(11.9)
     expect(model.doors.landings.map((d) => d.origin[1])).toEqual([1, 4, 8.5])
   })
 
@@ -155,7 +155,7 @@ describe('semantic installation-height reflow', () => {
   it('preserves absolute points and sources, while unavailable anchors omit only dependent equipment', () => {
     const model = normalize(createPassengerMechanicalFixture())
     const missing: string[] = []
-    const point = { xMm: mm(0), yMm: mm(5400), zMm: mm(0) }
+    const point = { xMm: mm(0), yMm: mm(6400), zMm: mm(0) }
     expect(resolveVerticalRecord(point, model.installation.vertical, missing, 'absolute')).toEqual(point)
     expect(resolveVerticalRecord({ ...point, verticalAnchor: undefined }, model.installation.vertical, missing, 'absolute')).toEqual(point)
     expect(resolveVerticalRecord({ ...point, yMm: mm(-600), verticalAnchor: 'shaft-top' }, model.installation.vertical, missing, 'relative')).toEqual(point)
@@ -170,6 +170,6 @@ describe('semantic installation-height reflow', () => {
     expect(partial.drive.validation.issues).toEqual([])
     expect(partial.safety.validation.issues).toEqual([])
     expect(createPassengerPlanningConfiguration('Normal')).not.toHaveProperty('cabinLevelIndex')
-    expect(resolveVerticalRecord({ ...point, verticalAnchor: 'counterweight-center' }, model.installation.vertical, [], 'cw', metres(1))).toMatchObject({ yMm: 6400 })
+    expect(resolveVerticalRecord({ ...point, verticalAnchor: 'counterweight-center' }, model.installation.vertical, [], 'cw', metres(1))).toMatchObject({ yMm: 7400 })
   })
 })

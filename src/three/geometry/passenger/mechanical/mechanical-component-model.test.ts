@@ -73,7 +73,7 @@ describe('explicit mechanical component geometry', () => {
     expect(right.rotationY).toBe(-Math.PI / 2)
     expect(left.facing[0]).toBeCloseTo(1)
     expect(right.facing[0]).toBeCloseTo(-1)
-    expect(left.length).toBeCloseTo(7.2)
+    expect(left.length).toBeCloseTo(8.2)
   })
 
   it('orients z-axis cabin rails toward their sling', () => {

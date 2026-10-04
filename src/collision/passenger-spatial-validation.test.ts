@@ -6,7 +6,7 @@ import {
 import { metres, millimetres } from '../engineering'
 import { createPassengerDoorDemo } from '../dev/fixtures/passenger-door-demo'
 import { createPassengerMechanicalFixture } from '../dev/fixtures/passenger-mechanical-fixture'
-import { createPassengerSimulationFixture } from '../dev/fixtures/passenger-simulation-demo'
+import { createPassengerSimulationFixture, PASSENGER_SIMULATION_DEMO_DATA } from '../dev/fixtures/passenger-simulation-demo'
 import { createLiftGeometryPlanningInput } from '../three/geometry/lift-geometry-planning-input'
 import { createPassengerInstallationModel } from '../three/geometry/passenger/passenger-installation-model'
 import { createPassengerMechanicalLayout } from '../three/geometry/passenger/mechanical/passenger-mechanical-layout'
@@ -20,6 +20,7 @@ import {
   aabbIntersects,
   aabbOutside,
   aabbSeparation,
+  classifyAabbIntersection,
   createVerticalSweptAabb,
   measureGeometricClearances,
   type AxisAlignedBoundingBox,
@@ -102,6 +103,15 @@ describe('static collision primitives', () => {
     expect(createVerticalSweptAabb(box([-0.5, 0, -0.5], [0.5, 2, 0.5]), metres(-1), metres(9))).toEqual(
       box([-0.5, -1, -0.5], [0.5, 11, 0.5]),
     )
+  })
+
+  it('classifies touching AABBs as contact rather than penetration', () => {
+    const first = box([0, 0, 0], [1, 1, 1])
+    const touching = box([1, 0.25, 0.25], [2, 0.75, 0.75])
+    expect(classifyAabbIntersection(first, touching)).toEqual({
+      relationship: 'contact', overlap: [0, 0.5, 0.5],
+    })
+    expect(aabbIntersects(first, touching)).toBe(false)
   })
 })
 
@@ -253,7 +263,25 @@ describe('passenger spatial rule registry', () => {
     })
   })
 
-  it('reports spatial cabin/counterweight sweep overlap without inferring timing', () => {
+  it('keeps the complete Mechanical Demo free of false blocking swept-space conflicts', () => {
+    const configuration = createPassengerMechanicalFixture()
+    expect(configuration).toMatchObject({ doorWidthMm: millimetres(900), doorHeightMm: millimetres(2100) })
+    const inputs = normalize(configuration)
+    const movement = evaluation(inputs, 'passenger.movement.swept-spaces')
+    expect(movement.issues).not.toContainEqual(expect.objectContaining({
+      code: 'fixed-obstacle-in-cabin-sweep',
+    }))
+    expect(createPassengerSimulationModel(inputs).status).toBe('available')
+  })
+
+  it('does not report a cabin/counterweight conflict for overlapping Y travel with separated X/Z plans', () => {
+    const inputs = normalize(createPassengerSimulationFixture())
+    expect(evaluation(inputs, 'passenger.movement.swept-spaces', {
+      counterweightCenterEnvelope: { minY: metres(1.1), maxY: metres(4.1) },
+    })).toMatchObject({ status: 'ok', issues: [] })
+  })
+
+  it('invalidates actual cabin/counterweight swept penetration without inferring timing', () => {
     const inputs = normalize(createPassengerSimulationFixture())
     const overlappingLayout = {
       ...inputs.layout,
@@ -269,7 +297,39 @@ describe('passenger spatial rule registry', () => {
     const sweep = evaluation({ ...inputs, layout: overlappingLayout }, 'passenger.movement.swept-spaces', {
       counterweightCenterEnvelope: { minY: metres(1.1), maxY: metres(4.1) },
     })
-    expect(sweep).toMatchObject({ status: 'warning', issues: [expect.objectContaining({ code: 'counterweight-sweep-conflict' })] })
+    expect(sweep).toMatchObject({
+      status: 'invalid',
+      issues: [expect.objectContaining({
+        code: 'counterweight-sweep-conflict', severity: 'error', blocksCabinTravel: true,
+      })],
+    })
+    expect(createPassengerSimulationModel({ ...inputs, layout: overlappingLayout }, PASSENGER_SIMULATION_DEMO_DATA)).toMatchObject({
+      status: 'invalid',
+      issues: expect.arrayContaining([
+        expect.objectContaining({ code: 'geometric-conflict', path: 'counterweight-sweep-conflict' }),
+      ]),
+    })
+  })
+
+  it('keeps fixed guide rails and landing doors out of moving sweeps', () => {
+    const validation = validatePassengerSpatialGeometry(normalize(createPassengerSimulationFixture()), {
+      counterweightCenterEnvelope: { minY: metres(1.1), maxY: metres(4.1) },
+    })
+    const carIds = [
+      ...validation.envelopes.cabinSweep?.componentIds ?? [],
+      ...validation.envelopes.carFrameSweep?.componentIds ?? [],
+    ]
+    expect(carIds.some((id) => id.startsWith('car-rail-') || id.startsWith('landing-'))).toBe(false)
+    expect(validation.envelopes.counterweightSweep?.componentIds.some((id) =>
+      id.startsWith('counterweight-rail-'))).toBe(false)
+  })
+
+  it.each([2, 6, 10])('keeps the complete Mechanical Demo swept-space baseline stable for %i stops', (count) => {
+    const inputs = normalize(createPassengerSimulationFixture('rear', false, count))
+    expect(evaluation(inputs, 'passenger.movement.swept-spaces').issues).not.toContainEqual(
+      expect.objectContaining({ code: 'fixed-obstacle-in-cabin-sweep' }),
+    )
+    expect(createPassengerSimulationModel(inputs).status).toBe('available')
   })
 
   it('blocks simulation only for travel-blocking INVALID geometry', () => {

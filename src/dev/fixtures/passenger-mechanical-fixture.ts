@@ -29,7 +29,8 @@ export function createPassengerMechanicalFixture(
     doorWidthMm: millimetres(900), doorHeightMm: millimetres(2100), throughCar,
     doors: createPassengerDoorDemo(throughCar),
     shaftWidthMm: millimetres(2600), shaftDepthMm: millimetres(3000),
-    floorHeightMm: millimetres(3000), pitDepthMm: millimetres(1200), headroomMm: millimetres(3000),
+    // Synthetic clearance for the explicitly placed demo top equipment; not a production planning default.
+    floorHeightMm: millimetres(3000), pitDepthMm: millimetres(1200), headroomMm: millimetres(4000),
     counterweightWidthMm: millimetres(700), counterweightHeightMm: millimetres(1800), counterweightDepthMm: millimetres(220),
     counterweightPosition: arrangement,
     mechanical: {

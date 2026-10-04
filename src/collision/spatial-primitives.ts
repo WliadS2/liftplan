@@ -30,13 +30,32 @@ export interface AxisSeparation {
   readonly distance: Metres
 }
 
+export type AabbRelationship = 'separated' | 'contact' | 'penetration'
+
+export interface AabbIntersection {
+  readonly relationship: AabbRelationship
+  readonly overlap: SpatialPoint
+}
+
 export const isFiniteAabb = (box: AxisAlignedBoundingBox): boolean =>
   [...box.min, ...box.max].every(Number.isFinite) &&
   box.min.every((value, axis) => value <= box.max[axis])
 
-/** Positive-volume intersection. Merely touching faces have zero clearance but do not intersect. */
+/** Distinguishes separation, zero-volume contact, and positive-volume penetration without an engineering tolerance. */
+export function classifyAabbIntersection(a: AxisAlignedBoundingBox, b: AxisAlignedBoundingBox): AabbIntersection {
+  const overlap = [0, 1, 2].map((axis) =>
+    metres(Math.min(a.max[axis], b.max[axis]) - Math.max(a.min[axis], b.min[axis]))) as unknown as SpatialPoint
+  const relationship = overlap.some((value) => value < 0)
+    ? 'separated'
+    : overlap.every((value) => value > 0)
+      ? 'penetration'
+      : 'contact'
+  return { relationship, overlap }
+}
+
+/** Positive-volume intersection. Merely touching faces have zero overlap and do not penetrate. */
 export const aabbIntersects = (a: AxisAlignedBoundingBox, b: AxisAlignedBoundingBox): boolean =>
-  [0, 1, 2].every((axis) => a.min[axis] < b.max[axis] && a.max[axis] > b.min[axis])
+  classifyAabbIntersection(a, b).relationship === 'penetration'
 
 export const aabbContains = (container: AxisAlignedBoundingBox, subject: AxisAlignedBoundingBox): boolean =>
   [0, 1, 2].every((axis) => subject.min[axis] >= container.min[axis] && subject.max[axis] <= container.max[axis])

@@ -331,7 +331,9 @@ const ruleSweeps = geometricRule('passenger.movement.swept-spaces', 'movement', 
   const counterweight = context.envelopes.counterweightSweep
   if (!counterweight?.bounds) return result(rule, 'unknown', [issue('counterweight-sweep-unavailable', 'info', 'movement', ['counterweight'])])
   return planRectanglesIntersect(cabin.plan, counterweight.plan) && aabbIntersects(cabin.bounds, counterweight.bounds)
-    ? result(rule, 'warning', [issue('counterweight-sweep-conflict', 'warning', 'movement', ['cabin', 'counterweight'])])
+    ? result(rule, 'invalid', [issue('counterweight-sweep-conflict', 'error', 'movement', ['cabin', 'counterweight'], {
+      blocksCabinTravel: true,
+    })])
     : result(rule, 'ok')
 })
 

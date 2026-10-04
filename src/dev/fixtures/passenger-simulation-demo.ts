@@ -12,9 +12,5 @@ export const PASSENGER_SIMULATION_DEMO_DATA: PassengerVisualizationData = {
 }
 
 export function createPassengerSimulationFixture(arrangement: CounterweightPosition = 'rear', throughCar = false, stopCount = 2) {
-  return {
-    ...createPassengerMechanicalFixture(arrangement, throughCar), stopCount,
-    // Explicit demo headroom keeps moving hitch endpoints below the fixed top wraps at every served level.
-    headroomMm: millimetres(4000),
-  }
+  return { ...createPassengerMechanicalFixture(arrangement, throughCar), stopCount }
 }

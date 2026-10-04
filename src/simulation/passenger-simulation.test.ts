@@ -243,7 +243,7 @@ describe('deterministic passenger kinematic visualization', () => {
       status: 'available', availability: 'partial', model: { capabilities: { cabinMovement: { available: true }, suspensionUpdate: { available: false } } },
     })
     expect(createPassengerSimulationModel(normalize(createPassengerMechanicalFixture()), PASSENGER_SIMULATION_DEMO_DATA)).toMatchObject({
-      status: 'invalid', issues: [expect.objectContaining({ code: 'geometric-conflict', path: 'fixed-obstacle-in-cabin-sweep' })],
+      status: 'available', availability: 'complete',
     })
   })
 

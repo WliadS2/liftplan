@@ -31,7 +31,8 @@ normalizers convert them.
 
 The lightweight collision layer supports:
 
-- positive-volume AABB and plan-rectangle intersection;
+- explicit AABB separation, zero-volume contact, and positive-volume
+  penetration classification, plus positive-area plan-rectangle intersection;
 - containment and outside checks;
 - per-axis separation and Euclidean separation distance;
 - raw left, right, front, rear, top, and bottom clearances;
@@ -104,8 +105,10 @@ Frame jambs, headers, tracks, operators, and visualization shell thickness do
 not shrink this validation envelope.
 - buffer and explicit upper-mechanical containment;
 - analytic cabin/car-frame sweep conflicts with fixed components;
-- geometric overlap of cabin and counterweight swept spaces without inferring
-  timing or collision probability.
+- positive-volume overlap of cabin and counterweight swept spaces without
+  inferring timing or collision probability. This is travel-blocking because
+  both moving envelopes occupy the same X/Y/Z volume; Y overlap alone is not a
+  conflict.
 
 The registry classifies rule sources as `geometric`, `planning`,
 `verified-standard`, or `manufacturer`. Only geometric rules are registered in

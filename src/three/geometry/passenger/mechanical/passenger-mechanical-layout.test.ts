@@ -30,7 +30,7 @@ describe('explicit passenger mechanical layout', () => {
     const model = layout()
     expect(model.carRails?.rails.map((r) => r.start[0])).toEqual([-0.75, 0.75])
     expect(model.carRails?.rails.map((r) => r.start[2])).toEqual([0, 0])
-    expect(model.carRails?.rails[0].end[1]).toBe(6)
+    expect(model.carRails?.rails[0].end[1]).toBe(7)
     expect(model.carRails?.source).toBe('planning')
   })
   it('creates a sling around unchanged cabin dimensions and shares its rail axes', () => {
@@ -74,9 +74,11 @@ describe('explicit passenger mechanical layout', () => {
   })
   it('includes the full installation and all mechanical envelopes in bounds', () => {
     const model = layout()
-    expect(model.bounds.min).toEqual([-1.3, -1.2, -1.5])
-    expect(model.bounds.max).toEqual([1.3, 6, 1.5])
-    expect(model.bounds.height).toBeCloseTo(7.2)
+    expect(model.bounds.min[0]).toBeCloseTo(-1.3)
+    expect(model.bounds.min[1]).toBeCloseTo(-1.2)
+    expect(model.bounds.min[2]).toBeCloseTo(-1.5)
+    expect(model.bounds.max).toEqual([1.3, 7, 1.5])
+    expect(model.bounds.height).toBeCloseTo(8.2)
     const debug = getPassengerMechanicalDebugPositions(model)
     // Detailed traction placement now belongs to the separate pure drive model.
     expect(debug.machinePosition).toBeUndefined()
@@ -171,7 +173,7 @@ describe('explicit passenger mechanical layout', () => {
   it('rejects invalid buffer relationships and machine/sheave envelopes', () => {
     const model = layout(changeMechanical({
       carBufferPositionsMm: [{ xMm: millimetres(0), yMm: millimetres(100), zMm: millimetres(0) }],
-      machine: { positionMm: { xMm: millimetres(0), yMm: millimetres(6000), zMm: millimetres(0) }, envelopeMm: { widthMm: millimetres(500), heightMm: millimetres(500), depthMm: millimetres(500) } },
+      machine: { positionMm: { xMm: millimetres(0), yMm: millimetres(7000), zMm: millimetres(0) }, envelopeMm: { widthMm: millimetres(500), heightMm: millimetres(500), depthMm: millimetres(500) } },
     }))
     expect(model.carBuffers).toBeUndefined()
     expect(model.machine).toBeUndefined()
