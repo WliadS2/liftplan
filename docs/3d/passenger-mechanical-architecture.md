@@ -16,6 +16,8 @@ Data flows through pure transformations before React rendering:
 
 Missing inputs omit only dependent subsystems. Invalid placement omits the affected subsystem and returns an issue with a code, path, severity, message key, and optional coordinates. A renderable cabin remains available independently of mechanical completeness.
 
+Height-dependent placement now resolves through `installation.vertical` and explicit semantic point offsets rather than fixed demo Y values. Top equipment, pit equipment, car attachments, counterweight hitches and rope contacts share this reference source. Existing absolute points remain absolute. Current cabin level is independent of door-inspection selection. See [canonical vertical layout](./passenger-vertical-layout.md) for the serialized contract, validation and focused camera changes.
+
 ## Explicit layout inputs
 
 Cabin rails accept either two explicit plan positions or explicit spacing and an `x`/`z` orientation. The spacing mode means a pair symmetric about the cabin travel axis; an optional explicit `carRailAxisMm` shifts that axis. The canonical cabin axis is the project origin, not an assumed clearance. Explicit positions take precedence over spacing.
@@ -98,7 +100,7 @@ Structured drive issues contain stable codes, paths, severity and message keys; 
 
 The `1e-9` comparison epsilon is only floating-point construction precision in metres, never a manufactured tolerance. Rope/groove allocation is capped at 64 solely as a browser-resource guard, not a technical limit. Rope meshes use six radial tube segments, one interval per straight section and 24 intervals per half-turn (26 longitudinal intervals in the demo). Rings coincide with line/contact boundaries; analytic tangents avoid corner distortion. Wire strands and helices are absent. Drive geometry is memoized across view changes, materials are shared across ropes/sheaves/cylinders, box geometry is reused, and owned geometry/materials are disposed on replacement/unmount.
 
-Antrieb camera bounds are derived from drive extents plus the upper halves of the car/counterweight frames, retaining their connection context and excluding unrelated pit/rail tails. Halving is a camera-only framing policy, never a mechanical dimension or data change. Other modes restore installation/component/drive aggregate framing. No fixture-specific camera position is added.
+Antrieb camera bounds now focus the explicit top machine/supports, traction/deflection wheels and supplied brake, excluding long suspension spans and distant car frames from automatic fitting. Mechanik focuses local car/counterweight/pit equipment; overview and cutaway retain aggregate framing. Sicherheit retains its complete loop bounds. These are camera-only policies, never data changes, and use no fixture-specific camera coordinates. See [height reflow](./passenger-vertical-layout.md).
 
 ## Explicit safety-system contract
 

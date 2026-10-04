@@ -2,6 +2,7 @@ import type { ComponentDataSource } from '../../../../elevator/configuration/mec
 import type { HitchData, RopeRouteNode, TractionDriveData, TractionMachineData } from '../../../../elevator/configuration/traction-drive-data'
 import { metres, millimetresToMetres, type Metres, type TechnicalValidationResult, type ValidationIssue } from '../../../../engineering'
 import type { PassengerInstallationModel } from '../passenger-installation-model'
+import { resolveVerticalRecord } from '../passenger-vertical-model'
 import type { ComponentBox, MechanicalMaterialRole, PassengerMechanicalComponentModel } from './mechanical-component-model'
 import { componentBoxBounds } from './mechanical-component-model'
 import { createMechanicalBounds, type MechanicalBounds, type MechanicalPoint, type PassengerMechanicalLayout } from './passenger-mechanical-layout'
@@ -149,10 +150,18 @@ const delta = (a: MechanicalPoint, b: MechanicalPoint) => p(b[0] - a[0], b[1] - 
 
 /** No state, rendering dependencies, physical sizing formulas, or fallback dimensions. */
 export function createTractionDriveModel(
-  data: TractionDriveData | undefined, installation: PassengerInstallationModel,
+  suppliedData: TractionDriveData | undefined, installation: PassengerInstallationModel,
   layout: PassengerMechanicalLayout, components: PassengerMechanicalComponentModel,
 ): TractionDriveModel {
   const issues: ValidationIssue<DriveIssueCode>[] = [], missingData: string[] = []
+  const unresolvedReferences = new Set<string>()
+  const resolve = <T,>(record: T | undefined, path: string) => resolveVerticalRecord(record, installation.vertical, missingData, `mechanical.drive.${path}`, layout.counterweight?.center[1])
+  const data: TractionDriveData | undefined = suppliedData && { ...suppliedData,
+    machine: resolve(suppliedData.machine, 'machine'), mount: resolve(suppliedData.mount, 'mount'),
+    sheaves: suppliedData.sheaves?.flatMap((s, i) => { const value = resolve(s, `sheaves.${i}`); if (!value) unresolvedReferences.add(s.id); return value ? [value] : [] }),
+    hitches: suppliedData.hitches?.flatMap((h, i) => { const value = resolve(h, `hitches.${i}`); if (!value) unresolvedReferences.add(h.id); return value ? [value] : [] }),
+    suspension: resolve(suppliedData.suspension, 'suspension'),
+  }
   const issue = (code: DriveIssueCode, path: string) => {
     issues.push({ code, severity: 'error', path: ['mechanical', 'drive', ...path.split('.')], messageKey: `drive.${code}` })
     return false
@@ -160,8 +169,8 @@ export function createTractionDriveModel(
   const inside = (bounds: MechanicalBounds, path: string) => {
     const shaft = installation.shaft
     if (!shaft) return true
-    const bottom = layout.zones.find((z) => z.kind === 'bottom')?.bottomY
-    const top = layout.zones.find((z) => z.kind === 'top')?.topY
+    const bottom = installation.vertical.pitBottomY
+    const top = installation.vertical.shaftTopY
     return ([0, 2].every((i) => bounds.min[i] >= -(i === 0 ? shaft.width : shaft.depth) / 2 - GEOMETRY_EPSILON &&
       bounds.max[i] <= (i === 0 ? shaft.width : shaft.depth) / 2 + GEOMETRY_EPSILON) &&
       (bottom === undefined || bounds.min[1] >= bottom - GEOMETRY_EPSILON) &&
@@ -229,7 +238,10 @@ export function createTractionDriveModel(
     if (inside(hitch.bounds, `hitches.${i}`)) hitches.push(hitch)
   }
   let suspension: SuspensionModel | undefined
-  const supplied = data?.suspension
+  const unresolvedRoute = data?.suspension?.route?.some((node) => node.kind === 'hitch' ? unresolvedReferences.has(node.hitchId)
+    : node.kind === 'contact' ? unresolvedReferences.has(node.sheaveId) : false)
+  const supplied = unresolvedRoute ? undefined : data?.suspension
+  if (unresolvedRoute) missingData.push('mechanical.drive.suspension.anchors')
   if (data) {
     if (!data.machine) missingData.push('mechanical.drive.machine')
     if (!data.sheaves?.some((s) => s.role === 'traction')) missingData.push('mechanical.drive.sheaves')

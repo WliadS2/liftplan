@@ -31,6 +31,8 @@ export interface PassengerPlanningConfiguration
   readonly capacityKg?: Kilograms
   readonly passengerCount?: number
   readonly stopCount?: number
+  readonly levelElevationsMm?: readonly Millimetres[]
+  readonly cabinLevelIndex?: number
   readonly ratedSpeedMetresPerSecond?: MetresPerSecond
   readonly cabinWidthMm?: Millimetres
   readonly cabinDepthMm?: Millimetres
@@ -74,6 +76,8 @@ export const passengerPlanningConfigurationSchema = z
     capacityKg: optionalKilograms,
     passengerCount: z.number().int().optional(),
     stopCount: z.number().int().optional(),
+    levelElevationsMm: z.array(z.number().finite().transform(millimetres)).readonly().optional(),
+    cabinLevelIndex: z.number().int().nonnegative().optional(),
     ratedSpeedMetresPerSecond: optionalMetresPerSecond,
     cabinWidthMm: optionalMillimetres,
     cabinDepthMm: optionalMillimetres,

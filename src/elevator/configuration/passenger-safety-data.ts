@@ -4,12 +4,14 @@ import {
   componentPointSchema as point, componentBoxSchema as box,
   rotationalWheelDataSchema,
 } from './rotational-wheel-data'
+import { verticalAnchorSchema, verticalPointSchema } from './vertical-placement-data'
 
-const worldBox = box.extend({ rotationYRad: z.number().finite() }).strict()
+const worldBox = box.extend({ centerMm: verticalPointSchema, rotationYRad: z.number().finite() }).strict()
+const worldWheel = rotationalWheelDataSchema.extend({ originMm: verticalPointSchema }).strict()
 export const safetyWheelAssemblyDataSchema = z.object({
   ...provenance,
   // Local housing/base geometry uses the wheel's explicit origin and Y rotation.
-  wheel: rotationalWheelDataSchema,
+  wheel: worldWheel,
   shaftLengthMm: dimension, housing: z.array(box).min(1).readonly(), base: box,
   supports: z.array(worldBox).min(1).readonly(),
   tensionDevice: box.optional(),
@@ -17,7 +19,7 @@ export const safetyWheelAssemblyDataSchema = z.object({
 
 export const safetyGearDataSchema = z.object({
   ...provenance, id: z.string().min(1), side: z.enum(['left', 'right']), railId: z.string().min(1),
-  kind: z.enum(['generic', 'progressive', 'instantaneous']), elevationMm: dimension,
+  kind: z.enum(['generic', 'progressive', 'instantaneous']), elevationMm: dimension, elevationAnchor: verticalAnchorSchema.optional(),
   heightMm: dimension, bodyDepthMm: dimension, wallThicknessMm: dimension,
   slotWidthMm: dimension, slotDepthMm: dimension, railTipGapMm: dimension,
   mountingPlateThicknessMm: dimension, mountingPlateWidthMm: dimension,
@@ -25,10 +27,10 @@ export const safetyGearDataSchema = z.object({
 }).strict()
 
 export const governorLinkageDataSchema = z.object({
-  ...provenance, id: z.string().min(1), ropeConnectionMm: point,
+  ...provenance, id: z.string().min(1), ropeConnectionMm: verticalPointSchema,
   clamp: worldBox, rodDiameterMm: dimension.optional(),
   paths: z.array(z.object({ id: z.string().min(1), gearId: z.string().min(1),
-    pointsMm: z.array(point).min(2).readonly(),
+    pointsMm: z.array(verticalPointSchema).min(2).readonly(),
   }).strict()).readonly().optional(),
 }).strict()
 
@@ -36,7 +38,7 @@ const routeNode = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('contact'), wheel: z.enum(['governor', 'tension']),
     entryAngleRad: z.number().finite(), exitAngleRad: z.number().finite() }).strict(),
   z.object({ kind: z.literal('linkage'), linkageId: z.string().min(1) }).strict(),
-  z.object({ kind: z.literal('point'), positionMm: point }).strict(),
+  z.object({ kind: z.literal('point'), positionMm: verticalPointSchema }).strict(),
 ])
 export const governorRopeDataSchema = z.object({
   ...provenance, diameterMm: dimension.optional(),
@@ -53,7 +55,7 @@ export const governorRopeDataSchema = z.object({
 }).strict()
 
 export const machineBrakeDataSchema = z.object({
-  ...provenance, kind: z.literal('generic'), wheel: rotationalWheelDataSchema,
+  ...provenance, kind: z.literal('generic'), wheel: worldWheel,
   machineMountPartId: z.string().min(1),
   parts: z.array(z.object({ ...box.shape, role: z.enum(['body', 'arm', 'mount']) }).strict()).min(1).readonly(),
 }).strict()

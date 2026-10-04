@@ -50,6 +50,7 @@ export default defineConfig([
       'src/simulation/**/*.{ts,tsx}',
       'src/three/geometry/lift-geometry-planning-input.ts',
       'src/three/geometry/passenger/passenger-installation-model.ts',
+      'src/three/geometry/passenger/passenger-vertical-model.ts',
       'src/three/geometry/passenger/mechanical/passenger-mechanical-layout.ts',
       'src/three/geometry/passenger/mechanical/mechanical-component-model.ts',
       'src/three/geometry/passenger/mechanical/rail-profile.ts',

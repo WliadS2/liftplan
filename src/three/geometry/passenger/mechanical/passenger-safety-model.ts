@@ -2,6 +2,7 @@ import type { ComponentDataSource } from '../../../../elevator/configuration/mec
 import type { PassengerSafetyData, SafetyGearData, SafetyWheelAssemblyData } from '../../../../elevator/configuration/passenger-safety-data'
 import { metres, millimetresToMetres, type Metres, type TechnicalValidationResult, type ValidationIssue } from '../../../../engineering'
 import type { PassengerInstallationModel } from '../passenger-installation-model'
+import { resolveVerticalRecord } from '../passenger-vertical-model'
 import { componentBoxBounds, type ComponentBox, type DetailedRail, type PassengerMechanicalComponentModel } from './mechanical-component-model'
 import { createMechanicalBounds, type MechanicalBounds, type MechanicalPoint, type PassengerMechanicalLayout } from './passenger-mechanical-layout'
 import { createSheaveModel, sheaveContactPoint, sheaveContactTangent, type SheaveModel } from './sheave-model'
@@ -106,22 +107,29 @@ interface RoutePiece {
 
 /** Explicit safety geometry only: no tripping, braking, deceleration or certification decisions. */
 export function createPassengerSafetyModel(
-  data: PassengerSafetyData | undefined, installation: PassengerInstallationModel,
+  suppliedData: PassengerSafetyData | undefined, installation: PassengerInstallationModel,
   layout: PassengerMechanicalLayout, components: PassengerMechanicalComponentModel,
   machine?: TractionMachineModel,
 ): PassengerSafetyModel {
   const issues: ValidationIssue<SafetyIssueCode>[] = [], missingData: string[] = []
+  const resolve = <T,>(record: T | undefined, path: string) => resolveVerticalRecord(record, installation.vertical, missingData, `mechanical.safety.${path}`, layout.counterweight?.center[1])
+  const data: PassengerSafetyData | undefined = suppliedData && { ...suppliedData,
+    governor: resolve(suppliedData.governor, 'governor'), tension: resolve(suppliedData.tension, 'tension'),
+    gears: suppliedData.gears?.flatMap((g, i) => { const value = resolve(g, `gears.${i}`); return value ? [value] : [] }),
+    linkage: resolve(suppliedData.linkage, 'linkage'), governorRope: resolve(suppliedData.governorRope, 'governorRope'),
+    machineBrake: resolve(suppliedData.machineBrake, 'machineBrake'),
+  }
   const issue = (code: SafetyIssueCode, path: string) => {
     issues.push({ code, severity: 'error', path: ['mechanical', 'safety', ...path.split('.')], messageKey: `safety.${code}` })
     return false
   }
   const inside = (bounds: MechanicalBounds, path: string, pitOnly = false) => {
-    const shaft = installation.shaft, bottom = layout.zones.find((z) => z.kind === 'bottom')?.bottomY
-    const top = layout.zones.find((z) => z.kind === 'top')?.topY
+    const shaft = installation.shaft, bottom = installation.vertical.pitBottomY
+    const top = installation.vertical.shaftTopY
     return ((!shaft || (bounds.min[0] >= -shaft.width / 2 - GEOMETRY_EPSILON && bounds.max[0] <= shaft.width / 2 + GEOMETRY_EPSILON &&
       bounds.min[2] >= -shaft.depth / 2 - GEOMETRY_EPSILON && bounds.max[2] <= shaft.depth / 2 + GEOMETRY_EPSILON)) &&
       (bottom === undefined || bounds.min[1] >= bottom - GEOMETRY_EPSILON) &&
-      (top === undefined || bounds.max[1] <= top + GEOMETRY_EPSILON) && (!pitOnly || bounds.max[1] <= GEOMETRY_EPSILON)) || issue('outside-safety-envelope', path)
+      (top === undefined || bounds.max[1] <= top + GEOMETRY_EPSILON) && (!pitOnly || bounds.max[1] <= (installation.vertical.lowestLandingY ?? 0) + GEOMETRY_EPSILON)) || issue('outside-safety-envelope', path)
   }
   const wheelAssembly = (kind: 'governor' | 'tension', record: SafetyWheelAssemblyData | undefined): SafetyWheelAssemblyModel | undefined => {
     if (!record) return undefined
@@ -149,7 +157,7 @@ export function createPassengerSafetyModel(
     const mounted = supports.some((_, i) => {
       const index = housing.length + 1 + i, b = partBounds[index]
       if (!visited.has(index)) return false
-      return kind === 'tension' ? nearDriveValue(b.min[1], layout.zones.find((z) => z.kind === 'bottom')?.bottomY ?? NaN)
+      return kind === 'tension' ? nearDriveValue(b.min[1], installation.vertical.pitBottomY ?? NaN)
         : nearDriveValue(b.min[0], -installation.shaft!.width / 2) || nearDriveValue(b.max[0], installation.shaft!.width / 2) ||
           nearDriveValue(b.min[2], -installation.shaft!.depth / 2) || nearDriveValue(b.max[2], installation.shaft!.depth / 2)
     })

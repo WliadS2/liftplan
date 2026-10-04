@@ -5,6 +5,7 @@ import {
 } from '../../../../engineering'
 import type { PassengerGeometryPlanningInput } from '../../lift-geometry-planning-input'
 import type { PassengerInstallationModel } from '../passenger-installation-model'
+import { resolveVerticalRecord } from '../passenger-vertical-model'
 import type {
   MechanicalPlanningPointMm, MechanicalPlanningPlanPositionMm,
   RailOrientation, SuspensionArrangement,
@@ -142,11 +143,18 @@ export function createPassengerMechanicalLayout(
   input: PassengerGeometryPlanningInput,
   installation: PassengerInstallationModel,
 ): PassengerMechanicalLayout {
-  const planning = input.mechanical
   const cabin = installation.cabin
   const shaft = installation.shaft
   const issues: ValidationIssue<MechanicalPlanningIssueCode>[] = []
   const missingFields: string[] = []
+  const resolve = <T,>(record: T | undefined, path: string) => resolveVerticalRecord(record, installation.vertical, missingFields, path)
+  const planning = { ...input.mechanical,
+    machine: resolve(input.mechanical.machine, 'mechanical.machine'),
+    tractionSheave: resolve(input.mechanical.tractionSheave, 'mechanical.tractionSheave'),
+    suspension: resolve(input.mechanical.suspension, 'mechanical.suspension'),
+    carBufferPositionsMm: input.mechanical.carBufferPositionsMm?.flatMap((p, i) => { const value = resolve(p, `mechanical.carBufferPositionsMm.${i}`); return value ? [value] : [] }),
+    counterweightBufferPositionsMm: input.mechanical.counterweightBufferPositionsMm?.flatMap((p, i) => { const value = resolve(p, `mechanical.counterweightBufferPositionsMm.${i}`); return value ? [value] : [] }),
+  }
   const issue = (code: MechanicalPlanningIssueCode, path: string, context?: Record<string, unknown>) => {
     if (!issues.some((entry) => entry.code === code && entry.path?.join('.') === path)) {
       issues.push({ code, severity: 'error', path: path.split('.'), messageKey: `mechanical.${code}`, context })
@@ -174,13 +182,14 @@ export function createPassengerMechanicalLayout(
   if (planning.machine && (!planning.machine.positionMm || !planning.machine.envelopeMm)) missingFields.push('mechanical.machine')
   if (planning.tractionSheave && (!planning.tractionSheave.positionMm || planning.tractionSheave.diameterMm === undefined)) missingFields.push('mechanical.tractionSheave')
   if (planning.suspension && (!planning.suspension.arrangement || !planning.suspension.pathPointsMm || planning.suspension.pathPointsMm.length < 2)) missingFields.push('mechanical.suspension')
-  const highestLevel = installation.levels.length > 0
-    ? Math.max(...installation.levels.map((level) => level.elevationY)) : undefined
+  const highestLevel = installation.vertical.highestLandingY
   // Only explicit pit/headroom data establish vertical envelope constraints.
-  const knownBottom = input.shaft.pitDepthMm !== undefined && Number.isFinite(input.shaft.pitDepthMm) && input.shaft.pitDepthMm >= 0
-    ? -millimetresToMetres(input.shaft.pitDepthMm) : undefined
-  const knownTop = highestLevel !== undefined && input.shaft.headroomMm !== undefined && Number.isFinite(input.shaft.headroomMm) && input.shaft.headroomMm >= 0
-    ? highestLevel + millimetresToMetres(input.shaft.headroomMm) : undefined
+  const knownBottom = installation.vertical.pitBottomY
+  const knownTop = installation.vertical.shaftTopY
+  const lowestLevel = installation.vertical.lowestLandingY ?? metres(0)
+  const topInset = planning.zones?.topInsetMm
+  if (topInset !== undefined && (!Number.isFinite(topInset) || topInset < 0 ||
+    (knownTop !== undefined && input.shaft.headroomMm !== undefined && topInset > input.shaft.headroomMm))) issue('invalid-zone-offset', 'mechanical.zones.topInsetMm')
   const insideShaft = (bounds: MechanicalBounds, path: string) => {
     if (!shaft) return true
     const inside = bounds.min[0] >= -shaft.width / 2 && bounds.max[0] <= shaft.width / 2 &&
@@ -320,7 +329,7 @@ export function createPassengerMechanicalLayout(
       if (!pointValid(p, path)) continue
       const position = toPoint(p)
       if (!insideShaft(createMechanicalBounds([position]), path)) continue
-      if (position[1] < pitBottom || position[1] >= 0) { issue('buffer-outside-pit', path); continue }
+      if (position[1] < pitBottom || position[1] >= lowestLevel) { issue('buffer-outside-pit', path); continue }
       if (position[0] < assembly.min[0] || position[0] > assembly.max[0] || position[2] < assembly.min[2] || position[2] > assembly.max[2]) {
         issue('buffer-misses-assembly', path); continue
       }
@@ -371,7 +380,7 @@ export function createPassengerMechanicalLayout(
     if (bottomY >= topY) { if (offsetMm !== undefined) issue('invalid-zone-offset', `mechanical.zones.${kind}OffsetMm`); return }
     zones.push({ kind, source: 'planning', width: shaft.width, depth: shaft.depth, bottomY, topY, height: metres(topY - bottomY), centerY: metres((bottomY + topY) / 2) })
   }
-  if (installation.pit && knownBottom !== undefined) makeZone('bottom', knownBottom, 0, planning.zones?.bottomOffsetMm)
+  if (installation.pit && knownBottom !== undefined) makeZone('bottom', knownBottom, lowestLevel, planning.zones?.bottomOffsetMm)
   if (highestLevel !== undefined && knownTop !== undefined) makeZone('top', highestLevel, knownTop, planning.zones?.topOffsetMm)
 
   const boundsPoints: MechanicalPoint[] = [

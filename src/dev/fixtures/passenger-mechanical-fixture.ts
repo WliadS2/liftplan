@@ -24,7 +24,7 @@ export function createPassengerMechanicalFixture(
   return {
     ...createPassengerPlanningConfiguration('Mechanische Demo – Testdaten'),
     capacityKg: kilograms(630), passengerCount: 8,
-    ratedSpeedMetresPerSecond: metresPerSecond(1), stopCount: 2,
+    ratedSpeedMetresPerSecond: metresPerSecond(1), stopCount: 2, cabinLevelIndex: 0,
     cabinWidthMm: millimetres(1100), cabinDepthMm: millimetres(1400), cabinHeightMm: millimetres(2200),
     doorWidthMm: millimetres(900), doorHeightMm: millimetres(2100), throughCar,
     doors: createPassengerDoorDemo(throughCar),
@@ -40,11 +40,12 @@ export function createPassengerMechanicalFixture(
       carRailAxisMm: { xMm: millimetres(0), zMm: millimetres(0) },
       counterweightArrangement: arrangement, counterweightOffsetMm: offset,
       counterweightRailSpacingMm: millimetres(900),
+      zones: { topInsetMm: millimetres(1000) },
       carBufferPositionsMm: [
-        { xMm: millimetres(-350), yMm: millimetres(-1200), zMm: millimetres(0) },
-        { xMm: millimetres(350), yMm: millimetres(-1200), zMm: millimetres(0) },
+        { xMm: millimetres(-350), yMm: millimetres(0), zMm: millimetres(0), verticalAnchor: 'pit-bottom' },
+        { xMm: millimetres(350), yMm: millimetres(0), zMm: millimetres(0), verticalAnchor: 'pit-bottom' },
       ],
-      counterweightBufferPositionsMm: [{ xMm: offset.xMm, yMm: millimetres(-1200), zMm: offset.zMm }],
+      counterweightBufferPositionsMm: [{ xMm: offset.xMm, yMm: millimetres(0), zMm: offset.zMm, verticalAnchor: 'pit-bottom' }],
     },
   }
 }

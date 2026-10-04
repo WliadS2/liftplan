@@ -42,6 +42,7 @@ export interface PassengerGeometryPlanningInput {
     readonly headroomMm?: Millimetres
   }
   readonly levels: LevelPlanningInput
+  readonly cabinLevelIndex?: number
   readonly counterweight: {
     readonly widthMm?: Millimetres
     readonly heightMm?: Millimetres
@@ -90,7 +91,8 @@ function createPassengerGeometryPlanningInput(
       pitDepthMm: planning.pitDepthMm,
       headroomMm: planning.headroomMm,
     },
-    levels: {
+    cabinLevelIndex: planning.cabinLevelIndex,
+    levels: planning.levelElevationsMm ? { kind: 'explicit', elevationsMm: planning.levelElevationsMm } : {
       kind: 'uniform',
       stopCount: planning.stopCount,
       floorHeightMm: planning.floorHeightMm,

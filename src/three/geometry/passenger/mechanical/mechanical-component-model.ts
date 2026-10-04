@@ -108,6 +108,12 @@ export function componentBoxBounds(part: ComponentBox): MechanicalBounds {
     localToWorld(point(x * part.size[0] / 2, y * part.size[1] / 2, z * part.size[2] / 2), part.center, part.rotationY))))
   return createMechanicalBounds(points)
 }
+export function componentCylinderBounds(cylinder: ComponentCylinder): MechanicalBounds {
+  return createMechanicalBounds([
+    point(cylinder.center[0] - cylinder.radius, cylinder.center[1] - cylinder.height / 2, cylinder.center[2] - cylinder.radius),
+    point(cylinder.center[0] + cylinder.radius, cylinder.center[1] + cylinder.height / 2, cylinder.center[2] + cylinder.radius),
+  ])
+}
 function boxesBounds(boxes: readonly ComponentBox[]): MechanicalBounds {
   return createMechanicalBounds(boxes.flatMap((part) => {
     const bounds = componentBoxBounds(part)
@@ -301,8 +307,8 @@ export function createPassengerMechanicalComponents(
     extentPoints.push(...rail.profile.points.flatMap(([u, v]) => [0, rail.length].map((y) => localToWorld(point(u, y, v), rail.origin, rail.rotationY))))
   }
   for (const cylinder of [...(carBuffers?.cylinders ?? []), ...(counterweightBuffers?.cylinders ?? [])]) {
-    extentPoints.push(point(cylinder.center[0] - cylinder.radius, cylinder.center[1] - cylinder.height / 2, cylinder.center[2] - cylinder.radius),
-      point(cylinder.center[0] + cylinder.radius, cylinder.center[1] + cylinder.height / 2, cylinder.center[2] + cylinder.radius))
+    const bounds = componentCylinderBounds(cylinder)
+    extentPoints.push(bounds.min, bounds.max)
   }
   return { carRails, counterweightRails, carSling, counterweightFrame, carGuideShoes, counterweightGuideShoes,
     carBuffers, counterweightBuffers, missingData, issues,

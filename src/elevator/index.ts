@@ -53,3 +53,5 @@ export {
 export type { LiftImplementationStatus } from './types/lift-implementation-status'
 export { passengerDoorSystemDataSchema, DOOR_OPENING_TYPES } from './configuration/passenger-door-data'
 export type { PassengerDoorSystemData, DoorAssemblyData, DoorOpeningType, CabinDoorEntranceData, LandingDoorSeriesData } from './configuration/passenger-door-data'
+export { VERTICAL_ANCHORS, verticalAnchorSchema, verticalPointSchema } from './configuration/vertical-placement-data'
+export type { VerticalAnchor, VerticalPlanningPoint } from './configuration/vertical-placement-data'

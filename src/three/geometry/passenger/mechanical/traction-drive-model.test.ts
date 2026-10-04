@@ -188,17 +188,14 @@ describe('explicit generic traction and suspension foundation', () => {
     expect(getPassengerViewVisibility('drive')).toMatchObject({ mechanicalOpacity: 1, shaftEnvelopeOpacity: 0 })
     expect(getPassengerViewVisibility('drive').cabinShellOpacity).toBeLessThan(getPassengerViewVisibility('mechanical').cabinShellOpacity)
     const bounds = getPassengerCameraBounds('drive', components, model)
-    for (const extent of [model.bounds!]) {
+    for (const extent of [model.machine!.bounds, ...model.sheaves.map((s) => s.bounds), ...model.supports.map(componentBoxBounds)]) {
       for (const i of [0, 1, 2]) {
         expect(bounds.min[i]).toBeLessThanOrEqual(extent.min[i]); expect(bounds.max[i]).toBeGreaterThanOrEqual(extent.max[i])
       }
     }
-    expect(bounds.min[1]).toBeLessThanOrEqual(components.carSling!.bounds.centerY)
-    expect(bounds.max[1]).toBeGreaterThanOrEqual(components.carSling!.bounds.max[1])
-    expect(bounds.min[1]).toBeLessThanOrEqual(components.counterweightFrame!.bounds.centerY)
-    expect(bounds.max[1]).toBeGreaterThanOrEqual(components.counterweightFrame!.bounds.max[1])
+    expect(bounds.min[1]).toBeGreaterThan(components.carSling!.bounds.max[1])
     expect(bounds.height).toBeLessThan(getPassengerCameraBounds('overview', components, model).height)
-    expect(getPassengerCameraBounds('mechanical', components, model)).toEqual(getPassengerCameraBounds('overview', components, model))
+    expect(getPassengerCameraBounds('mechanical', components, model).height).toBeLessThan(getPassengerCameraBounds('overview', components, model).height)
   })
 
   it.each(COMPONENT_DATA_SOURCES)('preserves %s provenance throughout parsing and normalization', (source) => {

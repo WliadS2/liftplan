@@ -2,13 +2,14 @@ import { z } from 'zod'
 import { millimetres } from '../../engineering'
 import { COMPONENT_DATA_SOURCES } from './mechanical-component-data'
 import { rotationalWheelDataSchema } from './rotational-wheel-data'
+import { verticalPointSchema } from './vertical-placement-data'
 
 const dimension = z.number().finite().transform(millimetres)
 const provenance = { source: z.enum(COMPONENT_DATA_SOURCES), reference: z.string().optional() }
 const point = z.object({ xMm: dimension, yMm: dimension, zMm: dimension }).strict()
 const size = z.object({ widthMm: dimension, heightMm: dimension, depthMm: dimension }).strict()
 const box = z.object({ centerMm: point, sizeMm: size }).strict()
-const transform = { originMm: point, rotationYRad: z.number().finite() }
+const transform = { originMm: verticalPointSchema, rotationYRad: z.number().finite() }
 
 export const tractionMachineDataSchema = z.object({
   ...provenance, ...transform,
@@ -20,11 +21,12 @@ export const tractionMachineDataSchema = z.object({
 
 export const machineMountDataSchema = z.object({
   ...provenance,
-  // Explicit world-space supports. No beam span or support elevation is inferred.
-  supports: z.array(z.object({ ...box.shape, rotationYRad: z.number().finite() }).strict()).min(1).readonly(),
+  // Explicit world/semantic supports. No beam span or support elevation is inferred.
+  supports: z.array(z.object({ ...box.shape, centerMm: verticalPointSchema, rotationYRad: z.number().finite() }).strict()).min(1).readonly(),
 }).strict()
 
 export const sheaveDataSchema = rotationalWheelDataSchema.extend({
+  originMm: verticalPointSchema,
   role: z.enum(['traction', 'deflection', 'car', 'counterweight']),
 }).strict()
 
@@ -39,7 +41,7 @@ export const hitchDataSchema = z.object({
 
 export const ropeRouteNodeSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('hitch'), hitchId: z.string().min(1) }).strict(),
-  z.object({ kind: z.literal('point'), positionMm: point }).strict(),
+  z.object({ kind: z.literal('point'), positionMm: verticalPointSchema }).strict(),
   z.object({ kind: z.literal('contact'), sheaveId: z.string().min(1),
     entryAngleRad: z.number().finite(), exitAngleRad: z.number().finite(),
   }).strict(),

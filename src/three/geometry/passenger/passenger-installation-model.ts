@@ -8,6 +8,7 @@ import type {
   LevelPlanningInput,
   PassengerGeometryPlanningInput,
 } from '../lift-geometry-planning-input'
+import { createPassengerVerticalModel, type PassengerVerticalModel } from './passenger-vertical-model'
 
 export type PassengerGeometryField =
   | 'cabin.widthMm'
@@ -28,6 +29,7 @@ export type PassengerGeometryField =
   | 'counterweight.depthMm'
   | 'counterweight.position'
   | 'doors.cabin'
+  | 'cabinLevelIndex'
 
 export interface PassengerLandingLevelModel {
   readonly id: string
@@ -103,6 +105,7 @@ export interface PassengerInstallationBounds {
 }
 
 export interface PassengerInstallationModel {
+  readonly vertical: PassengerVerticalModel
   readonly cabin?: PassengerCabinModel
   readonly shaft?: PassengerShaftModel
   readonly levels: readonly PassengerLandingLevelModel[]
@@ -174,7 +177,7 @@ function createLevelElevations(levels: LevelPlanningInput): LevelElevationResult
       }
     }
 
-    if (levels.elevationsMm.some((elevation) => !Number.isFinite(elevation))) {
+    if (levels.elevationsMm.some((elevation, i) => !Number.isFinite(elevation) || (i > 0 && elevation <= levels.elevationsMm[i - 1]))) {
       return {
         elevations: [],
         missingFields: [],
@@ -370,6 +373,10 @@ function createInstallationModel(
   input: PassengerGeometryPlanningInput,
   levelElevations: readonly Metres[],
 ): PassengerInstallationModel | undefined {
+  const vertical = createPassengerVerticalModel(levelElevations, input.shaft.pitDepthMm, input.shaft.headroomMm,
+    input.cabinLevelIndex, input.mechanical.zones?.topInsetMm)
+  // A progressive cabin without levels uses the documented datum, never an invented landing.
+  const cabinBottomY = vertical.cabinElevationY ?? (input.cabinLevelIndex === undefined ? metres(0) : undefined)
   const cabinHeight =
     input.cabin.heightMm === undefined
       ? undefined
@@ -380,13 +387,13 @@ function createInstallationModel(
     cabinHeight !== undefined &&
     isPositive(input.cabin.widthMm) &&
     isPositive(input.cabin.depthMm) &&
-    isPositive(cabinHeight)
+    isPositive(cabinHeight) && cabinBottomY !== undefined
       ? {
           width: millimetresToMetres(input.cabin.widthMm),
           depth: millimetresToMetres(input.cabin.depthMm),
           height: cabinHeight,
-          bottomY: metres(0),
-          centerY: metres(cabinHeight / 2),
+          bottomY: cabinBottomY,
+          centerY: metres(cabinBottomY + cabinHeight / 2),
           throughCar: input.cabin.throughCar,
         }
       : undefined
@@ -442,22 +449,14 @@ function createInstallationModel(
     isNonNegative(input.shaft.pitDepthMm)
       ? millimetresToMetres(input.shaft.pitDepthMm)
       : undefined
-  const validHeadroom =
-    input.shaft.headroomMm !== undefined &&
-    isNonNegative(input.shaft.headroomMm)
-      ? millimetresToMetres(input.shaft.headroomMm)
-      : undefined
-
-  const highestLevel =
-    levelElevations.length > 0 ? Math.max(...levelElevations) : undefined
+  const highestLevel = vertical.highestLandingY
   const knownTopValues = [
-    cabinAssembly?.height,
-    highestLevel === undefined
-      ? undefined
-      : metres(highestLevel + (validHeadroom ?? 0)),
+    cabinAssembly ? metres(cabinAssembly.bottomY + cabinAssembly.height) : undefined,
+    highestLevel,
   ].filter((value): value is Metres => value !== undefined)
-  const shaftBottomY = metres(-(validPitDepth ?? 0))
-  const shaftTopY = metres(Math.max(0, ...knownTopValues))
+  const lowestY = vertical.lowestLandingY ?? metres(0)
+  const shaftBottomY = vertical.pitBottomY ?? metres(lowestY - (validPitDepth ?? 0))
+  const shaftTopY = vertical.shaftTopY ?? metres(Math.max(0, ...knownTopValues))
   const shaftHeight = metres(shaftTopY - shaftBottomY)
   const shaftVerticalExtent =
     shaftBase !== undefined && shaftHeight > 0
@@ -489,7 +488,7 @@ function createInstallationModel(
           width: shaft.width,
           depth: shaft.depth,
           height: validPitDepth,
-          centerY: metres(-validPitDepth / 2),
+          centerY: metres(lowestY - validPitDepth / 2),
         }
       : undefined
   const hasGeometry =
@@ -505,12 +504,13 @@ function createInstallationModel(
   )
   const installationTop = Math.max(
     0,
-    cabinAssembly?.height ?? 0,
+    cabinAssembly ? cabinAssembly.bottomY + cabinAssembly.height : 0,
     highestLevel ?? 0,
     shaft?.verticalExtent?.topY ?? 0,
   )
 
   return {
+    vertical,
     cabin: cabinAssembly,
     shaft,
     levels,
@@ -535,10 +535,11 @@ export function createPassengerInstallationModel(
     input,
     levelResult.missingFields,
   )
-  const invalidFields = collectInvalidFields(
+  const invalidFields = [...collectInvalidFields(
     input,
     levelResult.invalidFields,
-  )
+  )]
+  if (input.cabinLevelIndex !== undefined && (!Number.isInteger(input.cabinLevelIndex) || input.cabinLevelIndex < 0 || input.cabinLevelIndex >= levelResult.elevations.length)) invalidFields.push('cabinLevelIndex')
   const model = createInstallationModel(input, levelResult.elevations)
 
   if (invalidFields.length > 0) {

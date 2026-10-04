@@ -15,7 +15,7 @@ Local component coordinates follow the same axis orientation. A component's pivo
 
 ## Passenger planning scene
 
-The current passenger installation places the cabin floor at the lowest served level (`Y = 0`). Uniform landing elevations are derived from the explicit stop count and storey height before React rendering. The level contract also accepts explicit millimetre elevations so later project data can replace uniform spacing without changing scene components.
+The passenger installation resolves the static cabin floor from optional `cabinLevelIndex` against normalized levels (first known level when unspecified). The development fixture explicitly selects index zero. Uniform levels use the supplied count/storey height; optional `levelElevationsMm` supplies strictly ordered elevations and takes precedence. Shared `installation.vertical` exposes landing, pit, headroom, shaft-top and current-cabin references. See [canonical vertical layout](./passenger-vertical-layout.md) for anchor semantics and missing-data behavior.
 
 The primary cabin entrance is on its `+Z` shell face; through-car adds the rear opening on its `-Z` shell face. Landing planes require explicit separation from these cabin planes, not inferred shaft-face placement. Pit depth remains explicit.
 
@@ -25,7 +25,7 @@ The passenger cutaway view opens the model toward the default camera on the `+Z/
 
 ## Mechanical coordinates
 
-Mechanical planning points use the same canonical `X/Y/Z` axes and are stored in millimetres. The mechanical layout transform converts them to metre-based immutable tuples before rendering. Rail paths use bottom-to-top points along `+Y`; buffer positions refer to their base points; machine and sheave positions refer to their visual envelope centres; suspension paths retain their supplied point order.
+Mechanical planning points use the canonical axes and millimetres. World-placement points may explicitly declare `verticalAnchor`, making their Y an offset from a canonical reference; unanchored points remain absolute. Local shape coordinates remain local. Pure transforms resolve anchors before conversion/rendering. Rail paths use bottom-to-top points along `+Y`; buffer positions refer to bases; machine/wheel origins identify assembly references; supplied route order is retained.
 
 The rear/left/right counterweight arrangement indicates a side of the cabin and the width-axis orientation. `counterweightOffsetMm` supplies an explicit three-coordinate centre-to-centre displacement from the cabin centre; no shaft-boundary placement is inferred. Cabin rails use either an explicit pair of X/Z positions or spacing along X/Z symmetric about the canonical cabin axis (or an explicitly supplied rail axis). Counterweight rails use explicit positions or explicit spacing along the weight's width axis.
 

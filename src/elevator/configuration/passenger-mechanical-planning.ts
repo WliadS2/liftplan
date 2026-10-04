@@ -3,6 +3,7 @@ import { millimetres } from '../../engineering'
 import { mechanicalComponentDataSchema } from './mechanical-component-data'
 import { tractionDriveDataSchema } from './traction-drive-data'
 import { passengerSafetyDataSchema } from './passenger-safety-data'
+import { verticalPointSchema } from './vertical-placement-data'
 
 export const COUNTERWEIGHT_ARRANGEMENTS = ['rear', 'left', 'right'] as const
 export const RAIL_ORIENTATIONS = ['x', 'z'] as const
@@ -29,23 +30,24 @@ export const passengerMechanicalPlanningSchema = z.object({
   counterweightOffsetMm: point.partial().optional(),
   counterweightRailSpacingMm: dimension.optional(),
   counterweightRailPositionsMm: z.tuple([planPosition, planPosition]).readonly().optional(),
-  carBufferPositionsMm: z.array(point).readonly().optional(),
-  counterweightBufferPositionsMm: z.array(point).readonly().optional(),
+  carBufferPositionsMm: z.array(verticalPointSchema).readonly().optional(),
+  counterweightBufferPositionsMm: z.array(verticalPointSchema).readonly().optional(),
   machine: z.object({
-    positionMm: point.optional(),
+    positionMm: verticalPointSchema.optional(),
     envelopeMm: envelope.optional(),
   }).strict().optional(),
   tractionSheave: z.object({
-    positionMm: point.optional(),
+    positionMm: verticalPointSchema.optional(),
     diameterMm: dimension.optional(),
   }).strict().optional(),
   suspension: z.object({
     arrangement: z.enum(['1:1', '2:1']).optional(),
-    pathPointsMm: z.array(point).readonly().optional(),
+    pathPointsMm: z.array(verticalPointSchema).readonly().optional(),
   }).strict().optional(),
   zones: z.object({
     bottomOffsetMm: dimension.optional(),
     topOffsetMm: dimension.optional(),
+    topInsetMm: dimension.optional(),
   }).strict().optional(),
   driveConcept: z.string().optional(),
 }).strict()
