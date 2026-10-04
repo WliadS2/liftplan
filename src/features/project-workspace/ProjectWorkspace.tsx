@@ -17,8 +17,9 @@ import {
 import { useProjectStore } from '../../projects'
 import { createLiftGeometryPlanningInput } from '../../three/geometry/lift-geometry-planning-input'
 import { ThreeSceneErrorBoundary } from '../../three/scene/ThreeSceneErrorBoundary'
-import { createPassengerSpatialValidationFromPlanningInput } from '../../collision/passenger-spatial-validation'
+import { createPassengerDrawingContext } from '../../drawings/passenger-technical-drawings'
 import { getSpatialIssueMessage, SPATIAL_STATUS_LABELS } from './spatial-validation-messages'
+import { PlansWorkspace } from './PlansWorkspace'
 import './ProjectWorkspace.css'
 
 const liftTypes = getLiftTypeDefinitions()
@@ -91,10 +92,11 @@ export function ProjectWorkspace() {
     () => createLiftGeometryPlanningInput(project.configuration),
     [project.configuration],
   )
-  const spatialValidation = useMemo(
-    () => geometryInput ? createPassengerSpatialValidationFromPlanningInput(geometryInput) : undefined,
+  const drawingContext = useMemo(
+    () => geometryInput ? createPassengerDrawingContext(geometryInput) : undefined,
     [geometryInput],
   )
+  const spatialValidation = drawingContext?.validation
   const spatialIssues = spatialValidation?.issues.filter((entry, index, all) =>
     all.findIndex((candidate) => candidate.code === entry.code &&
       candidate.affectedLevelId === entry.affectedLevelId) === index) ?? []
@@ -606,6 +608,7 @@ export function ProjectWorkspace() {
           </button>
         </aside>
       </div>
+      <PlansWorkspace context={drawingContext} />
     </main>
   )
 }

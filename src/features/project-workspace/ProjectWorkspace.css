@@ -237,6 +237,224 @@
   font-size: 0.9rem;
 }
 
+.plans-panel {
+  margin-top: 16px;
+}
+
+.plans-heading-row,
+.plans-options,
+.plans-view-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plans-heading-row {
+  justify-content: space-between;
+}
+
+.plans-heading-row h2,
+.plans-heading-row p {
+  margin-bottom: 4px;
+}
+
+.plans-view-controls button {
+  border: 1px solid #667085;
+  border-radius: 3px;
+  padding: 7px 10px;
+  color: #101828;
+  background: #fff;
+  cursor: pointer;
+}
+
+.plans-view-controls button[aria-pressed='true'] {
+  border-color: #101828;
+  color: #fff;
+  background: #101828;
+}
+
+.plans-options {
+  margin: 14px 0 10px;
+  flex-wrap: wrap;
+}
+
+.plans-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #344054;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.plans-option select {
+  border: 1px solid #98a2b3;
+  border-radius: 3px;
+  padding: 5px 7px;
+  color: #101828;
+  background: #fff;
+}
+
+.technical-drawing-frame {
+  height: clamp(480px, 68vh, 720px);
+  overflow: hidden;
+  border: 1px solid #667085;
+  background: #e4e7ec;
+}
+
+.technical-drawing-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: #101828;
+  background: #fff;
+}
+
+.technical-drawing-fixed-page {
+  background: #e4e7ec;
+}
+
+.technical-drawing-svg line,
+.technical-drawing-svg rect,
+.technical-drawing-svg circle,
+.technical-drawing-svg path,
+.technical-drawing-svg polyline {
+  fill: none;
+  stroke: currentColor;
+  vector-effect: non-scaling-stroke;
+}
+
+.technical-drawing-fixed-page line,
+.technical-drawing-fixed-page rect,
+.technical-drawing-fixed-page circle,
+.technical-drawing-fixed-page path,
+.technical-drawing-fixed-page polyline {
+  vector-effect: none;
+}
+
+.technical-cut {
+  stroke: #000;
+  stroke-width: 2.2;
+}
+
+.technical-visible {
+  stroke: #101828;
+  stroke-width: 1.5;
+}
+
+.technical-secondary {
+  stroke: #475467;
+  stroke-width: 0.8;
+}
+
+.technical-centerline {
+  stroke: #475467;
+  stroke-width: 0.7;
+  stroke-dasharray: 10 5 2 5;
+}
+
+.technical-hidden {
+  stroke: #667085;
+  stroke-width: 0.7;
+  stroke-dasharray: 6 4;
+}
+
+.technical-level {
+  stroke: #667085;
+  stroke-width: 0.8;
+  stroke-dasharray: 12 5 2 5;
+}
+
+.technical-section {
+  stroke: #101828;
+  stroke-width: 2;
+}
+
+.technical-dimension {
+  color: #344054;
+  stroke: #344054;
+  stroke-width: 0.7;
+}
+
+.technical-paper {
+  fill: #fff !important;
+  stroke: #98a2b3 !important;
+  stroke-width: 0.7;
+}
+
+.technical-printable-area {
+  fill: none !important;
+  stroke: #d0d5dd !important;
+  stroke-width: 0.45;
+  stroke-dasharray: 2 2;
+}
+
+.technical-hatch-line {
+  stroke: #667085;
+  stroke-width: 0.45;
+}
+
+.technical-drawing-fixed-page .technical-cut {
+  stroke-width: 0.7;
+}
+
+.technical-drawing-fixed-page .technical-visible {
+  stroke-width: 0.45;
+}
+
+.technical-drawing-fixed-page .technical-secondary {
+  stroke-width: 0.25;
+}
+
+.technical-drawing-fixed-page .technical-centerline {
+  stroke-width: 0.18;
+  stroke-dasharray: 4 1 1 1;
+}
+
+.technical-drawing-fixed-page .technical-hidden {
+  stroke-width: 0.18;
+  stroke-dasharray: 2 1;
+}
+
+.technical-drawing-fixed-page .technical-level {
+  stroke-width: 0.22;
+  stroke-dasharray: 5 1.5 1 1.5;
+}
+
+.technical-drawing-fixed-page .technical-dimension {
+  stroke-width: 0.18;
+}
+
+.technical-drawing-fixed-page .technical-section {
+  stroke-width: 0.7;
+}
+
+.technical-drawing-svg text,
+.technical-dimension text {
+  fill: #101828;
+  stroke: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: var(--drawing-font-size, 100px);
+}
+
+.plans-warning {
+  margin: 8px 0;
+  border-left: 3px solid #b54708;
+  padding: 7px 10px;
+  color: #7a2e0e;
+  background: #fffaeb;
+}
+
+.plans-empty,
+.plans-scale-note {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.plans-scale-note {
+  margin: 8px 0 0;
+}
+
 @media (max-width: 960px) {
   .workspace-grid {
     grid-template-columns: 1fr;
@@ -271,6 +489,11 @@
   }
 
   .viewport-heading-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .plans-heading-row {
     align-items: flex-start;
     flex-direction: column;
   }
