@@ -21,6 +21,11 @@ This glossary is the initial source of truth for customer-facing German terminol
 | Grube | Lower shaft area below the reference level | Technical dimensions require approved engineering input |
 | Schachtkopf | Upper shaft area above the top served level | Technical dimensions require approved engineering input |
 | Tür | Generic term for a lift or landing door | Use a more specific approved term when context requires it |
+| Türen | View of explicit cabin and selected landing-door equipment | Does not imply approved door engineering |
+| Kabinentür | Door assembly attached to the cabin entrance | Distinct from the fixed landing door |
+| Schachttür | Fixed door assembly associated with a served landing | Requires explicit entrance-series data |
+| Türantrieb | Generic explicitly supplied cabin-door operator | No manufacturer, power, technology or force claim |
+| Zugang | Inspected front/rear entrance side | Selection never moves the cabin |
 | Antrieb | Drive system of the lift | Do not imply a drive technology unless configured |
 | Sicherheit | View of explicitly represented mechanical safety components | Visualization only, not a safety approval |
 | Geschwindigkeitsbegrenzer | Explicit generic governor assembly | No tripping-speed selection or certification implied |

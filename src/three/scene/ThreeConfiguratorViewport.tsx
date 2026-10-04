@@ -12,6 +12,24 @@ import type { MechanicalPlanningIssueCode } from '../geometry/passenger/mechanic
 import { createTractionDriveModel, type DriveIssueCode } from '../geometry/passenger/mechanical/traction-drive-model'
 import { getPassengerCameraBounds } from '../camera/passenger-camera-bounds'
 import { createPassengerSafetyModel, type SafetyIssueCode } from '../geometry/passenger/mechanical/passenger-safety-model'
+import { createPassengerDoorSystem, getDoorInspection, type DoorIssueCode } from '../geometry/passenger/doors/passenger-door-model'
+import type { PassengerEntranceSide } from '../geometry/passenger/passenger-installation-model'
+
+const doorMessages: Record<DoorIssueCode, string> = {
+  'invalid-door-shape': 'Eine Türbaugruppe enthält widersprüchliche Geometriedaten.',
+  'unsupported-door-type': 'Für diese Türanordnung ist noch keine Bauteildarstellung verfügbar.',
+  'duplicate-door-identity': 'Türbaugruppen benötigen unterschiedliche Kennungen und Zugangsseiten.',
+  'missing-door-reference': 'Eine Türbaugruppe verweist auf einen fehlenden Kabinenzugang.',
+  'invalid-door-panel': 'Türblätter, Bauteilmaße oder Fahrwege passen nicht zusammen.',
+  'invalid-door-sill': 'Schwellenprofil und Bodenführung passen nicht zusammen.',
+  'unmounted-door-component': 'Für eine Türbaugruppe fehlt eine passende explizite Befestigung.',
+  'invalid-door-operator': 'Der Türantrieb passt nicht zur Befestigung über dem Kabinenzugang.',
+  'invalid-door-drive-path': 'Der explizite Antriebsverlauf passt nicht zu den Türantriebsrollen.',
+  'invalid-door-coupling': 'Die Kupplung passt nicht zum angegebenen Türblatt oder Anschluss.',
+  'invalid-door-interlock': 'Die Verriegelungsdarstellung passt nicht zur zugehörigen Schachttür.',
+  'invalid-door-level': 'Eine Schachttür verweist auf ungültige Haltestellendaten.',
+  'entrance-axis-mismatch': 'Kabinen- und Schachtzugang liegen nicht auf derselben Zugangsachse.',
+}
 
 const safetyMessages: Record<SafetyIssueCode, string> = {
   'invalid-safety-shape': 'Eine Sicherheitsbaugruppe enthält widersprüchliche Geometriedaten.',
@@ -71,6 +89,8 @@ export function ThreeConfiguratorViewport({
   initialViewMode = 'overview',
 }: ThreeConfiguratorViewportProps) {
   const [viewMode, setViewMode] = useState<ThreeViewMode>(initialViewMode)
+  const [selectedLevelId, setSelectedLevelId] = useState<string>()
+  const [selectedEntranceSide, setSelectedEntranceSide] = useState<PassengerEntranceSide>('front')
   const modelResult = useMemo(() => geometryInput
     ? createPassengerInstallationModel(geometryInput)
     : undefined, [geometryInput])
@@ -88,9 +108,13 @@ export function ThreeConfiguratorViewport({
   const safety = useMemo(() => model && mechanicalLayout && mechanicalComponents
     ? createPassengerSafetyModel(geometryInput?.mechanical.safety, model, mechanicalLayout, mechanicalComponents, drive?.machine)
     : undefined, [geometryInput, model, mechanicalLayout, mechanicalComponents, drive])
+  const doors = useMemo(() => model ? createPassengerDoorSystem(geometryInput?.doors, model) : undefined, [model, geometryInput])
+  const doorInspection = useMemo(() => doors && model
+    ? getDoorInspection(doors, model.levels, selectedLevelId, selectedEntranceSide)
+    : undefined, [doors, model, selectedLevelId, selectedEntranceSide])
   const cameraBounds = useMemo(() => mechanicalComponents && drive
-    ? getPassengerCameraBounds(viewMode, mechanicalComponents, drive, safety)
-    : undefined, [viewMode, mechanicalComponents, drive, safety])
+    ? getPassengerCameraBounds(viewMode, mechanicalComponents, drive, safety, doors, doorInspection)
+    : undefined, [viewMode, mechanicalComponents, drive, safety, doors, doorInspection])
 
   const frameKey =
     model
@@ -152,6 +176,13 @@ export function ThreeConfiguratorViewport({
             Sicherheit
           </button>
           <button
+            aria-pressed={viewMode === 'doors'}
+            type="button"
+            onClick={() => setViewMode('doors')}
+          >
+            Türen
+          </button>
+          <button
             aria-pressed={viewMode === 'cutaway'}
             type="button"
             onClick={() => setViewMode('cutaway')}
@@ -160,6 +191,15 @@ export function ThreeConfiguratorViewport({
           </button>
         </div>
       </div>
+
+      {viewMode === 'doors' && model && doorInspection && <div className="viewport-mode-controls">
+        {model.levels.length > 0 && <label>Haltestelle: <select aria-label="Haltestelle" value={doorInspection.level?.id ?? ''} onChange={(event) => setSelectedLevelId(event.target.value)}>
+          {model.levels.map((level) => <option key={level.id} value={level.id}>{level.index + 1}</option>)}
+        </select></label>}
+        {doors && doors.cabin.length > 1 && <label>Zugang: <select aria-label="Zugang" value={doorInspection.side} onChange={(event) => setSelectedEntranceSide(event.target.value as PassengerEntranceSide)}>
+          {doors.cabin.map((entry) => <option key={entry.id} value={entry.side}>{entry.side === 'front' ? 'Vorn' : 'Hinten'}</option>)}
+        </select></label>}
+      </div>}
 
       {!modelResult || modelResult.status === 'empty' ? (
         <ViewportFallback>
@@ -202,12 +242,14 @@ export function ThreeConfiguratorViewport({
               <directionalLight intensity={0.7} position={[-4, 3, -5]} />
 
               <Bounds margin={1.15}>
-                {model && mechanicalLayout && mechanicalComponents && drive && safety && (
+                {model && mechanicalLayout && mechanicalComponents && drive && safety && doors && doorInspection && (
                   <PassengerElevatorAssembly
                     mechanicalLayout={mechanicalLayout}
                     mechanicalComponents={mechanicalComponents}
                     drive={drive}
                     safety={safety}
+                    doors={doors}
+                    doorInspection={doorInspection}
                     model={model}
                     viewMode={viewMode}
                   />
@@ -246,6 +288,9 @@ export function ThreeConfiguratorViewport({
           {safety?.missingData.length ? <p className="viewport-status">Sicherheitsdarstellung unvollständig – explizite Bauteil- oder Seildaten fehlen.</p> : null}
           {viewMode === 'safety' && !geometryInput?.mechanical.safety && <p className="viewport-status">Keine expliziten Planungsdaten für Sicherheitsbaugruppen vorhanden.</p>}
           {safety?.validation.issues.map((issue, index) => <p key={`safety-${index}`} className="viewport-status" role="alert">{safetyMessages[issue.code]}</p>)}
+          {(geometryInput?.doors || viewMode === 'doors') && !!doors?.missingData.length && <p className="viewport-status">Türdarstellung unvollständig – explizite Bauteildaten fehlen.</p>}
+          {doors?.validation.issues.map((issue, index) => <p key={`doors-${index}`} className="viewport-status" role="alert">{doorMessages[issue.code]}</p>)}
+          {viewMode === 'doors' && doorInspection?.level && !doorInspection.cabinAtLevel && <p className="viewport-status">Die Kabine bleibt an ihrer Ausgangsposition. Fokus: Schachttür der gewählten Haltestelle.</p>}
         </>
       )}
 

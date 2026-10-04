@@ -27,6 +27,7 @@ export type PassengerGeometryField =
   | 'counterweight.heightMm'
   | 'counterweight.depthMm'
   | 'counterweight.position'
+  | 'doors.cabin'
 
 export interface PassengerLandingLevelModel {
   readonly id: string
@@ -51,6 +52,7 @@ export interface PassengerDoorLeafModel {
 
 export interface PassengerEntranceModel extends PassengerDoorModel {
   readonly side: PassengerEntranceSide
+  readonly centerX: Metres
   readonly doorLeaves: readonly [
     PassengerDoorLeafModel,
     PassengerDoorLeafModel,
@@ -220,11 +222,13 @@ function createLevelElevations(levels: LevelPlanningInput): LevelElevationResult
 function createEntranceModel(
   side: PassengerEntranceSide,
   door: PassengerDoorModel,
+  centerX = metres(0),
 ): PassengerEntranceModel {
   const leafWidth = metres(door.width / 2)
 
   return {
     side,
+    centerX,
     width: door.width,
     height: door.height,
     doorLeaves: [
@@ -351,6 +355,14 @@ function collectInvalidFields(
     fields.push('cabin.doorHeightMm')
   }
 
+  for (const entry of input.doors?.cabin ?? []) {
+    const opening = entry.opening
+    const width = opening?.widthMm ?? input.cabin.doorWidthMm, height = opening?.heightMm ?? input.cabin.doorHeightMm
+    if (!Number.isFinite(entry.axisXMm) || (width !== undefined && (!isPositive(width) ||
+      (input.cabin.widthMm !== undefined && Math.abs(entry.axisXMm) + width / 2 > input.cabin.widthMm / 2))) ||
+      (height !== undefined && (!isPositive(height) || (input.cabin.heightMm !== undefined && height > input.cabin.heightMm)))) fields.push('doors.cabin')
+  }
+
   return uniqueFields(fields)
 }
 
@@ -398,15 +410,14 @@ function createInstallationModel(
       ? undefined
       : {
           ...cabin,
-          entrances:
-            door === undefined
-              ? []
-              : [
-                  createEntranceModel('front', door),
-                  ...(cabin.throughCar === true
-                    ? [createEntranceModel('rear', door)]
-                    : []),
-                ],
+          entrances: (['front', ...(cabin.throughCar === true ? ['rear'] : [])] as PassengerEntranceSide[]).flatMap((side) => {
+            const record = input.doors?.cabin?.find((entry) => entry.side === side)
+            const opening = record?.opening ? { width: millimetresToMetres(record.opening.widthMm), height: millimetresToMetres(record.opening.heightMm) } : door
+            const centerX = record ? millimetresToMetres(record.axisXMm) : metres(0)
+            return opening && isPositive(opening.width) && isPositive(opening.height) && Number.isFinite(centerX) &&
+              opening.width / 2 + Math.abs(centerX) <= cabin.width / 2 && opening.height <= cabin.height
+              ? [createEntranceModel(side, opening, centerX)] : []
+          }),
           rearWall:
             cabin.throughCar === true
               ? ('opening' as const)

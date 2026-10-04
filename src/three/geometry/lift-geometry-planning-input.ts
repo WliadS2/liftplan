@@ -7,6 +7,7 @@ import {
 } from '../../elevator'
 import type { Millimetres } from '../../engineering'
 import type { PassengerMechanicalPlanningInput } from './passenger/mechanical/passenger-mechanical-planning-input'
+import type { PassengerDoorSystemData } from '../../elevator/configuration/passenger-door-data'
 
 export interface UniformLevelPlanningInput {
   readonly kind: 'uniform'
@@ -48,6 +49,7 @@ export interface PassengerGeometryPlanningInput {
     readonly position?: CounterweightPosition
   }
   readonly mechanical: PassengerMechanicalPlanningInput
+  readonly doors?: PassengerDoorSystemData
 }
 
 export type LiftGeometryPlanningInput = PassengerGeometryPlanningInput
@@ -73,6 +75,7 @@ function createPassengerGeometryPlanningInput(
   return {
     liftFamily: planning.family,
     sourceSchemaVersion: planning.schemaVersion,
+    doors: planning.doors,
     cabin: {
       widthMm: planning.cabinWidthMm,
       depthMm: planning.cabinDepthMm,

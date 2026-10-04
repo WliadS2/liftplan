@@ -11,6 +11,8 @@ import type { PassengerMechanicalComponentModel } from './mechanical/mechanical-
 import type { PassengerInstallationModel } from './passenger-installation-model'
 import type { TractionDriveModel } from './mechanical/traction-drive-model'
 import type { PassengerSafetyModel } from './mechanical/passenger-safety-model'
+import type { DoorInspection, PassengerDoorSystemModel } from './doors/passenger-door-model'
+import { PassengerDoorMeshes } from './doors/PassengerDoorMeshes'
 
 export interface PassengerElevatorAssemblyProps {
   readonly model: PassengerInstallationModel
@@ -18,6 +20,8 @@ export interface PassengerElevatorAssemblyProps {
   readonly mechanicalComponents: PassengerMechanicalComponentModel
   readonly drive: TractionDriveModel
   readonly safety: PassengerSafetyModel
+  readonly doors: PassengerDoorSystemModel
+  readonly doorInspection: DoorInspection
   readonly viewMode: ThreeViewMode
 }
 
@@ -27,6 +31,8 @@ export function PassengerElevatorAssembly({
   mechanicalComponents,
   drive,
   safety,
+  doors,
+  doorInspection,
   viewMode,
 }: PassengerElevatorAssemblyProps) {
   const visibility = getPassengerViewVisibility(viewMode)
@@ -39,13 +45,11 @@ export function PassengerElevatorAssembly({
       {model.pit && <Pit key={`pit-${viewMode}`} pit={model.pit} opacity={visibility.pitOpacity} />}
       <LandingLevels
         key={`landings-${viewMode}`}
-        cabin={model.cabin}
         footprint={model.levelFootprint}
         levels={model.levels}
-        shaft={model.shaft}
         opacity={visibility.landingOpacity}
       />
-      <PassengerMechanicalAssembly
+      <group visible={visibility.showMechanicalSystems}><PassengerMechanicalAssembly
         layout={mechanicalLayout}
         components={mechanicalComponents}
         drive={drive}
@@ -53,7 +57,8 @@ export function PassengerElevatorAssembly({
         showCounterweight={visibility.showCounterweight}
         showTractionRopes={visibility.showTractionRopes}
         opacity={visibility.mechanicalOpacity}
-      />
+      /></group>
+      <PassengerDoorMeshes model={doors} inspection={doorInspection} viewMode={viewMode} />
       {model.cabin && <Cabin key={`cabin-${viewMode}`} cabin={model.cabin} viewMode={viewMode} />}
     </group>
   )

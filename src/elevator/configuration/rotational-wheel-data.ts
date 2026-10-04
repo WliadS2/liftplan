@@ -16,4 +16,4 @@ export const rotationalWheelDataSchema = z.object({
     depthMm: componentDimensionSchema, widthMm: componentDimensionSchema }).strict().optional(),
 }).strict()
 export type RotationalWheelData = z.infer<typeof rotationalWheelDataSchema>
-export type RotationalWheelRole = 'traction' | 'deflection' | 'car' | 'counterweight' | 'governor' | 'tension' | 'brake'
+export type RotationalWheelRole = 'traction' | 'deflection' | 'car' | 'counterweight' | 'governor' | 'tension' | 'brake' | 'door-operator'

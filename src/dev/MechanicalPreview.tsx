@@ -9,7 +9,8 @@ const labels = { rear: 'Hinten', left: 'Links', right: 'Rechts' } as const
 
 export default function MechanicalPreview() {
   const [arrangement, setArrangement] = useState<CounterweightPosition>('rear')
-  const input = createLiftGeometryPlanningInput(createPassengerMechanicalFixture(arrangement))
+  const [throughCar, setThroughCar] = useState(false)
+  const input = createLiftGeometryPlanningInput(createPassengerMechanicalFixture(arrangement, throughCar))
   return (
     <main className="workspace" style={{ maxWidth: 1000 }}>
       <h1>Mechanische Demo</h1>
@@ -20,6 +21,7 @@ export default function MechanicalPreview() {
           {COUNTERWEIGHT_POSITIONS.map((position) => <option key={position} value={position}>{labels[position]}</option>)}
         </select>
       </label>
+      <label><input type="checkbox" checked={throughCar} onChange={(event) => setThroughCar(event.target.checked)} /> Durchlader (Entwicklungsdaten)</label>
       <ThreeConfiguratorViewport geometryInput={input} initialViewMode="mechanical" />
     </main>
   )

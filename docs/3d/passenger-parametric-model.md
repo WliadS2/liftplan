@@ -10,7 +10,8 @@ The first LiftPlan 3D assembly is a lightweight planning visualization for the p
 2. The family geometry adapter creates a normalized `PassengerGeometryPlanningInput` without depending on React forms or Zustand.
 3. The pure passenger installation transform creates every independently renderable submodel, reports an `empty`, `partial`, `complete`, or `invalid` state, and converts dimensions through `millimetresToMetres`.
 4. The pure mechanical-layout transform adds independent schematic mechanical subsystems from available planning and installation geometry.
-5. React Three Fiber components render the resulting metre-based installation and mechanical models.
+5. The independent pure door transform normalizes explicitly supplied equipment against cabin openings and landing levels.
+6. React Three Fiber components render metre-based installation, mechanical and door models.
 
 Missing dimensions remain missing. The transform does not insert hidden shaft, cabin, level, pit, or counterweight defaults.
 
@@ -27,7 +28,8 @@ The current scene can consume:
 - uniform stop count and storey height, with an explicit-elevation contract available for future data;
 - pit depth and headroom;
 - optional counterweight width, height, depth, rear/left/right arrangement, and centre offset;
-- optional rail spacing/orientation/axes, buffer positions, machine/sheave geometry, and suspension routing.
+- optional rail spacing/orientation/axes, buffer positions, machine/sheave geometry, and suspension routing;
+- optional independently sourced cabin/landing door assemblies, operators, sills, coupling and interlocks.
 
 Capacity, passenger count, nominal speed, and drive concept remain project data but do not create geometry yet. Machine, sheave, and suspension placeholders remain absent unless their complete optional mechanical planning inputs are supplied.
 
@@ -35,12 +37,14 @@ Capacity, passenger count, nominal speed, and drive concept remain project data 
 
 `PassengerElevatorAssembly` composes the installation and a separate `PassengerMechanicalAssembly`. The latter owns car-frame, cabin-rail, counterweight, counterweight-rail, buffer, machine, sheave, suspension-path, and zone renderers. Mechanical rendering consumes the pure layout and does not inspect project state or derive technical rules.
 
-The cabin is composed from separate floor, ceiling, side-wall, rear-wall, entrance, sill, and door-leaf meshes. Each entrance owns two equal visualization leaves representing a center-opening door. When through-car planning is enabled, the rear wall is replaced by a second entrance assembly; when it is disabled, the rear wall remains closed.
+The cabin has separate floor, ceiling, side-wall, rear-wall and entrance wall sections. The independent door renderer adds panels/equipment only from explicit data. Center-opening and side-opening two-panel types are supported; missing component data leaves an opening outline. Through-car replaces the rear wall with an independent entrance, without changing cabin dimensions.
 
-Cabin wall, floor, door, frame, and sill thicknesses are defined in `visualization-geometry.ts`. These render-space constants exist only to make otherwise dimensionless surfaces readable. They are not planning values, engineering dimensions, manufactured thicknesses, or technical results, and they are bounded for very small input geometry.
+Cabin wall/floor thicknesses in `visualization-geometry.ts` are bounded visualization-only constants for dimensionless shell surfaces. Door panels, frames and sills no longer use thickness constants: they require explicit component data.
 
-The active view-mode contract supports `overview`, `mechanical`, and `cutaway`. Overview retains the normal technical enclosure. Mechanical mode reduces cabin and shaft obstruction while emphasizing mechanical components. Cutaway opens the `+Z/+X` camera side by removing the front wall sections and right cabin wall, making the front doors and ceiling translucent, and reducing the shaft enclosure to its edge frame. Mechanical components remain visible in cutaway. No mode mutates the planning, installation, or mechanical model.
+The six modes are `overview`, `mechanical`, `drive`, `safety`, `doors` and `cutaway`. Overview retains the enclosure; mechanical reduces shell obstruction; drive/safety focus their systems. Doors emphasizes the selected entrance and landing. Cutaway removes front wall sections/right cabin wall, makes door panels/ceiling translucent and retains shaft edges/mechanics. No mode mutates planning or normalized geometry.
 
 The scene uses a perspective camera, orbit controls, neutral technical lighting, and bounds-based automatic fitting. Changes that affect the installation bounds, level count, component availability, or view mode trigger reframing so the full installation remains visible.
 
 The detailed mechanical boundary, schematic-value policy, and deferred systems are documented in [Passenger mechanical visualization architecture](./passenger-mechanical-architecture.md).
+
+Door equipment, level association, explicit mounting/sill relationships, selected-floor camera behavior and future travel are documented in [Static passenger door system](./passenger-door-architecture.md).

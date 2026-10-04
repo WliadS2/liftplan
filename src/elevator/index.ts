@@ -51,3 +51,5 @@ export {
   LIFT_IMPLEMENTATION_STATUSES,
 } from './types/lift-implementation-status'
 export type { LiftImplementationStatus } from './types/lift-implementation-status'
+export { passengerDoorSystemDataSchema, DOOR_OPENING_TYPES } from './configuration/passenger-door-data'
+export type { PassengerDoorSystemData, DoorAssemblyData, DoorOpeningType, CabinDoorEntranceData, LandingDoorSeriesData } from './configuration/passenger-door-data'

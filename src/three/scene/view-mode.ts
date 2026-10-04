@@ -1,4 +1,4 @@
-export const THREE_VIEW_MODES = ['overview', 'mechanical', 'drive', 'safety', 'cutaway'] as const
+export const THREE_VIEW_MODES = ['overview', 'mechanical', 'drive', 'safety', 'doors', 'cutaway'] as const
 
 export type ThreeViewMode = (typeof THREE_VIEW_MODES)[number]
 
@@ -7,7 +7,7 @@ export const PASSENGER_VIEW_MODE_CATALOG = [
   { id: 'cabin', label: 'Kabine', implemented: false },
   { id: 'shaft', label: 'Schacht', implemented: false },
   { id: 'mechanical', label: 'Mechanik', implemented: true },
-  { id: 'doors', label: 'Türen', implemented: false },
+  { id: 'doors', label: 'Türen', implemented: true },
   { id: 'drive', label: 'Antrieb', implemented: true },
   { id: 'safety', label: 'Sicherheit', implemented: true },
   { id: 'cutaway', label: 'Schnittansicht', implemented: true },
@@ -29,11 +29,17 @@ export interface PassengerViewVisibility {
   readonly pitOpacity: number
   readonly showCounterweight: boolean
   readonly showTractionRopes: boolean
+  readonly showMechanicalSystems: boolean
 }
 
 export function getPassengerViewVisibility(
   viewMode: ThreeViewMode,
 ): PassengerViewVisibility {
+  if (viewMode === 'doors') return {
+    showRightCabinWall: true, showFrontWallSections: true, cabinShellOpacity: 0.12, cabinCeilingOpacity: 0.025,
+    frontDoorOpacity: 1, shaftEnvelopeOpacity: 0, mechanicalOpacity: 1, landingOpacity: 0.025, pitOpacity: 0,
+    showCounterweight: false, showTractionRopes: false, showMechanicalSystems: false,
+  }
   if (viewMode === 'cutaway') {
     return {
       showRightCabinWall: false,
@@ -47,6 +53,7 @@ export function getPassengerViewVisibility(
       pitOpacity: 0,
       showCounterweight: true,
       showTractionRopes: true,
+      showMechanicalSystems: true,
     }
   }
 
@@ -63,6 +70,7 @@ export function getPassengerViewVisibility(
       pitOpacity: 0,
       showCounterweight: viewMode !== 'safety',
       showTractionRopes: viewMode !== 'safety',
+      showMechanicalSystems: true,
     }
   }
 
@@ -78,5 +86,13 @@ export function getPassengerViewVisibility(
     pitOpacity: 0.1,
     showCounterweight: true,
     showTractionRopes: true,
+    showMechanicalSystems: true,
   }
+}
+
+export function getDoorViewVisibility(mode: ThreeViewMode, selected: boolean): { readonly panelOpacity: number; readonly componentOpacity: number } {
+  if (mode === 'doors') return { panelOpacity: selected ? 1 : 0.025, componentOpacity: selected ? 1 : 0.025 }
+  if (mode === 'cutaway') return { panelOpacity: 0.12, componentOpacity: 1 }
+  if (mode === 'mechanical' || mode === 'drive' || mode === 'safety') return { panelOpacity: 0.025, componentOpacity: 1 }
+  return { panelOpacity: 1, componentOpacity: 1 }
 }

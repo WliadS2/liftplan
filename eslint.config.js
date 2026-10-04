@@ -58,6 +58,8 @@ export default defineConfig([
       'src/three/geometry/passenger/mechanical/traction-drive-model.ts',
       'src/three/geometry/passenger/mechanical/passenger-safety-model.ts',
       'src/three/geometry/passenger/mechanical/cable-segment.ts',
+      'src/three/geometry/passenger/doors/passenger-door-model.ts',
+      'src/three/geometry/passenger/doors/cabin-entrance-shell.ts',
       'src/three/camera/passenger-camera-bounds.ts',
     ],
     rules: {

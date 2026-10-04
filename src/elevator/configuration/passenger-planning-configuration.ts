@@ -9,6 +9,7 @@ import {
 } from '../../engineering'
 import type { LiftConfiguration } from '../models/lift-configuration'
 import { LIFT_FAMILIES } from '../types/lift-family'
+import { passengerDoorSystemDataSchema, type PassengerDoorSystemData } from './passenger-door-data'
 import {
   passengerMechanicalPlanningSchema,
   COUNTERWEIGHT_ARRANGEMENTS,
@@ -48,6 +49,7 @@ export interface PassengerPlanningConfiguration
   readonly counterweightDepthMm?: Millimetres
   readonly counterweightPosition?: CounterweightPosition
   readonly mechanical?: PassengerMechanicalPlanningInput
+  readonly doors?: PassengerDoorSystemData
 }
 
 const optionalFiniteNumber = z.number().finite().optional()
@@ -90,6 +92,7 @@ export const passengerPlanningConfigurationSchema = z
     counterweightDepthMm: optionalMillimetres,
     counterweightPosition: z.enum(COUNTERWEIGHT_POSITIONS).optional(),
     mechanical: passengerMechanicalPlanningSchema.optional(),
+    doors: passengerDoorSystemDataSchema.optional(),
   })
   .strict()
 

@@ -39,4 +39,11 @@ export const MECHANICAL_MATERIALS = {
   linkage: { color: '#969b92', metalness: 0.45, roughness: 0.45 },
   tension: { color: '#85827b', metalness: 0.32, roughness: 0.6 },
   brake: { color: '#686771', metalness: 0.35, roughness: 0.55 },
+  cabinDoor: { color: '#9caab2', metalness: 0.45, roughness: 0.45 },
+  landingDoor: { color: '#85949a', metalness: 0.4, roughness: 0.52 },
+  doorFrame: { color: '#687980', metalness: 0.45, roughness: 0.48 },
+  doorSill: { color: '#a4adb1', metalness: 0.6, roughness: 0.38 },
+  doorOperator: { color: '#657371', metalness: 0.35, roughness: 0.55 },
+  doorCoupling: { color: '#a29d8c', metalness: 0.4, roughness: 0.5 },
+  doorInterlock: { color: '#736e68', metalness: 0.35, roughness: 0.55 },
 } as const
