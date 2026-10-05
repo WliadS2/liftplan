@@ -1,8 +1,11 @@
 # Technical drawing architecture
 
 LiftPlan technical drawings are deterministic vector projections of the same
-normalized passenger installation, mechanical, door, and spatial models used by
-validation and the Three.js presentation. They do not inspect Three.js meshes,
+family-owned normalized installation and spatial models used by validation and
+the Three.js presentation. Passenger drawings additionally consume the detailed
+mechanical and door models; goods-lift drawings consume the independent goods
+platform, shaft, entrance, level, guide, and explicit load envelopes. Autoaufzug drawings consume their independent
+platform, shaft, entrance, vehicle pose/contact-point, and approach-envelope model. They do not inspect Three.js meshes,
 screenshots, DOM dimensions, or rendered pixels.
 
 The pipeline is:
@@ -117,7 +120,7 @@ selected SVG/PDF scale or browser viewport.
 Lines, R12 polylines, circles, arcs, text, and explicit dimension lines/arrows
 are derived from the existing drawing primitives. Deterministic layers separate
 shaft, cabin, car frame, guide rails, counterweight, doors, machine, buffers,
-ropes, dimensions, centerlines, and annotations. Center and hidden line types
+ropes, loads, vehicles, approach envelopes, dimensions, centerlines, and annotations. Center and hidden line types
 retain the drawing roles where R12 supports them. Missing optional normalized
 systems create no entities.
 

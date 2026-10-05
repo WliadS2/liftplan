@@ -20,6 +20,7 @@ import { ThreeSceneErrorBoundary } from '../../three/scene/ThreeSceneErrorBounda
 import { createPassengerDrawingContext } from '../../drawings/passenger-technical-drawings'
 import { getSpatialIssueMessage, SPATIAL_STATUS_LABELS } from './spatial-validation-messages'
 import { PlansWorkspace } from './PlansWorkspace'
+import { ProjectPersistenceControls } from './ProjectPersistenceControls'
 import './ProjectWorkspace.css'
 
 const liftTypes = getLiftTypeDefinitions()
@@ -81,7 +82,6 @@ function MillimetreField({ label, value, onChange }: MillimetreFieldProps) {
 export function ProjectWorkspace() {
   const project = useProjectStore((state) => state.project)
   const validation = useProjectStore((state) => state.validation)
-  const createProject = useProjectStore((state) => state.createProject)
   const setLiftFamily = useProjectStore((state) => state.setLiftFamily)
   const updateConfiguration = useProjectStore(
     (state) => state.updateConfiguration,
@@ -139,11 +139,9 @@ export function ProjectWorkspace() {
               <DevelopmentMechanicalControls />
             </Suspense>
           )}
-          <button type="button" className="primary-action" onClick={() => createProject()}>
-            Neues Projekt
-          </button>
         </div>
       </header>
+      <ProjectPersistenceControls />
 
       <div className="workspace-body">
         <aside className="workspace-panel configuration-panel" aria-labelledby="configuration-heading">
@@ -625,6 +623,10 @@ export function ProjectWorkspace() {
               <div>
                 <dt>Versionskennung</dt>
                 <dd>{project.schemaVersion}</dd>
+              </div>
+              <div>
+                <dt>Projektversion</dt>
+                <dd>{project.projectVersion === 0 ? 'Noch keine Version gespeichert' : `Version ${project.projectVersion}`}</dd>
               </div>
               <div>
                 <dt>Strukturprüfung</dt>

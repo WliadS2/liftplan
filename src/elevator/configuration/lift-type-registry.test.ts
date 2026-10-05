@@ -9,16 +9,17 @@ import {
 } from '../../elevator'
 
 describe('lift type registry', () => {
-  it('registers the seven initial lift families without marking future types as available', () => {
+  it('registers all target families and marks only implemented types as available', () => {
     const definitions = getLiftTypeDefinitions()
 
-    expect(definitions).toHaveLength(7)
+    expect(definitions).toHaveLength(8)
     expect(getLiftTypeDefinition(LIFT_FAMILIES.passenger).implementationStatus).toBe(
       'available',
     )
     expect(getLiftTypeDefinition(LIFT_FAMILIES.goods).implementationStatus).toBe(
-      'coming-soon',
+      'available',
     )
+    expect(getLiftTypeDefinition(LIFT_FAMILIES.car).implementationStatus).toBe('available')
   })
 
   it('structurally validates a passenger planning configuration', () => {

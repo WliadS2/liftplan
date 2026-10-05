@@ -13,6 +13,17 @@ export interface FutureModuleReference {
   readonly status: 'planned' | 'available'
 }
 
+export const LIFT_CAPABILITY_NAMES = [
+  'configuration', 'normalization', 'validation', 'geometry', 'three',
+  'simulation', 'drawings', 'pdf', 'dxf', 'persistence', 'migration',
+] as const
+export type LiftCapabilityName = (typeof LIFT_CAPABILITY_NAMES)[number]
+export interface LiftCapability {
+  readonly status: 'available' | 'unavailable'
+  readonly moduleId?: string
+}
+export type LiftCapabilities = Readonly<Record<LiftCapabilityName, LiftCapability>>
+
 export interface LiftTypeDefinition<
   Configuration extends LiftConfiguration,
 > {
@@ -24,5 +35,6 @@ export interface LiftTypeDefinition<
   readonly createDefaultConfiguration: (projectName: string) => Configuration
   readonly engineeringModule: FutureModuleReference
   readonly geometryModule: FutureModuleReference
+  readonly capabilities: LiftCapabilities
   readonly uiSections: readonly LiftUiSection[]
 }

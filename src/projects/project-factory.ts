@@ -38,6 +38,7 @@ export function createLiftPlanProject(
     createdAt,
     updatedAt: createdAt,
     schemaVersion: LIFTPLAN_PROJECT_SCHEMA_VERSION,
+    projectVersion: 0,
   }
 }
 
@@ -56,5 +57,9 @@ export function createProjectForLiftFamily(
     dependencies,
   )
 
-  return { ...nextProject, updatedAt: (dependencies.now ?? createDefaultTimestamp)() }
+  return {
+    ...nextProject,
+    projectVersion: project.projectVersion,
+    updatedAt: (dependencies.now ?? createDefaultTimestamp)(),
+  }
 }
