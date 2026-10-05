@@ -139,7 +139,7 @@ export function ProjectWorkspace() {
               <DevelopmentMechanicalControls />
             </Suspense>
           )}
-          <button type="button" onClick={() => createProject()}>
+          <button type="button" className="primary-action" onClick={() => createProject()}>
             Neues Projekt
           </button>
         </div>
