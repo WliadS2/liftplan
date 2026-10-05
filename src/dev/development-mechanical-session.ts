@@ -3,6 +3,7 @@ import { createPassengerMechanicalFixture } from './fixtures/passenger-mechanica
 export interface DevelopmentMechanicalProjectActions {
   updateConfiguration: (configuration: unknown) => unknown
   createProject: () => void
+  loadDevelopmentConfiguration?: (configuration: unknown) => unknown
 }
 
 /**
@@ -13,7 +14,11 @@ export function loadDevelopmentMechanicalFixture(
   actions: DevelopmentMechanicalProjectActions,
 ) {
   const configuration = createPassengerMechanicalFixture()
-  actions.updateConfiguration(configuration)
+  if (actions.loadDevelopmentConfiguration) {
+    actions.loadDevelopmentConfiguration(configuration)
+  } else {
+    actions.updateConfiguration(configuration)
+  }
 
   return configuration
 }

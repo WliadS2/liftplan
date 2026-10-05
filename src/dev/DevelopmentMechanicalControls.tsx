@@ -10,6 +10,9 @@ export function DevelopmentMechanicalControls() {
     (state) => state.updateConfiguration,
   )
   const createProject = useProjectStore((state) => state.createProject)
+  const loadDevelopmentConfiguration = useProjectStore(
+    (state) => state.loadDevelopmentConfiguration,
+  )
 
   return (
     <div className="development-mechanical-controls">
@@ -17,7 +20,11 @@ export function DevelopmentMechanicalControls() {
       <button
         type="button"
         onClick={() =>
-          loadDevelopmentMechanicalFixture({ updateConfiguration, createProject })
+          loadDevelopmentMechanicalFixture({
+            updateConfiguration,
+            createProject,
+            loadDevelopmentConfiguration,
+          })
         }
       >
         Demo-Mechanik laden

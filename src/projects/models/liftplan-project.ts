@@ -13,6 +13,7 @@ export interface LiftPlanProject {
   readonly createdAt: string
   readonly updatedAt: string
   readonly schemaVersion: typeof LIFTPLAN_PROJECT_SCHEMA_VERSION
+  readonly projectVersion: number
 }
 
 export interface CreateLiftPlanProjectInput {

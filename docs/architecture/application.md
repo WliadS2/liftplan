@@ -37,7 +37,9 @@ ESLint guardrails prevent presentation modules from importing technical implemen
 
 Zustand may hold application and feature state, but it must not become a container for hidden engineering logic. Zod schemas validate data shape at trust boundaries; technical validity is a separate structured result.
 
-The current project store owns one in-memory `LiftPlanProject`. It delegates creation, family changes, and configuration replacement to pure project functions. Store state contains serializable project data and structural validation output only; it does not contain React refs, Three.js objects, scene state, or technical calculations.
+The project store owns the active `LiftPlanProject`, its serializable editable configuration draft, structural validation output, and an ephemeral persistence mode. It delegates creation, family changes, and configuration replacement to pure project functions. The last structurally valid configuration remains the input to engineering consumers while the draft preserves temporarily invalid form state for autosave. Store state does not contain React refs, Three.js objects, scene state, or technical calculations.
+
+`src/projects/persistence` defines the browser-local persistence boundary. A repository port is implemented by IndexedDB in the application and by an in-memory adapter in tests. Stored records contain identity, timestamps, a sequential project-version counter, lift family, and JSON planning inputs only; normalized installation models, validation results, simulation runtime, Three.js objects, drawing documents, PDF, and DXF are always regenerated. Strict record/file schemas and an explicit record migration entry point protect the load boundary. Manual versions are immutable full-input snapshots in a separate IndexedDB store. The development Mechanical Demo is marked as an ephemeral store mode and is excluded from autosave and project-file export.
 
 ## Lift-family registry
 

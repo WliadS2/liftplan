@@ -51,6 +51,7 @@ describe('passenger mechanical planning structure', () => {
     const fixture = loadDevelopmentMechanicalFixture(store.getState())
     const loaded = store.getState().project
 
+    expect(store.getState().persistenceMode).toBe('development-demo')
     expect(loaded.name).toBe('Mechanische Demo – Testdaten')
     expect(loaded.configuration).toMatchObject({
       mechanical: fixture.mechanical,
@@ -59,6 +60,7 @@ describe('passenger mechanical planning structure', () => {
 
     resetDevelopmentMechanicalFixture(store.getState())
 
+    expect(store.getState().persistenceMode).toBe('project')
     expect(store.getState().project.configuration).toEqual(normalConfiguration)
     expect(
       passengerPlanningConfigurationSchema.parse(

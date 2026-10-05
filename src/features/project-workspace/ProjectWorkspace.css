@@ -21,6 +21,104 @@
   gap: 8px;
 }
 
+.project-persistence {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  padding: 10px;
+  background: #fff;
+  text-align: left;
+}
+
+.project-persistence-actions,
+.version-save-row,
+.project-versions li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.project-persistence button,
+.project-persistence select,
+.project-persistence input {
+  min-height: 32px;
+  border: 1px solid #98a2b3;
+  border-radius: 4px;
+  padding: 5px 8px;
+  color: #101828;
+  background: #fff;
+}
+
+.project-persistence button {
+  cursor: pointer;
+}
+
+.project-persistence button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.secondary-project-actions {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.save-status {
+  margin-left: auto;
+  font-weight: 600;
+}
+
+.save-status-error,
+.project-persistence-message {
+  color: #b42318;
+}
+
+.project-versions summary {
+  cursor: pointer;
+  color: #344054;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.project-versions ul {
+  display: grid;
+  gap: 5px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-versions li {
+  justify-content: space-between;
+  font-size: 0.8rem;
+}
+
+.version-save-row {
+  margin-top: 8px;
+}
+
+.version-save-row input {
+  min-width: 240px;
+}
+
+.project-persistence-message {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
 .development-mechanical-controls {
   color: var(--text-muted);
   font-size: 0.78rem;

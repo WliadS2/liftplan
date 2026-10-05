@@ -10,6 +10,7 @@ export {
   isRegisteredLiftFamily,
   liftTypeRegistry,
   REGISTERED_LIFT_FAMILIES,
+  registeredLiftFamilySchema,
 } from './configuration/lift-type-registry'
 export type {
   RegisteredLiftConfiguration,
