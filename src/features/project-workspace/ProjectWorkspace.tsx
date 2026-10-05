@@ -6,6 +6,8 @@ import {
   getLiftTypeDefinitions,
   isRegisteredLiftFamily,
   updatePassengerPlanningConfiguration,
+  type CarLiftPlanningConfiguration,
+  type GoodsLiftPlanningConfiguration,
   type PassengerMechanicalPlanningInput,
 } from '../../elevator'
 import {
@@ -18,7 +20,11 @@ import { useProjectStore } from '../../projects'
 import { createLiftGeometryPlanningInput } from '../../three/geometry/lift-geometry-planning-input'
 import { ThreeSceneErrorBoundary } from '../../three/scene/ThreeSceneErrorBoundary'
 import { createPassengerDrawingContext } from '../../drawings/passenger-technical-drawings'
-import { getSpatialIssueMessage, SPATIAL_STATUS_LABELS } from './spatial-validation-messages'
+import { createGoodsLiftDrawingContext } from '../../drawings/goods-lift-technical-drawings'
+import { createCarLiftDrawingContext } from '../../drawings/car-lift-technical-drawings'
+import { createLiftFamilyTechnicalModel } from '../../lift-families'
+import { getLiftSpatialIssueMessage, SPATIAL_STATUS_LABELS } from './spatial-validation-messages'
+import { CarLiftConfigurationForm, GoodsLiftConfigurationForm } from './FamilyConfigurationForms'
 import { PlansWorkspace } from './PlansWorkspace'
 import { ProjectPersistenceControls } from './ProjectPersistenceControls'
 import './ProjectWorkspace.css'
@@ -81,6 +87,7 @@ function MillimetreField({ label, value, onChange }: MillimetreFieldProps) {
 
 export function ProjectWorkspace() {
   const project = useProjectStore((state) => state.project)
+  const configurationDraft = useProjectStore((state) => state.configurationDraft)
   const validation = useProjectStore((state) => state.validation)
   const setLiftFamily = useProjectStore((state) => state.setLiftFamily)
   const updateConfiguration = useProjectStore(
@@ -94,20 +101,58 @@ export function ProjectWorkspace() {
     () => createLiftGeometryPlanningInput(project.configuration),
     [project.configuration],
   )
-  const drawingContext = useMemo(
-    () => geometryInput ? createPassengerDrawingContext(geometryInput) : undefined,
-    [geometryInput],
+  const drawingContext = useMemo(() => {
+    if (project.configuration.family === LIFT_FAMILIES.passenger) {
+      return geometryInput ? createPassengerDrawingContext(geometryInput) : undefined
+    }
+    if (project.configuration.family === LIFT_FAMILIES.goods) {
+      return createGoodsLiftDrawingContext(project.configuration)
+    }
+    if (project.configuration.family === LIFT_FAMILIES.car) {
+      return createCarLiftDrawingContext(project.configuration)
+    }
+    return undefined
+  }, [geometryInput, project.configuration])
+  const technicalFamilyModel = useMemo(
+    () => createLiftFamilyTechnicalModel(project.configuration),
+    [project.configuration],
   )
   const spatialValidation = drawingContext?.validation
-  const spatialIssues = spatialValidation?.issues.filter((entry, index, all) =>
-    all.findIndex((candidate) => candidate.code === entry.code &&
-      candidate.affectedLevelId === entry.affectedLevelId) === index) ?? []
+  const spatialIssues = spatialValidation?.issues.filter((entry, index, all) => {
+    const affectedLevelId = 'affectedLevelId' in entry ? entry.affectedLevelId : undefined
+    return all.findIndex((candidate) => candidate.code === entry.code &&
+      ('affectedLevelId' in candidate ? candidate.affectedLevelId : undefined) === affectedLevelId) === index
+  }) ?? []
   const spatialConflicts = spatialIssues.filter((issue) => issue.severity === 'error').length
   const spatialWarnings = spatialIssues.filter((issue) => issue.severity === 'warning').length
   const spatialUnknown = spatialIssues.filter((issue) => issue.severity === 'info').length
   const isPassengerLift =
     project.configuration.family === LIFT_FAMILIES.passenger
+  const isGoodsLift = project.configuration.family === LIFT_FAMILIES.goods
+  const isCarLift = project.configuration.family === LIFT_FAMILIES.car
   const passengerConfiguration = isPassengerLift ? project.configuration : undefined
+  const validGoodsConfiguration = isGoodsLift ? project.configuration : undefined
+  const validCarConfiguration = isCarLift ? project.configuration : undefined
+  const goodsConfiguration = isGoodsLift && configurationDraft && typeof configurationDraft === 'object' &&
+    'family' in configurationDraft && configurationDraft.family === LIFT_FAMILIES.goods
+    ? configurationDraft as GoodsLiftPlanningConfiguration
+    : isGoodsLift ? project.configuration : undefined
+  const carConfiguration = isCarLift && configurationDraft && typeof configurationDraft === 'object' &&
+    'family' in configurationDraft && configurationDraft.family === LIFT_FAMILIES.car
+    ? configurationDraft as CarLiftPlanningConfiguration
+    : isCarLift ? project.configuration : undefined
+
+  const family3dMessage = isPassengerLift ? undefined
+    : !isGoodsLift && !isCarLift
+      ? '3D-Darstellung für diesen Aufzugstyp noch nicht verfügbar.'
+      : validation.status === 'invalid'
+      ? 'Eingaben prüfen, bevor die technische Darstellung aktualisiert werden kann.'
+      : technicalFamilyModel.status !== 'available' || !('normalized' in technicalFamilyModel) ||
+          technicalFamilyModel.normalized.status === 'empty'
+        ? 'Planungsdaten eingeben, um die 3D-Ansicht zu starten.'
+        : technicalFamilyModel.validation.status === 'invalid'
+          ? '3D-Darstellung wegen geometrischer Konflikte nicht verfügbar.'
+          : '3D-Darstellung für diesen Aufzugstyp noch nicht verfügbar.'
 
   const updatePassengerConfiguration = (
     update: Parameters<typeof updatePassengerPlanningConfiguration>[1],
@@ -457,6 +502,16 @@ export function ProjectWorkspace() {
                   ))}
                 </details>
               </div>
+            ) : goodsConfiguration ? (
+              <GoodsLiftConfigurationForm
+                configuration={goodsConfiguration}
+                onChange={updateConfiguration}
+              />
+            ) : carConfiguration ? (
+              <CarLiftConfigurationForm
+                configuration={carConfiguration}
+                onChange={updateConfiguration}
+              />
             ) : (
               <p className="coming-soon-message">
                 Dieser Aufzugstyp wird in einer kommenden Ausbaustufe unterstützt.
@@ -487,15 +542,19 @@ export function ProjectWorkspace() {
             </button>
           </div>
           <div className="central-content" style={{ display: activeTab === '3d' ? 'flex' : 'none' }}>
-            <ThreeSceneErrorBoundary>
-              <Suspense
-                fallback={
-                  <div className="viewport-fallback">3D-Ansicht wird geladen.</div>
-                }
-              >
-                <ThreeConfiguratorViewport geometryInput={geometryInput} />
-              </Suspense>
-            </ThreeSceneErrorBoundary>
+            {isPassengerLift ? (
+              <ThreeSceneErrorBoundary>
+                <Suspense
+                  fallback={
+                    <div className="viewport-fallback">3D-Ansicht wird geladen.</div>
+                  }
+                >
+                  <ThreeConfiguratorViewport geometryInput={geometryInput} />
+                </Suspense>
+              </ThreeSceneErrorBoundary>
+            ) : (
+              <div className="viewport-fallback" role="status">{family3dMessage}</div>
+            )}
           </div>
           <div className="central-content" style={{ display: activeTab === 'plans' ? 'flex' : 'none' }}>
              <PlansWorkspace context={drawingContext} project={project} />
@@ -518,9 +577,13 @@ export function ProjectWorkspace() {
               {spatialIssues.length > 0 && <details>
                 <summary>Prüfhinweise</summary>
                 <ul>
-                  {spatialIssues.map((issue, index) => <li key={`${issue.code}-${issue.affectedLevelId ?? index}`}>
-                    {getSpatialIssueMessage(issue)}
-                  </li>)}
+                  {spatialIssues.map((issue, index) => {
+                    const affectedLevelId = 'affectedLevelId' in issue ? issue.affectedLevelId : undefined
+                    const family = isGoodsLift ? 'goods' : isCarLift ? 'car' : 'passenger'
+                    return <li key={`${issue.code}-${affectedLevelId ?? index}`}>
+                      {getLiftSpatialIssueMessage(family, issue)}
+                    </li>
+                  })}
                 </ul>
               </details>}
               <p className="panel-note">Geometrische Planungsprüfung, keine technische oder normative Freigabe.</p>
@@ -610,6 +673,56 @@ export function ProjectWorkspace() {
                     <dt>Antriebskonzept</dt>
                     <dd>{project.configuration.driveConcept || 'Nicht angegeben'}</dd>
                   </div>
+                </>
+              )}
+              {validGoodsConfiguration && (
+                <>
+                  <div><dt>Tragfähigkeit</dt><dd>{formatValue(validGoodsConfiguration.ratedLoadKg, 'kg')}</dd></div>
+                  <div><dt>Haltestellen</dt><dd>{formatValue(validGoodsConfiguration.stopCount)}</dd></div>
+                  <div><dt>Nenngeschwindigkeit</dt><dd>{formatValue(validGoodsConfiguration.nominalSpeedMetresPerSecond, 'm/s')}</dd></div>
+                  <div><dt>Plattform (B/T/H)</dt><dd>
+                    {formatValue(validGoodsConfiguration.platformWidthMm)}×
+                    {formatValue(validGoodsConfiguration.platformDepthMm)}×
+                    {formatValue(validGoodsConfiguration.platformHeightMm)} mm
+                  </dd></div>
+                  <div><dt>Tür (B/H)</dt><dd>
+                    {formatValue(validGoodsConfiguration.doorWidthMm)}×
+                    {formatValue(validGoodsConfiguration.doorHeightMm)} mm
+                  </dd></div>
+                  <div><dt>Schacht (B/T)</dt><dd>
+                    {formatValue(validGoodsConfiguration.shaftWidthMm)}×
+                    {formatValue(validGoodsConfiguration.shaftDepthMm)} mm
+                  </dd></div>
+                  <div><dt>Durchlader</dt><dd>{validGoodsConfiguration.throughCar === undefined
+                    ? 'Nicht angegeben' : validGoodsConfiguration.throughCar ? 'Ja' : 'Nein'}</dd></div>
+                </>
+              )}
+              {validCarConfiguration && (
+                <>
+                  <div><dt>Tragfähigkeit</dt><dd>{formatValue(validCarConfiguration.ratedLoadKg, 'kg')}</dd></div>
+                  <div><dt>Haltestellen</dt><dd>{formatValue(validCarConfiguration.stopCount)}</dd></div>
+                  <div><dt>Nenngeschwindigkeit</dt><dd>{formatValue(validCarConfiguration.nominalSpeedMetresPerSecond, 'm/s')}</dd></div>
+                  <div><dt>Plattform (B/T/H)</dt><dd>
+                    {formatValue(validCarConfiguration.platformWidthMm)}×
+                    {formatValue(validCarConfiguration.platformDepthMm)}×
+                    {formatValue(validCarConfiguration.usableHeightMm)} mm
+                  </dd></div>
+                  <div><dt>Tür (B/H)</dt><dd>
+                    {formatValue(validCarConfiguration.doorClearWidthMm)}×
+                    {formatValue(validCarConfiguration.doorClearHeightMm)} mm
+                  </dd></div>
+                  <div><dt>Fahrzeug (B/L/H)</dt><dd>
+                    {formatValue(validCarConfiguration.vehicle?.widthMm)}×
+                    {formatValue(validCarConfiguration.vehicle?.lengthMm)}×
+                    {formatValue(validCarConfiguration.vehicle?.heightMm)} mm
+                  </dd></div>
+                  <div><dt>Fahrzeugmasse</dt><dd>{formatValue(validCarConfiguration.vehicle?.massKg, 'kg')}</dd></div>
+                  <div><dt>Fahrzeugversatz (L/Q)</dt><dd>
+                    {formatValue(validCarConfiguration.vehiclePosition?.longitudinalOffsetMm)} /{' '}
+                    {formatValue(validCarConfiguration.vehiclePosition?.lateralOffsetMm)} mm
+                  </dd></div>
+                  <div><dt>Durchlader</dt><dd>{validCarConfiguration.throughCar === undefined
+                    ? 'Nicht angegeben' : validCarConfiguration.throughCar ? 'Ja' : 'Nein'}</dd></div>
                 </>
               )}
             </dl>

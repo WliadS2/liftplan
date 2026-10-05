@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
 import {
-  createPassengerDoorElevationDrawing,
-  createPassengerPlanDrawing,
-  createPassengerSectionDrawing,
-  getAvailableDoorSides,
-  type PassengerDrawingContext,
-} from '../../drawings/passenger-technical-drawings'
+  createLiftDoorElevationDrawing,
+  createLiftPlanDrawing,
+  createLiftSectionDrawing,
+  getLiftDrawingLevels,
+  getLiftDrawingSides,
+  type LiftDrawingSide,
+  type LiftFamilyDrawingContext,
+} from '../../drawings/lift-family-technical-drawings'
 import { TechnicalDrawingSvg } from '../../drawings/TechnicalDrawingSvg'
 import { createTechnicalDrawingPresentation, TECHNICAL_DRAWING_SCALES, type TechnicalDrawingScale } from '../../drawings/technical-drawing'
 import {
@@ -23,7 +25,6 @@ import {
   type TechnicalPlanDxfCandidate,
 } from '../../documents/technical-plan-dxf'
 import type { LiftPlanProject } from '../../projects'
-import type { PassengerEntranceSide } from '../../three/geometry/passenger/passenger-installation-model'
 
 type PlansView = 'plan' | 'section' | 'door'
 
@@ -33,12 +34,12 @@ const scaleLabels: Record<TechnicalDrawingScale, string> = {
 }
 
 export function PlansWorkspace({ context, project }: {
-  readonly context?: PassengerDrawingContext
+  readonly context?: LiftFamilyDrawingContext
   readonly project: LiftPlanProject
 }) {
   const [view, setView] = useState<PlansView>('plan')
   const [selectedLevelId, setSelectedLevelId] = useState<string>()
-  const [selectedSide, setSelectedSide] = useState<PassengerEntranceSide>('front')
+  const [selectedSide, setSelectedSide] = useState<LiftDrawingSide>('front')
   const [scale, setScale] = useState<TechnicalDrawingScale>('auto')
   const [exportScope, setExportScope] = useState<TechnicalPlanPdfScope>('current')
   const [exportingFormat, setExportingFormat] = useState<'pdf' | 'dxf'>()
@@ -47,8 +48,8 @@ export function PlansWorkspace({ context, project }: {
     readonly text: string
     readonly contextKey: string
   }>()
-  const levels = useMemo(() => context?.inputs.installation.levels ?? [], [context])
-  const sides = useMemo(() => context ? getAvailableDoorSides(context) : [], [context])
+  const levels = useMemo(() => getLiftDrawingLevels(context), [context])
+  const sides = useMemo(() => getLiftDrawingSides(context), [context])
   const levelId = levels.some((entry) => entry.id === selectedLevelId) ? selectedLevelId : levels[0]?.id
   const side = useMemo(
     () => sides.includes(selectedSide) ? selectedSide : sides[0] ?? selectedSide,
@@ -56,13 +57,13 @@ export function PlansWorkspace({ context, project }: {
   )
   const document = useMemo(() => {
     if (!context) return undefined
-    if (view === 'plan') return createPassengerPlanDrawing(context, scale)
-    if (view === 'section') return createPassengerSectionDrawing(context, scale)
-    const currentLevels = context.inputs.installation.levels
-    const currentSides = getAvailableDoorSides(context)
+    if (view === 'plan') return createLiftPlanDrawing(context, scale)
+    if (view === 'section') return createLiftSectionDrawing(context, scale)
+    const currentLevels = getLiftDrawingLevels(context)
+    const currentSides = getLiftDrawingSides(context)
     const currentLevelId = currentLevels.some((entry) => entry.id === selectedLevelId) ? selectedLevelId : currentLevels[0]?.id
     const currentSide = currentSides.includes(selectedSide) ? selectedSide : currentSides[0] ?? selectedSide
-    return createPassengerDoorElevationDrawing(context, { levelId: currentLevelId, side: currentSide }, scale)
+    return createLiftDoorElevationDrawing(context, { levelId: currentLevelId, side: currentSide }, scale)
   }, [context, scale, selectedLevelId, selectedSide, view])
   const presentation = useMemo(() => document ? createTechnicalDrawingPresentation(document) : undefined, [document])
   const previewSheet = useMemo(() => {
@@ -100,9 +101,9 @@ export function PlansWorkspace({ context, project }: {
     const documents = !context ? [] : exportScope === 'current'
       ? document ? [document] : []
       : [
-          createPassengerPlanDrawing(context, exportScale),
-          createPassengerSectionDrawing(context, exportScale),
-          createPassengerDoorElevationDrawing(context, { levelId, side }, exportScale),
+          createLiftPlanDrawing(context, exportScale),
+          createLiftSectionDrawing(context, exportScale),
+          createLiftDoorElevationDrawing(context, { levelId, side }, exportScale),
         ]
     const candidates: TechnicalPlanPdfCandidate[] = documents.map((entry) => ({
       document: entry,
@@ -154,15 +155,15 @@ export function PlansWorkspace({ context, project }: {
     const selectedLanding = levels.find((entry) => entry.id === levelId)
     const doorSelection = selectedLanding ? { landing: selectedLanding.index + 1, side } : undefined
     const currentModelDocument = !context ? undefined
-      : view === 'plan' ? createPassengerPlanDrawing(context, 'auto')
-        : view === 'section' ? createPassengerSectionDrawing(context, 'auto')
-          : createPassengerDoorElevationDrawing(context, { levelId, side }, 'auto')
+      : view === 'plan' ? createLiftPlanDrawing(context, 'auto')
+        : view === 'section' ? createLiftSectionDrawing(context, 'auto')
+          : createLiftDoorElevationDrawing(context, { levelId, side }, 'auto')
     const documents = !context ? [] : exportScope === 'current'
       ? currentModelDocument ? [currentModelDocument] : []
       : [
-          createPassengerPlanDrawing(context, 'auto'),
-          createPassengerSectionDrawing(context, 'auto'),
-          createPassengerDoorElevationDrawing(context, { levelId, side }, 'auto'),
+          createLiftPlanDrawing(context, 'auto'),
+          createLiftSectionDrawing(context, 'auto'),
+          createLiftDoorElevationDrawing(context, { levelId, side }, 'auto'),
         ]
     const candidates: TechnicalPlanDxfCandidate[] = documents.map((entry) => ({
       document: entry,
@@ -223,7 +224,7 @@ export function PlansWorkspace({ context, project }: {
             {levels.map((level) => <option key={level.id} value={level.id}>{level.index + 1}</option>)}
           </select></label>
           {sides.length > 1 && <label className="plans-option"><span>Zugang</span><select value={side}
-            onChange={(event) => setSelectedSide(event.target.value as PassengerEntranceSide)}>
+            onChange={(event) => setSelectedSide(event.target.value as LiftDrawingSide)}>
             {sides.map((entry) => <option key={entry} value={entry}>{entry === 'front' ? 'Vorne' : 'Hinten'}</option>)}
           </select></label>}
         </>}

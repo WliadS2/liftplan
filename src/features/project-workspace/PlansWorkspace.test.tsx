@@ -4,10 +4,14 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createPassengerMechanicalFixture } from '../../dev/fixtures/passenger-mechanical-fixture'
-import { millimetres } from '../../engineering'
+import { kilograms, metresPerSecond, millimetres } from '../../engineering'
 import { createLiftGeometryPlanningInput } from '../../three/geometry/lift-geometry-planning-input'
 import { createPassengerDrawingContext } from '../../drawings/passenger-technical-drawings'
-import { createLiftPlanProject } from '../../projects'
+import { createGoodsLiftDrawingContext } from '../../drawings/goods-lift-technical-drawings'
+import { createCarLiftDrawingContext } from '../../drawings/car-lift-technical-drawings'
+import { createCarLiftPlanningConfiguration, createCenteredVehiclePosition, createGoodsLiftPlanningConfiguration,
+  type CarLiftPlanningConfiguration, type GoodsLiftPlanningConfiguration } from '../../elevator'
+import { createLiftPlanProject, replaceProjectConfiguration } from '../../projects'
 import { PlansWorkspace } from './PlansWorkspace'
 
 afterEach(cleanup)
@@ -27,6 +31,41 @@ const project = createLiftPlanProject(
   { projectId: 'test-project', projectName: 'Mechanische Demo – Testdaten', createdAt: '2026-10-04T10:00:00.000Z' },
   { createId: () => 'test-project', now: () => '2026-10-04T10:00:00.000Z' },
 )
+
+function goodsPlanConfiguration(): GoodsLiftPlanningConfiguration {
+  return {
+    ...createGoodsLiftPlanningConfiguration('Warenaufzug UI'),
+    ratedLoadKg: kilograms(2000), stopCount: 2, nominalSpeedMetresPerSecond: metresPerSecond(0.6),
+    platformWidthMm: millimetres(1800), platformDepthMm: millimetres(2400), platformHeightMm: millimetres(2300),
+    doorWidthMm: millimetres(1400), doorHeightMm: millimetres(2200),
+    shaftWidthMm: millimetres(2600), shaftDepthMm: millimetres(3200), pitDepthMm: millimetres(1200),
+    headroomMm: millimetres(3800), storeyHeightsMm: [millimetres(3500)],
+    frontAccess: true, rearAccess: false, throughCar: false,
+  }
+}
+
+function carPlanConfiguration(): CarLiftPlanningConfiguration {
+  return {
+    ...createCarLiftPlanningConfiguration('Autoaufzug UI'),
+    ratedLoadKg: kilograms(3000), stopCount: 2, nominalSpeedMetresPerSecond: metresPerSecond(0.5),
+    platformWidthMm: millimetres(2500), platformDepthMm: millimetres(5500), usableHeightMm: millimetres(2400),
+    doorClearWidthMm: millimetres(2400), doorClearHeightMm: millimetres(2300),
+    shaftWidthMm: millimetres(3200), shaftDepthMm: millimetres(6500), pitDepthMm: millimetres(1200),
+    headroomMm: millimetres(3600), storeyHeightsMm: [millimetres(3600)],
+    vehicleLoadingDirection: 'shaft-z', frontAccess: true, rearAccess: false, throughCar: false,
+    vehicle: { widthMm: millimetres(1900), lengthMm: millimetres(4700), heightMm: millimetres(1900) },
+    vehiclePosition: createCenteredVehiclePosition(),
+  }
+}
+
+function familyProject(configuration: GoodsLiftPlanningConfiguration | CarLiftPlanningConfiguration) {
+  const created = createLiftPlanProject(
+    { projectId: `${configuration.family}-ui-plan`, projectName: configuration.projectName,
+      liftFamily: configuration.family, createdAt: '2026-10-05T12:00:00.000Z' },
+    { now: () => '2026-10-05T12:00:00.000Z' },
+  )
+  return replaceProjectConfiguration(created, configuration, '2026-10-05T12:00:00.000Z').project
+}
 
 describe('PlansWorkspace validation status', () => {
   it('does not show a conflict banner for the known-good Mechanical Demo', () => {
@@ -128,5 +167,33 @@ describe('PlansWorkspace validation status', () => {
     fireEvent.change(screen.getByRole('combobox', { name: 'Maßstab' }), { target: { value: '1:20' } })
     fireEvent.click(screen.getByRole('button', { name: 'PDF erstellen' }))
     expect(screen.getAllByText('Die Zeichnung passt im Maßstab 1:20 nicht auf A4.')).toHaveLength(1)
+  })
+
+  it('uses the Waren-/Lastenaufzug drawing generators for all three plan views', () => {
+    const configuration = goodsPlanConfiguration()
+    const context = createGoodsLiftDrawingContext(configuration)
+    if (!context) throw new Error('Expected goods drawing context')
+    render(<PlansWorkspace context={context} project={familyProject(configuration)} />)
+    expect(screen.getByRole('img', { name: 'Grundriss' }).querySelector('[data-primitive-id="goods-shaft"]')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Schnitt' }))
+    expect(screen.getByRole('img', { name: 'Schnitt' }).querySelector('[data-primitive-id="goods-shaft-section"]')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Türansicht' }))
+    expect(screen.getByRole('img', { name: 'Türansicht' }).querySelector('[data-primitive-id="goods-door-opening"]')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'PDF erstellen' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'DXF exportieren' })).toBeEnabled()
+  })
+
+  it('uses the Autoaufzug drawing generators for all three plan views', () => {
+    const configuration = carPlanConfiguration()
+    const context = createCarLiftDrawingContext(configuration)
+    if (!context) throw new Error('Expected car drawing context')
+    render(<PlansWorkspace context={context} project={familyProject(configuration)} />)
+    const plan = screen.getByRole('img', { name: 'Grundriss' })
+    expect(plan.querySelector('[data-primitive-id="car-shaft"]')).not.toBeNull()
+    expect(plan.querySelector('[data-primitive-id="car-vehicle-envelope"]')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Schnitt' }))
+    expect(screen.getByRole('img', { name: 'Schnitt' }).querySelector('[data-primitive-id="car-shaft-section"]')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Türansicht' }))
+    expect(screen.getByRole('img', { name: 'Türansicht' }).querySelector('[data-primitive-id="car-door-opening"]')).not.toBeNull()
   })
 })

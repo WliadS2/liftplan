@@ -3,6 +3,8 @@ import type {
   PassengerSpatialIssueCode,
   SpatialValidationStatus,
 } from '../../collision/passenger-spatial-validation'
+import type { GoodsSpatialIssue, GoodsSpatialIssueCode } from '../../collision/goods-lift-spatial-validation'
+import type { CarSpatialIssue, CarSpatialIssueCode } from '../../collision/car-lift-spatial-validation'
 
 export const SPATIAL_STATUS_LABELS: Record<SpatialValidationStatus, string> = {
   ok: 'Geeignet',
@@ -53,4 +55,62 @@ const messages: Record<PassengerSpatialIssueCode, string> = {
 
 export function getSpatialIssueMessage(issue: PassengerSpatialIssue): string {
   return messages[issue.code]
+}
+
+const goodsMessages: Record<GoodsSpatialIssueCode, string> = {
+  'geometry-unavailable': 'Für die räumliche Prüfung fehlen Geometriedaten.',
+  'invalid-planning-geometry': 'Die eingegebene Planungsgeometrie ist strukturell nicht auswertbar.',
+  'platform-outside-shaft': 'Die Ladefläche überschreitet den angegebenen Schacht.',
+  'zero-platform-clearance': 'Zwischen Ladefläche und Schacht liegt an mindestens einer Seite kein geometrischer Abstand vor.',
+  'door-geometry-unavailable': 'Tür- oder Plattformdaten fehlen. Die Türpassung ist noch nicht bewertet.',
+  'door-outside-platform': 'Die Türöffnung passt geometrisch nicht zur Ladefläche.',
+  'pallet-unavailable': 'Keine Palettenhülle angegeben.',
+  'pallet-outside-platform': 'Die Palettenhülle überschreitet die nutzbare Ladefläche.',
+  'roll-container-unavailable': 'Keine Rollcontainer-Hülle angegeben.',
+  'roll-container-outside-platform': 'Die Rollcontainer-Hülle überschreitet die nutzbare Ladefläche.',
+  'forklift-envelope-unavailable': 'Keine Gabelstapler-Hülle angegeben.',
+  'forklift-envelope-outside-platform': 'Die Gabelstapler-Hülle überschreitet die nutzbare Ladefläche.',
+  'access-configuration-unavailable': 'Die Zugangsart ist noch nicht vollständig angegeben.',
+  'access-configuration-mismatch': 'Vorderer, hinterer und Durchlader-Zugang sind nicht konsistent konfiguriert.',
+  'levels-unavailable': 'Haltestellendaten fehlen. Die Ebenenfolge ist noch nicht bewertet.',
+  'invalid-level-order': 'Die Haltestellenhöhen sind nicht eindeutig aufsteigend.',
+  'pit-headroom-unavailable': 'Gruben- oder Schachtkopfdaten fehlen.',
+  'invalid-pit-headroom': 'Grube, Schachtkopf und Installationshöhe sind geometrisch nicht konsistent.',
+  'moving-envelope-unavailable': 'Der Bewegungsraum ist noch nicht vollständig bestimmt.',
+  'moving-envelope-outside-shaft': 'Der Bewegungsraum überschreitet den angegebenen Schacht.',
+}
+
+const carMessages: Record<CarSpatialIssueCode, string> = {
+  'geometry-unavailable': 'Für die räumliche Prüfung fehlen Geometriedaten.',
+  'invalid-planning-geometry': 'Die eingegebene Planungsgeometrie ist strukturell nicht auswertbar.',
+  'platform-outside-shaft': 'Die Plattform überschreitet den angegebenen Schacht.',
+  'zero-platform-clearance': 'Zwischen Plattform und Schacht liegt an mindestens einer Seite kein geometrischer Abstand vor.',
+  'vehicle-unavailable': 'Fahrzeugdaten fehlen. Die Fahrzeugpassung ist noch nicht bewertet.',
+  'vehicle-outside-platform': 'Die Fahrzeughülle passt nicht auf die Plattform.',
+  'vehicle-too-tall': 'Die Fahrzeughöhe überschreitet die nutzbare Höhe.',
+  'vehicle-position-unavailable': 'Die Fahrzeugposition ist noch nicht vollständig angegeben.',
+  'vehicle-position-outside-platform': 'Das positionierte Fahrzeug überschreitet die Plattform.',
+  'door-geometry-unavailable': 'Tür- oder Fahrzeugdaten fehlen. Die Durchfahrt ist noch nicht bewertet.',
+  'vehicle-door-passage-conflict': 'Die Fahrzeughülle passt nicht durch die konfigurierte Türöffnung.',
+  'door-passage-envelope-unavailable': 'Keine vollständige Türdurchfahrtshülle angegeben.',
+  'door-passage-envelope-conflict': 'Die Türdurchfahrtshülle überschreitet die konfigurierte Türöffnung.',
+  'access-configuration-unavailable': 'Die Zugangsart ist noch nicht vollständig angegeben.',
+  'access-configuration-mismatch': 'Vorderer, hinterer und Durchlader-Zugang sind nicht konsistent konfiguriert.',
+  'levels-unavailable': 'Haltestellendaten fehlen. Die Ebenenfolge ist noch nicht bewertet.',
+  'invalid-level-order': 'Die Haltestellenhöhen sind nicht eindeutig aufsteigend.',
+  'pit-headroom-unavailable': 'Gruben- oder Schachtkopfdaten fehlen.',
+  'invalid-pit-headroom': 'Grube, Schachtkopf und Installationshöhe sind geometrisch nicht konsistent.',
+  'moving-envelope-unavailable': 'Der Plattform-Bewegungsraum ist noch nicht vollständig bestimmt.',
+  'moving-envelope-outside-shaft': 'Der Plattform-Bewegungsraum überschreitet den angegebenen Schacht.',
+  'vehicle-sweep-unavailable': 'Keine vollständige Fahrzeug-Bewegungshülle angegeben.',
+  'vehicle-sweep-outside-platform': 'Die Fahrzeug-Bewegungshülle überschreitet die Plattform.',
+}
+
+export function getLiftSpatialIssueMessage(
+  family: 'passenger' | 'goods' | 'car',
+  issue: PassengerSpatialIssue | GoodsSpatialIssue | CarSpatialIssue,
+): string {
+  if (family === 'goods') return goodsMessages[issue.code as GoodsSpatialIssueCode]
+  if (family === 'car') return carMessages[issue.code as CarSpatialIssueCode]
+  return messages[issue.code as PassengerSpatialIssueCode]
 }
