@@ -295,6 +295,51 @@
   background: #fff;
 }
 
+.plans-export-options {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 0 auto;
+  border: 1px solid #98a2b3;
+  border-radius: 3px;
+  padding: 5px 7px;
+  color: #344054;
+  font-size: 0.82rem;
+}
+
+.plans-export-options legend {
+  padding: 0 4px;
+  font-weight: 700;
+}
+
+.plans-export-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.plans-export-options button {
+  border: 1px solid #101828;
+  border-radius: 3px;
+  padding: 6px 9px;
+  color: #fff;
+  background: #101828;
+  cursor: pointer;
+}
+
+.plans-export-options button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.plans-export-success {
+  margin: 8px 0;
+  border-left: 3px solid #067647;
+  padding: 7px 10px;
+  color: #05603a;
+  background: #ecfdf3;
+}
+
 .technical-drawing-frame {
   height: clamp(480px, 68vh, 720px);
   overflow: hidden;
@@ -403,30 +448,51 @@
 }
 
 .technical-drawing-fixed-page .technical-secondary {
+  stroke: #344054;
   stroke-width: 0.25;
+  stroke-opacity: 0.82;
 }
 
 .technical-drawing-fixed-page .technical-centerline {
+  stroke: #475467;
   stroke-width: 0.18;
   stroke-dasharray: 4 1 1 1;
+  stroke-opacity: 0.82;
 }
 
 .technical-drawing-fixed-page .technical-hidden {
+  stroke: #667085;
   stroke-width: 0.18;
   stroke-dasharray: 2 1;
+  stroke-opacity: 0.75;
 }
 
 .technical-drawing-fixed-page .technical-level {
+  stroke: #475467;
   stroke-width: 0.22;
   stroke-dasharray: 5 1.5 1 1.5;
+  stroke-opacity: 0.82;
 }
 
 .technical-drawing-fixed-page .technical-dimension {
+  color: #344054;
+  stroke: #344054;
   stroke-width: 0.18;
 }
 
 .technical-drawing-fixed-page .technical-section {
   stroke-width: 0.7;
+}
+
+.technical-sheet-paper-primitive {
+  vector-effect: none;
+}
+
+.technical-drawing-svg .technical-sheet-paper-primitive {
+  fill: var(--sheet-fill) !important;
+  stroke: var(--sheet-stroke) !important;
+  stroke-width: var(--sheet-stroke-width) !important;
+  font-size: var(--sheet-font-size) !important;
 }
 
 .technical-drawing-svg text,

@@ -608,7 +608,7 @@ export function ProjectWorkspace() {
           </button>
         </aside>
       </div>
-      <PlansWorkspace context={drawingContext} />
+      <PlansWorkspace context={drawingContext} project={project} />
     </main>
   )
 }

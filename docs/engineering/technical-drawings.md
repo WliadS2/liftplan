@@ -81,11 +81,58 @@ and `1:25` retain available guide-shoe and door-mechanism detail; `1:100`
 simplifies those small features while preserving shaft, cabin, doors, rails,
 counterweight, primary labels, and semantic dimensions.
 
-SVG output is stable and self-contained, so the same drawing document can later
-be embedded in PDF reports, RFQ documents, or other project artifacts. The A4
-contract reserves future title-block space but does not render a legal title
-block. Certified construction drawings, PDF export, DXF/DWG, CAD editing, and
-regulatory dimension rules remain deferred.
+SVG output is stable and self-contained. Fixed-scale drawings can be exported
+as browser-local vector PDFs through the document layer. The converter maps the
+complete 210 × 297 mm or 297 × 210 mm SVG sheet to the identically sized PDF
+sheet at the origin. It never fits drawing bounds, changes orientation, or
+selects another scale. Automatic preview, incomplete/conflicting drawings, and
+fixed-scale drawings that do not fit are rejected before a file is generated.
+
+The common paper-space layer composes the unchanged fixed-scale drawing with a
+physical sheet frame and a reusable information block in both browser preview
+and PDF output. The frame is inset 9 mm from each paper edge. A 34 mm high
+title area, at most 180 mm wide, is anchored to the lower-right corner of that
+frame. The remaining drawing area is kept 6 mm away from the frame and title
+area. It contains only project and drawing metadata already available to
+LiftPlan plus the non-conformity notice: project number, deterministic drawing
+number, scale, date, version, sheet number, planning status, and millimetre
+unit.
+
+The complete visible drawing bounds, including annotations, are centered in
+that reserved drawing area by a single translation expressed in millimetres.
+No additional scale transform is applied. A second PDF-sheet fit guard rejects
+the export if those translated bounds would enter the title area or cross the
+drawing-area limits.
+The converter still maps the complete A4 SVG to the identically sized PDF page
+at the origin.
+
+## DXF model-space export
+
+DXF export branches from the unpresented `TechnicalDrawingDocument`, before
+paper-scale conversion. The browser-local writer emits ASCII AutoCAD R12
+(`AC1009`) content with model coordinates in millimetres. A 2600 mm shaft and a
+900 mm door therefore remain 2600 and 900 DXF drawing units regardless of the
+selected SVG/PDF scale or browser viewport.
+
+Lines, R12 polylines, circles, arcs, text, and explicit dimension lines/arrows
+are derived from the existing drawing primitives. Deterministic layers separate
+shaft, cabin, car frame, guide rails, counterweight, doors, machine, buffers,
+ropes, dimensions, centerlines, and annotations. Center and hidden line types
+retain the drawing roles where R12 supports them. Missing optional normalized
+systems create no entities.
+
+A complete DXF plan set defines Grundriss, Schnitt, and the selected
+Türansicht as separate model-space blocks and inserts them with translation
+only. No INSERT scale is emitted. Project and drawing metadata are stored as
+DXF comments; the export contains no certification or conformity claim.
+
+A plan set is ordered as plan, section, then entrance elevations. Every page
+uses the same sheet design and receives `Blatt X / Y`; repeated door elevations
+receive sequential `DR` drawing numbers. Drawing numbers have the deterministic
+presentation form `LP-[project-short-id]-GR|SC|DR-[sequence]`. This is not a
+legal title block or regulated document-number system. Certified construction
+drawings, DWG, multi-sheet tiling, per-page scales, native associative CAD
+dimensions, CAD editing, and regulatory dimension rules remain deferred.
 
 ## Validation and progressive data
 

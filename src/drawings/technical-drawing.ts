@@ -8,6 +8,11 @@ export type TechnicalLineRole = 'cut' | 'visible' | 'secondary' | 'centerline' |
   'dimension' | 'level' | 'section'
 export type TechnicalDrawingStatus = 'complete' | 'incomplete' | 'conflict'
 
+export const TECHNICAL_A4_PAGE_SIZE_MM = {
+  portrait: { width: 210, height: 297 },
+  landscape: { width: 297, height: 210 },
+} as const
+
 export interface CadLineStyle {
   readonly weightMm: number
   readonly pattern: 'solid' | 'dashed' | 'dash-dot'
@@ -309,7 +314,7 @@ export interface TechnicalDrawingPresentation {
   readonly fit?: 'fits' | 'does-not-fit'
 }
 
-const fixedScaleDenominator = (scale: TechnicalDrawingScale): 20 | 25 | 50 | 100 | undefined => {
+export const technicalDrawingScaleDenominator = (scale: TechnicalDrawingScale): 20 | 25 | 50 | 100 | undefined => {
   if (scale === 'auto') return undefined
   return Number(scale.slice(2)) as 20 | 25 | 50 | 100
 }
@@ -330,7 +335,7 @@ function dimensionPaperOffset(semantic: string): number {
 export function createTechnicalDrawingPresentation(
   document: TechnicalDrawingDocument,
 ): TechnicalDrawingPresentation {
-  const denominator = fixedScaleDenominator(document.scale.requested)
+  const denominator = technicalDrawingScaleDenominator(document.scale.requested)
   if (!denominator) {
     return {
       mode: 'automatic-fit', primitives: document.primitives, viewBounds: document.fittedBounds,
@@ -340,8 +345,9 @@ export function createTechnicalDrawingPresentation(
   }
 
   const portrait = document.view === 'section'
-  const pageWidth = portrait ? 210 : 297
-  const pageHeight = portrait ? 297 : 210
+  const pageSize = TECHNICAL_A4_PAGE_SIZE_MM[portrait ? 'portrait' : 'landscape']
+  const pageWidth = pageSize.width
+  const pageHeight = pageSize.height
   const margin = 12
   const titleBlockReserve = 18
   const contentBounds: DrawingBounds = {

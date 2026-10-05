@@ -8,6 +8,21 @@ import {
 } from '../../drawings/passenger-technical-drawings'
 import { TechnicalDrawingSvg } from '../../drawings/TechnicalDrawingSvg'
 import { createTechnicalDrawingPresentation, TECHNICAL_DRAWING_SCALES, type TechnicalDrawingScale } from '../../drawings/technical-drawing'
+import {
+  createTechnicalPlanPdfMetadata,
+  prepareTechnicalPlanPdf,
+  technicalPlanPdfErrorMessage,
+  type FixedTechnicalDrawingScale,
+  type TechnicalPlanPdfCandidate,
+  type TechnicalPlanPdfScope,
+} from '../../documents/technical-plan-pdf'
+import {
+  createTechnicalPlanDxfMetadata,
+  prepareTechnicalPlanDxf,
+  technicalPlanDxfErrorMessage,
+  type TechnicalPlanDxfCandidate,
+} from '../../documents/technical-plan-dxf'
+import type { LiftPlanProject } from '../../projects'
 import type { PassengerEntranceSide } from '../../three/geometry/passenger/passenger-installation-model'
 
 type PlansView = 'plan' | 'section' | 'door'
@@ -17,15 +32,28 @@ const scaleLabels: Record<TechnicalDrawingScale, string> = {
   auto: 'Automatisch (Vorschau)', '1:20': '1:20', '1:25': '1:25', '1:50': '1:50', '1:100': '1:100',
 }
 
-export function PlansWorkspace({ context }: { readonly context?: PassengerDrawingContext }) {
+export function PlansWorkspace({ context, project }: {
+  readonly context?: PassengerDrawingContext
+  readonly project: LiftPlanProject
+}) {
   const [view, setView] = useState<PlansView>('plan')
   const [selectedLevelId, setSelectedLevelId] = useState<string>()
   const [selectedSide, setSelectedSide] = useState<PassengerEntranceSide>('front')
   const [scale, setScale] = useState<TechnicalDrawingScale>('auto')
-  const levels = context?.inputs.installation.levels ?? []
-  const sides = context ? getAvailableDoorSides(context) : []
+  const [exportScope, setExportScope] = useState<TechnicalPlanPdfScope>('current')
+  const [exportingFormat, setExportingFormat] = useState<'pdf' | 'dxf'>()
+  const [exportMessage, setExportMessage] = useState<{
+    readonly kind: 'error' | 'success'
+    readonly text: string
+    readonly contextKey: string
+  }>()
+  const levels = useMemo(() => context?.inputs.installation.levels ?? [], [context])
+  const sides = useMemo(() => context ? getAvailableDoorSides(context) : [], [context])
   const levelId = levels.some((entry) => entry.id === selectedLevelId) ? selectedLevelId : levels[0]?.id
-  const side = sides.includes(selectedSide) ? selectedSide : sides[0] ?? selectedSide
+  const side = useMemo(
+    () => sides.includes(selectedSide) ? selectedSide : sides[0] ?? selectedSide,
+    [selectedSide, sides],
+  )
   const document = useMemo(() => {
     if (!context) return undefined
     if (view === 'plan') return createPassengerPlanDrawing(context, scale)
@@ -37,6 +65,145 @@ export function PlansWorkspace({ context }: { readonly context?: PassengerDrawin
     return createPassengerDoorElevationDrawing(context, { levelId: currentLevelId, side: currentSide }, scale)
   }, [context, scale, selectedLevelId, selectedSide, view])
   const presentation = useMemo(() => document ? createTechnicalDrawingPresentation(document) : undefined, [document])
+  const previewSheet = useMemo(() => {
+    if (!document || !presentation?.page || scale === 'auto') return undefined
+    const selectedLanding = levels.find((entry) => entry.id === levelId)
+    return createTechnicalPlanPdfMetadata(
+      project,
+      document,
+      scale,
+      new Date(),
+      document.view === 'door-elevation' && selectedLanding ? { landing: selectedLanding.index + 1, side } : undefined,
+    )
+  }, [document, levelId, levels, presentation?.page, project, scale, side])
+  const fitWarningMessage = presentation?.fit === 'does-not-fit'
+    ? `Die Zeichnung passt im Maßstab ${scale} nicht auf A4.`
+    : undefined
+  const exportContextKey = [project.id, project.updatedAt, view, scale, levelId ?? '', side, exportScope].join('|')
+
+  const exportPdf = async () => {
+    setExportMessage(undefined)
+    if (scale === 'auto') {
+      const result = prepareTechnicalPlanPdf({ scope: exportScope, scale, projectName: project.name, candidates: [] })
+      if (!result.ok) setExportMessage({
+        kind: 'error',
+        text: technicalPlanPdfErrorMessage(result.error, exportScope),
+        contextKey: exportContextKey,
+      })
+      return
+    }
+
+    const exportScale: FixedTechnicalDrawingScale = scale
+    const exportDate = new Date()
+    const selectedLanding = levels.find((entry) => entry.id === levelId)
+    const doorSelection = selectedLanding ? { landing: selectedLanding.index + 1, side } : undefined
+    const documents = !context ? [] : exportScope === 'current'
+      ? document ? [document] : []
+      : [
+          createPassengerPlanDrawing(context, exportScale),
+          createPassengerSectionDrawing(context, exportScale),
+          createPassengerDoorElevationDrawing(context, { levelId, side }, exportScale),
+        ]
+    const candidates: TechnicalPlanPdfCandidate[] = documents.map((entry) => ({
+      document: entry,
+      presentation: createTechnicalDrawingPresentation(entry),
+      metadata: createTechnicalPlanPdfMetadata(
+        project,
+        entry,
+        exportScale,
+        exportDate,
+        entry.view === 'door-elevation' ? doorSelection : undefined,
+      ),
+    }))
+    const prepared = prepareTechnicalPlanPdf({
+      scope: exportScope,
+      scale: exportScale,
+      projectName: project.name,
+      candidates,
+    })
+    if (!prepared.ok) {
+      setExportMessage({
+        kind: 'error',
+        text: technicalPlanPdfErrorMessage(prepared.error, exportScope),
+        contextKey: exportContextKey,
+      })
+      return
+    }
+
+    setExportingFormat('pdf')
+    try {
+      const { downloadTechnicalPlanPdf, generateTechnicalPlanPdf } = await import('../../documents/technical-plan-pdf-renderer')
+      const blob = await generateTechnicalPlanPdf(prepared.value)
+      downloadTechnicalPlanPdf(blob, prepared.value.filename)
+      setExportMessage({ kind: 'success', text: 'PDF wurde erstellt.', contextKey: exportContextKey })
+    } catch (error) {
+      console.error('Technical PDF export failed', error)
+      setExportMessage({
+        kind: 'error',
+        text: 'Die PDF-Datei konnte nicht erstellt werden.',
+        contextKey: exportContextKey,
+      })
+    } finally {
+      setExportingFormat(undefined)
+    }
+  }
+
+  const exportDxf = async () => {
+    setExportMessage(undefined)
+    const exportDate = new Date()
+    const selectedLanding = levels.find((entry) => entry.id === levelId)
+    const doorSelection = selectedLanding ? { landing: selectedLanding.index + 1, side } : undefined
+    const currentModelDocument = !context ? undefined
+      : view === 'plan' ? createPassengerPlanDrawing(context, 'auto')
+        : view === 'section' ? createPassengerSectionDrawing(context, 'auto')
+          : createPassengerDoorElevationDrawing(context, { levelId, side }, 'auto')
+    const documents = !context ? [] : exportScope === 'current'
+      ? currentModelDocument ? [currentModelDocument] : []
+      : [
+          createPassengerPlanDrawing(context, 'auto'),
+          createPassengerSectionDrawing(context, 'auto'),
+          createPassengerDoorElevationDrawing(context, { levelId, side }, 'auto'),
+        ]
+    const candidates: TechnicalPlanDxfCandidate[] = documents.map((entry) => ({
+      document: entry,
+      metadata: createTechnicalPlanDxfMetadata(
+        project,
+        entry,
+        exportDate,
+        entry.view === 'door-elevation' ? doorSelection : undefined,
+      ),
+    }))
+    const prepared = prepareTechnicalPlanDxf({
+      scope: exportScope,
+      projectName: project.name,
+      candidates,
+    })
+    if (!prepared.ok) {
+      setExportMessage({
+        kind: 'error',
+        text: technicalPlanDxfErrorMessage(prepared.error),
+        contextKey: exportContextKey,
+      })
+      return
+    }
+
+    setExportingFormat('dxf')
+    try {
+      const { downloadTechnicalPlanDxf, generateTechnicalPlanDxf } = await import('../../documents/technical-plan-dxf-renderer')
+      const content = generateTechnicalPlanDxf(prepared.value)
+      downloadTechnicalPlanDxf(content, prepared.value.filename)
+      setExportMessage({ kind: 'success', text: 'DXF wurde erstellt.', contextKey: exportContextKey })
+    } catch (error) {
+      console.error('Technical DXF export failed', error)
+      setExportMessage({
+        kind: 'error',
+        text: 'Die DXF-Datei konnte nicht erstellt werden.',
+        contextKey: exportContextKey,
+      })
+    } finally {
+      setExportingFormat(undefined)
+    }
+  }
 
   return <section className="workspace-panel plans-panel" aria-labelledby="plans-heading">
     <div className="plans-heading-row">
@@ -64,14 +231,29 @@ export function PlansWorkspace({ context }: { readonly context?: PassengerDrawin
           {sides.map((entry) => <option key={entry} value={entry}>{entry === 'front' ? 'Vorne' : 'Hinten'}</option>)}
         </select></label>}
       </>}
+      <fieldset className="plans-export-options">
+        <legend>Exportieren</legend>
+        <label><input type="radio" name="plan-export-scope" value="current" checked={exportScope === 'current'}
+          onChange={() => setExportScope('current')} /> Aktuelle Ansicht</label>
+        <label><input type="radio" name="plan-export-scope" value="plan-set" checked={exportScope === 'plan-set'}
+          onChange={() => setExportScope('plan-set')} /> Gesamter Plansatz</label>
+        <button type="button" onClick={() => void exportPdf()} disabled={exportingFormat !== undefined}>
+          {exportingFormat === 'pdf' ? 'PDF wird erstellt …' : 'PDF erstellen'}
+        </button>
+        <button type="button" onClick={() => void exportDxf()} disabled={exportingFormat !== undefined}>
+          {exportingFormat === 'dxf' ? 'DXF wird erstellt …' : 'DXF exportieren'}
+        </button>
+      </fieldset>
     </div>
+    {exportMessage?.contextKey === exportContextKey && exportMessage.text !== fitWarningMessage && <p
+      className={exportMessage.kind === 'error' ? 'plans-warning' : 'plans-export-success'} role="status">
+      {exportMessage.text}
+    </p>}
     {!document ? <p className="plans-empty">Planungsdaten eingeben, um die Pläne zu erzeugen.</p> : <>
       {document.status === 'conflict' && <p className="plans-warning" role="status">Planungsdaten enthalten Konflikte.</p>}
       {document.status === 'incomplete' && <p className="plans-warning" role="status">{document.incompleteMessage}</p>}
-      {presentation?.fit === 'does-not-fit' && <p className="plans-warning" role="status">
-        Die Zeichnung passt im Maßstab {scale} nicht auf A4.
-      </p>}
-      <div className="technical-drawing-frame"><TechnicalDrawingSvg document={document} presentation={presentation} /></div>
+      {fitWarningMessage && <p className="plans-warning" role="status">{fitWarningMessage}</p>}
+      <div className="technical-drawing-frame"><TechnicalDrawingSvg document={document} presentation={presentation} sheet={previewSheet} /></div>
       <p className="plans-scale-note">{scale === 'auto'
         ? 'Automatisch eingepasste Bildschirmvorschau · nicht druckverbindlich.'
         : `A4-Papieransicht · Geometrie ${scale} · Browserdarstellung nicht druckverbindlich.`}</p>

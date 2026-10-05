@@ -7,6 +7,12 @@ import {
   type TechnicalDrawingPrimitive,
   type TechnicalDrawingPresentation,
 } from './technical-drawing'
+import {
+  createTechnicalDrawingSheetLayout,
+  createTechnicalDrawingSheetPaperPrimitives,
+  type TechnicalDrawingSheetMetadata,
+  type TechnicalSheetPaperPrimitive,
+} from './technical-drawing-sheet'
 
 const roleClass = (primitive: TechnicalDrawingPrimitive) => `technical-${primitive.role}`
 
@@ -69,9 +75,30 @@ function Primitive({ primitive, markerId, hatchId }: {
   }
 }
 
-export function TechnicalDrawingSvg({ document, presentation: suppliedPresentation }: {
+function SheetPaperPrimitive({ primitive }: { readonly primitive: TechnicalSheetPaperPrimitive }) {
+  const common = { 'data-paper-primitive-id': primitive.id, className: 'technical-sheet-paper-primitive' }
+  if (primitive.kind === 'rectangle') {
+    return <rect {...common} x={primitive.x} y={primitive.y} width={primitive.width} height={primitive.height}
+      fill={primitive.fill} stroke={primitive.stroke} strokeWidth={primitive.strokeWidthMm}
+      style={{ '--sheet-fill': primitive.fill, '--sheet-stroke': primitive.stroke,
+        '--sheet-stroke-width': `${primitive.strokeWidthMm}px` } as CSSProperties} />
+  }
+  if (primitive.kind === 'line') {
+    return <line {...common} x1={primitive.x1} y1={primitive.y1} x2={primitive.x2} y2={primitive.y2}
+      fill="none" stroke={primitive.stroke} strokeWidth={primitive.strokeWidthMm}
+      style={{ '--sheet-fill': 'none', '--sheet-stroke': primitive.stroke,
+        '--sheet-stroke-width': `${primitive.strokeWidthMm}px` } as CSSProperties} />
+  }
+  return <text {...common} x={primitive.x} y={primitive.y} textAnchor={primitive.anchor} fill={primitive.fill} stroke="none"
+    fontFamily="Helvetica, Arial, sans-serif" fontSize={primitive.fontSizeMm} fontWeight={primitive.fontWeight}
+    style={{ '--sheet-fill': primitive.fill, '--sheet-stroke': 'none',
+      '--sheet-font-size': `${primitive.fontSizeMm}px` } as CSSProperties}>{primitive.text}</text>
+}
+
+export function TechnicalDrawingSvg({ document, presentation: suppliedPresentation, sheet }: {
   readonly document: TechnicalDrawingDocument
   readonly presentation?: TechnicalDrawingPresentation
+  readonly sheet?: TechnicalDrawingSheetMetadata
 }) {
   const presentation = suppliedPresentation ?? createTechnicalDrawingPresentation(document)
   const bounds = presentation.viewBounds
@@ -81,6 +108,8 @@ export function TechnicalDrawingSvg({ document, presentation: suppliedPresentati
   const hatchId = `${document.id.replace(/[^a-z0-9-]/gi, '-')}-section-hatch`
   const sheetClipId = `${document.id.replace(/[^a-z0-9-]/gi, '-')}-sheet-clip`
   const page = presentation.page
+  const sheetLayout = page && sheet ? createTechnicalDrawingSheetLayout(page, presentation.completeBounds) : undefined
+  const sheetPrimitives = sheetLayout && sheet ? createTechnicalDrawingSheetPaperPrimitives(sheetLayout, sheet) : undefined
   return <svg className={`technical-drawing-svg technical-drawing-${presentation.mode}`} role="img" aria-label={document.title}
     width={page ? `${page.widthMm}mm` : undefined} height={page ? `${page.heightMm}mm` : undefined}
     data-page-fit={presentation.fit}
@@ -96,14 +125,23 @@ export function TechnicalDrawingSvg({ document, presentation: suppliedPresentati
     </defs>
     {page && <g>
       <rect className="technical-paper" x="0" y="0" width={page.widthMm} height={page.heightMm} />
-      <rect className="technical-printable-area" x={page.contentBounds.minX} y={page.contentBounds.minY}
+      {!sheetLayout && <rect className="technical-printable-area" x={page.contentBounds.minX} y={page.contentBounds.minY}
         width={page.contentBounds.maxX - page.contentBounds.minX}
-        height={page.contentBounds.maxY - page.contentBounds.minY} />
+        height={page.contentBounds.maxY - page.contentBounds.minY} />}
     </g>}
     <g clipPath={page ? `url(#${sheetClipId})` : undefined}>
-      {presentation.primitives.map((primitive) => <g key={primitive.id} data-primitive-id={primitive.id}>
-        <Primitive primitive={primitive} markerId={markerId} hatchId={hatchId} />
-      </g>)}
+      <g data-technical-drawing-content="true" transform={sheetLayout
+        ? `translate(${sheetLayout.drawingTranslation.x} ${sheetLayout.drawingTranslation.y})`
+        : undefined}
+      data-sheet-translation-x-mm={sheetLayout ? String(sheetLayout.drawingTranslation.x) : undefined}
+      data-sheet-translation-y-mm={sheetLayout ? String(sheetLayout.drawingTranslation.y) : undefined}>
+        {presentation.primitives.map((primitive) => <g key={primitive.id} data-primitive-id={primitive.id}>
+          <Primitive primitive={primitive} markerId={markerId} hatchId={hatchId} />
+        </g>)}
+      </g>
+      {sheetPrimitives && <g data-technical-sheet-paper-space="true">
+        {sheetPrimitives.map((primitive) => <SheetPaperPrimitive key={primitive.id} primitive={primitive} />)}
+      </g>}
     </g>
   </svg>
 }
