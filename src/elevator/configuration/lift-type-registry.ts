@@ -2,6 +2,11 @@ import { z } from 'zod'
 import { LIFT_FAMILIES } from '../types/lift-family'
 import type { LiftCapabilityName, LiftTypeDefinition } from './lift-type-definition'
 import {
+  createCarLiftPlanningConfiguration,
+  carLiftPlanningConfigurationSchema,
+  type CarLiftPlanningConfiguration,
+} from './car-lift-configuration'
+import {
   createGoodsLiftPlanningConfiguration,
   goodsLiftPlanningConfigurationSchema,
   type GoodsLiftPlanningConfiguration,
@@ -34,6 +39,7 @@ type UnavailableRegisteredLiftFamily = Exclude<
   RegisteredLiftFamily,
   typeof LIFT_FAMILIES.passenger
   | typeof LIFT_FAMILIES.goods
+  | typeof LIFT_FAMILIES.car
 >
 
 const available = (moduleId: string) => ({ status: 'available', moduleId } as const)
@@ -102,6 +108,34 @@ const goodsLiftType: LiftTypeDefinition<GoodsLiftPlanningConfiguration> = {
   ],
 }
 
+const carLiftType: LiftTypeDefinition<CarLiftPlanningConfiguration> = {
+  id: LIFT_FAMILIES.car,
+  displayName: 'Autoaufzug',
+  description: 'Geometrische Planungskonfiguration für Autoaufzüge.',
+  implementationStatus: 'available',
+  configurationSchema: carLiftPlanningConfigurationSchema,
+  createDefaultConfiguration: createCarLiftPlanningConfiguration,
+  engineeringModule: { id: 'car-lift-engineering', status: 'available' },
+  geometryModule: { id: 'car-lift-geometry', status: 'available' },
+  capabilities: {
+    configuration: available('car-lift-configuration'),
+    normalization: available('car-lift-model'),
+    validation: available('car-lift-spatial-validation'),
+    geometry: available('car-lift-model'),
+    three: available('car-lift-scene-model'),
+    simulation: unavailable('car-lift-simulation'),
+    drawings: available('car-lift-technical-drawings'),
+    pdf: available('technical-plan-pdf'),
+    dxf: available('technical-plan-dxf'),
+    persistence: available('liftplan-indexeddb'),
+    migration: available('car-lift-configuration-migration'),
+  },
+  uiSections: [
+    { id: 'project', order: 10, titleKey: 'configuration.project' },
+    { id: 'car-planning', order: 20, titleKey: 'configuration.carPlanning' },
+  ],
+}
+
 function createComingSoonLiftType<Family extends UnavailableRegisteredLiftFamily>(
   id: Family,
   displayName: string,
@@ -142,11 +176,7 @@ function createComingSoonLiftType<Family extends UnavailableRegisteredLiftFamily
 export const liftTypeRegistry = {
   passenger: passengerLiftType,
   goods: goodsLiftType,
-  car: createComingSoonLiftType(
-    LIFT_FAMILIES.car,
-    'Autoaufzug',
-    'Planungskonfiguration wird vorbereitet.',
-  ),
+  car: carLiftType,
   'small-goods': createComingSoonLiftType(
     LIFT_FAMILIES.smallGoods,
     'Kleingüteraufzug',

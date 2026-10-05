@@ -114,7 +114,7 @@ describe('lift-family registry', () => {
     ])
     expect(getLiftFamilyCapability('goods', 'validation').status).toBe('available')
     expect(getLiftFamilyCapability('goods', 'simulation').status).toBe('unavailable')
-    expect(getLiftFamilyCapability('car', 'drawings').status).toBe('unavailable')
+    expect(getLiftFamilyCapability('car', 'drawings').status).toBe('available')
   })
 
   it('keeps passenger configuration parsing backwards-compatible', () => {
@@ -160,8 +160,8 @@ describe('goods-lift configuration and normalization', () => {
     expect(createLiftFamilyTechnicalModel(createPassengerPlanningConfiguration('Bestand'))).toMatchObject({
       status: 'available', family: 'passenger', planning: { liftFamily: 'passenger' },
     })
-    expect(createLiftFamilyTechnicalModel({ family: 'car', schemaVersion: 'lift-planning-placeholder-v1' })).toEqual({
-      status: 'unavailable', family: 'car', reason: 'family-capability-unavailable',
+    expect(createLiftFamilyTechnicalModel({ family: 'small-goods', schemaVersion: 'lift-planning-placeholder-v1' })).toEqual({
+      status: 'unavailable', family: 'small-goods', reason: 'family-capability-unavailable',
     })
   })
 })

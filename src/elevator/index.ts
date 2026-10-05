@@ -33,6 +33,23 @@ export {
   GOODS_LOAD_CATEGORIES,
   GOODS_PLANNING_SCHEMA_VERSION,
 } from './configuration/goods-lift-configuration'
+export {
+  CAR_LIFT_PLANNING_SCHEMA_VERSION,
+  VEHICLE_LOADING_DIRECTIONS,
+  carLiftPlanningConfigurationSchema,
+  createCarLiftPlanningConfiguration,
+  createCenteredVehiclePosition,
+  updateCarLiftPlanningConfiguration,
+} from './configuration/car-lift-configuration'
+export type {
+  CarLiftApproachEnvelope,
+  CarLiftDoorPassageEnvelope,
+  CarLiftPlanningConfiguration,
+  CarLiftPlanningConfigurationUpdate,
+  CarLiftVehicleEnvelope,
+  CarLiftVehiclePosition,
+  VehicleLoadingDirection,
+} from './configuration/car-lift-configuration'
 export type {
   GoodsGuidePlanning,
   GoodsLiftPlanningConfiguration,
@@ -77,6 +94,21 @@ export type {
 } from './goods/goods-lift-model'
 export { createGoodsLiftSceneModel } from './goods/goods-lift-scene-model'
 export type { GoodsLiftSceneModel, GoodsSceneBox } from './goods/goods-lift-scene-model'
+export { createCarLiftNormalizedModel } from './car/car-lift-model'
+export type {
+  CarBoxMm,
+  CarEntranceModel,
+  CarLevelModel,
+  CarLiftModelField,
+  CarLiftNormalizationResult,
+  CarLiftNormalizedModel,
+  CarPlanPointMm,
+  CarPlanRectangleMm,
+  NormalizedCarApproachEnvelope,
+  NormalizedVehicleModel,
+} from './car/car-lift-model'
+export { createCarLiftSceneModel } from './car/car-lift-scene-model'
+export type { CarLiftSceneModel, CarSceneBox, CarSceneLine } from './car/car-lift-scene-model'
 export {
   LIFT_IMPLEMENTATION_STATUSES,
 } from './types/lift-implementation-status'

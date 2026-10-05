@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { registeredLiftFamilySchema } from '../../elevator'
 import { GOODS_PLANNING_SCHEMA_VERSION } from '../../elevator/configuration/goods-lift-configuration'
+import { CAR_LIFT_PLANNING_SCHEMA_VERSION } from '../../elevator/configuration/car-lift-configuration'
 import { UNAVAILABLE_LIFT_CONFIGURATION_SCHEMA_VERSION } from '../../elevator/configuration/unavailable-lift-configuration'
 
 export const LIFTPLAN_STORAGE_SCHEMA_VERSION = 1 as const
@@ -130,11 +131,14 @@ export function migrateStoredProject(input: unknown): PersistenceParseResult<Sto
   }
   const value = parsed.data as StoredLiftPlanProject
   const planningData = value.planningData
-  const migratedPlanningData = value.liftFamily === 'goods' && planningData && !Array.isArray(planningData) &&
+  const isUnavailablePlaceholder = planningData && !Array.isArray(planningData) &&
     typeof planningData === 'object' && planningData.schemaVersion === UNAVAILABLE_LIFT_CONFIGURATION_SCHEMA_VERSION &&
     Object.keys(planningData).every((key) => key === 'family' || key === 'schemaVersion')
+  const migratedPlanningData = isUnavailablePlaceholder && value.liftFamily === 'goods'
     ? { family: 'goods', schemaVersion: GOODS_PLANNING_SCHEMA_VERSION, projectName: value.name } as const
-    : planningData
+    : isUnavailablePlaceholder && value.liftFamily === 'car'
+      ? { family: 'car', schemaVersion: CAR_LIFT_PLANNING_SCHEMA_VERSION, projectName: value.name } as const
+      : planningData
   return { ok: true, value: { ...value, planningData: migratedPlanningData } }
 }
 

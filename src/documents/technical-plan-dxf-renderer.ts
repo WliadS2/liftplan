@@ -24,6 +24,8 @@ export const TECHNICAL_DXF_LAYERS = [
   'CENTERLINES',
   'ANNOTATIONS',
   'LOADS',
+  'VEHICLE',
+  'APPROACH',
 ] as const
 
 export type TechnicalDxfLayer = (typeof TECHNICAL_DXF_LAYERS)[number]
@@ -64,6 +66,8 @@ const layerDefinitions: readonly DxfLayerDefinition[] = [
   { name: 'CENTERLINES', color: 8, lineType: 'CENTER' },
   { name: 'ANNOTATIONS', color: 7, lineType: 'CONTINUOUS' },
   { name: 'LOADS', color: 30, lineType: 'CONTINUOUS' },
+  { name: 'VEHICLE', color: 6, lineType: 'CONTINUOUS' },
+  { name: 'APPROACH', color: 8, lineType: 'HIDDEN' },
 ]
 
 const normalizeNumber = (value: number): string => {
@@ -114,6 +118,9 @@ export function technicalDxfLayerForPrimitive(primitive: TechnicalDrawingPrimiti
 
   const key = primitiveKey(primitive)
   if (key.includes('buffer')) return 'BUFFERS'
+  if (key.includes('car-entry-approach') || key.includes('car-exit-approach') || key.includes('car-vehicle-sweep') ||
+    key.includes('car-door-passage-envelope')) return 'APPROACH'
+  if (key.includes('car-vehicle') || key.includes('car-wheel-contact')) return 'VEHICLE'
   if (key.includes('pallet') || key.includes('roll-container') || key.includes('forklift') || key.includes('load-envelope')) return 'LOADS'
   if (key.includes('rope') || key.includes('suspension')) return 'ROPES'
   if (key.includes('door') || key.includes('entrance') || key.includes('landing-') || key.includes('cabin-front') ||

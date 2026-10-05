@@ -18,3 +18,18 @@ export type {
   GoodsSpatialValidationResult,
   GoodsSpatialValidationStatus,
 } from '../collision/goods-lift-spatial-validation'
+export {
+  createCarLiftDoorElevationDrawing,
+  createCarLiftDrawingContext,
+  createCarLiftPlanDrawing,
+  createCarLiftSectionDrawing,
+} from '../drawings/car-lift-technical-drawings'
+export type { CarDoorDrawingSelection, CarLiftDrawingContext } from '../drawings/car-lift-technical-drawings'
+export { validateCarLiftSpatialGeometry } from '../collision/car-lift-spatial-validation'
+export type {
+  CarSpatialIssue,
+  CarSpatialIssueCode,
+  CarSpatialRuleResult,
+  CarSpatialValidationResult,
+  CarSpatialValidationStatus,
+} from '../collision/car-lift-spatial-validation'

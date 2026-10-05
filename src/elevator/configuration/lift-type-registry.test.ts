@@ -19,7 +19,7 @@ describe('lift type registry', () => {
     expect(getLiftTypeDefinition(LIFT_FAMILIES.goods).implementationStatus).toBe(
       'available',
     )
-    expect(getLiftTypeDefinition(LIFT_FAMILIES.car).implementationStatus).toBe('coming-soon')
+    expect(getLiftTypeDefinition(LIFT_FAMILIES.car).implementationStatus).toBe('available')
   })
 
   it('structurally validates a passenger planning configuration', () => {

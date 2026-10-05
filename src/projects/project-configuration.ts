@@ -1,10 +1,12 @@
 import {
   LIFT_FAMILIES,
+  updateCarLiftPlanningConfiguration,
   updateGoodsLiftPlanningConfiguration,
   updatePassengerPlanningConfiguration,
   validateLiftConfiguration,
   type PassengerPlanningConfiguration,
   type GoodsLiftPlanningConfiguration,
+  type CarLiftPlanningConfiguration,
   type StructuralValidationResult,
 } from '../elevator'
 import type { LiftPlanProject } from './models/liftplan-project'
@@ -25,10 +27,9 @@ export function replaceProjectConfiguration(
     return { project, validation }
   }
 
-  const projectName =
-    validation.configuration.family === LIFT_FAMILIES.passenger
-      ? validation.configuration.projectName
-      : project.name
+  const projectName = 'projectName' in validation.configuration
+    ? validation.configuration.projectName
+    : project.name
 
   return {
     project: {
@@ -58,7 +59,12 @@ export function updateProjectName(
             project.configuration as GoodsLiftPlanningConfiguration,
             { projectName },
           )
-        : project.configuration
+        : project.configuration.family === LIFT_FAMILIES.car
+          ? updateCarLiftPlanningConfiguration(
+              project.configuration as CarLiftPlanningConfiguration,
+              { projectName },
+            )
+          : project.configuration
 
   return {
     ...project,
