@@ -205,45 +205,42 @@ export function PlansWorkspace({ context, project }: {
     }
   }
 
-  return <section className="workspace-panel plans-panel" aria-labelledby="plans-heading">
-    <div className="plans-heading-row">
-      <div>
-        <h2 id="plans-heading">Pläne</h2>
-        <p className="panel-note">Deterministische SVG-Vorschau aus den normalisierten Planungsdaten.</p>
-      </div>
+  return <div className="plans-workspace-container" aria-labelledby="plans-heading">
+    <h2 id="plans-heading" className="sr-only" style={{ display: 'none' }}>Pläne</h2>
+    <div className="plans-toolbar">
       <div className="plans-view-controls" role="group" aria-label="Planansicht">
         {(Object.keys(viewLabels) as PlansView[]).map((entry) => <button type="button" key={entry}
           aria-pressed={view === entry} onClick={() => setView(entry)}>{viewLabels[entry]}</button>)}
       </div>
-    </div>
-    <div className="plans-options">
-      <label className="plans-option"><span>Maßstab</span><select value={scale}
-        onChange={(event) => setScale(event.target.value as TechnicalDrawingScale)}>
-        {TECHNICAL_DRAWING_SCALES.map((entry) => <option key={entry} value={entry}>{scaleLabels[entry]}</option>)}
-      </select></label>
-      {view === 'door' && <>
-        <label className="plans-option"><span>Haltestelle</span><select value={levelId ?? ''}
-          onChange={(event) => setSelectedLevelId(event.target.value || undefined)}>
-          {levels.map((level) => <option key={level.id} value={level.id}>{level.index + 1}</option>)}
+      <div className="plans-options">
+        <label className="plans-option"><span>Maßstab</span><select value={scale}
+          onChange={(event) => setScale(event.target.value as TechnicalDrawingScale)}>
+          {TECHNICAL_DRAWING_SCALES.map((entry) => <option key={entry} value={entry}>{scaleLabels[entry]}</option>)}
         </select></label>
-        {sides.length > 1 && <label className="plans-option"><span>Zugang</span><select value={side}
-          onChange={(event) => setSelectedSide(event.target.value as PassengerEntranceSide)}>
-          {sides.map((entry) => <option key={entry} value={entry}>{entry === 'front' ? 'Vorne' : 'Hinten'}</option>)}
-        </select></label>}
-      </>}
-      <fieldset className="plans-export-options">
-        <legend>Exportieren</legend>
-        <label><input type="radio" name="plan-export-scope" value="current" checked={exportScope === 'current'}
-          onChange={() => setExportScope('current')} /> Aktuelle Ansicht</label>
-        <label><input type="radio" name="plan-export-scope" value="plan-set" checked={exportScope === 'plan-set'}
-          onChange={() => setExportScope('plan-set')} /> Gesamter Plansatz</label>
-        <button type="button" onClick={() => void exportPdf()} disabled={exportingFormat !== undefined}>
-          {exportingFormat === 'pdf' ? 'PDF wird erstellt …' : 'PDF erstellen'}
-        </button>
-        <button type="button" onClick={() => void exportDxf()} disabled={exportingFormat !== undefined}>
-          {exportingFormat === 'dxf' ? 'DXF wird erstellt …' : 'DXF exportieren'}
-        </button>
-      </fieldset>
+        {view === 'door' && <>
+          <label className="plans-option"><span>Haltestelle</span><select value={levelId ?? ''}
+            onChange={(event) => setSelectedLevelId(event.target.value || undefined)}>
+            {levels.map((level) => <option key={level.id} value={level.id}>{level.index + 1}</option>)}
+          </select></label>
+          {sides.length > 1 && <label className="plans-option"><span>Zugang</span><select value={side}
+            onChange={(event) => setSelectedSide(event.target.value as PassengerEntranceSide)}>
+            {sides.map((entry) => <option key={entry} value={entry}>{entry === 'front' ? 'Vorne' : 'Hinten'}</option>)}
+          </select></label>}
+        </>}
+        <fieldset className="plans-export-options">
+          <legend>Exportieren</legend>
+          <label><input type="radio" name="plan-export-scope" value="current" checked={exportScope === 'current'}
+            onChange={() => setExportScope('current')} /> Aktuelle Ansicht</label>
+          <label><input type="radio" name="plan-export-scope" value="plan-set" checked={exportScope === 'plan-set'}
+            onChange={() => setExportScope('plan-set')} /> Gesamter Plansatz</label>
+          <button type="button" onClick={() => void exportPdf()} disabled={exportingFormat !== undefined}>
+            {exportingFormat === 'pdf' ? 'PDF wird erstellt …' : 'PDF erstellen'}
+          </button>
+          <button type="button" onClick={() => void exportDxf()} disabled={exportingFormat !== undefined}>
+            {exportingFormat === 'dxf' ? 'DXF wird erstellt …' : 'DXF exportieren'}
+          </button>
+        </fieldset>
+      </div>
     </div>
     {exportMessage?.contextKey === exportContextKey && exportMessage.text !== fitWarningMessage && <p
       className={exportMessage.kind === 'error' ? 'plans-warning' : 'plans-export-success'} role="status">
@@ -258,5 +255,5 @@ export function PlansWorkspace({ context, project }: {
         ? 'Automatisch eingepasste Bildschirmvorschau · nicht druckverbindlich.'
         : `A4-Papieransicht · Geometrie ${scale} · Browserdarstellung nicht druckverbindlich.`}</p>
     </>}
-  </section>
+  </div>
 }
