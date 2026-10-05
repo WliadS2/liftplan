@@ -104,13 +104,17 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     const records = await requestResult(
       database.transaction(VERSION_STORE).objectStore(VERSION_STORE).index('projectId').getAll(projectId),
     ) as IndexedVersionRecord[]
-    return records.map((record) => ({
-      projectId: record.projectId,
-      version: record.version,
-      createdAt: record.createdAt,
-      note: record.note,
-      snapshot: record.snapshot,
-    })).sort((a, b) => b.version - a.version)
+    return records.map((record) => {
+      const snapshot = migrateStoredProject(record.snapshot)
+      if (!snapshot.ok) throw new Error(snapshot.error.message)
+      return {
+        projectId: record.projectId,
+        version: record.version,
+        createdAt: record.createdAt,
+        note: record.note,
+        snapshot: snapshot.value,
+      }
+    }).sort((a, b) => b.version - a.version)
   }
 
   async saveProjectVersion(project: StoredLiftPlanProject, version: StoredLiftPlanProjectVersion) {

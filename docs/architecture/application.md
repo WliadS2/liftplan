@@ -45,7 +45,11 @@ The project store owns the active `LiftPlanProject`, its serializable editable c
 
 `src/elevator/configuration/lift-type-registry.ts` is the single registry for currently selectable lift families. A definition supplies its stable ID, German customer-facing display metadata, implementation status, configuration schema, default draft configuration, UI section descriptors, and references to future engineering and geometry modules.
 
-The Personenaufzug definition is currently available as a planning-input draft. The remaining registered families are explicitly marked `coming-soon` and use a deliberately empty placeholder configuration. Adding a family means adding one definition and its family-owned schema rather than changing application-wide switches.
+The registry contains the eight product families Personenaufzug, Waren-/Lastenaufzug, Autoaufzug, Kleingüteraufzug, Bettenaufzug, Homelift, Plattformlift, and Schwerlast-/Spezialaufzug. Every definition declares configuration, normalization, validation, geometry, Three.js, simulation, drawing, PDF, DXF, persistence, and migration capabilities as `available` or `unavailable`. Unsupported capabilities remain explicit rather than falling through to passenger behavior.
+
+Personenaufzug and Waren-/Lastenaufzug are real typed families. Each owns its planning schema and normalization model; the remaining families retain deliberately empty placeholder configurations and `coming-soon` status. `src/lift-families/technical-family-model.ts` is the discriminated orchestration boundary and returns either a family-specific technical model or an explicit unavailable result. Adding a family means registering its schema and adapters, not extending one passenger-shaped interface.
+
+Waren-/Lastenaufzug uses `goods-planning-v1`. Its millimetre-based normalized model contains only explicitly supplied platform/cabin, shaft, entrance, level, load-envelope, and guide-system geometry. Its spatial validator checks containment, ordered levels, access consistency, vertical coherence, and moving-envelope containment without regulatory clearances. A render-neutral scene contract converts explicit dimensions to metres without creating Three.js objects. Pure plan, section, and door-elevation projections reuse the shared technical drawing primitives and therefore flow through the existing vector PDF and model-space DXF exporters.
 
 ## Configuration and 3D boundary
 

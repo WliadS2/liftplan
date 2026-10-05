@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { registeredLiftFamilySchema } from '../../elevator'
+import { GOODS_PLANNING_SCHEMA_VERSION } from '../../elevator/configuration/goods-lift-configuration'
+import { UNAVAILABLE_LIFT_CONFIGURATION_SCHEMA_VERSION } from '../../elevator/configuration/unavailable-lift-configuration'
 
 export const LIFTPLAN_STORAGE_SCHEMA_VERSION = 1 as const
 export const LIFTPLAN_PROJECT_FILE_FORMAT = 'liftplan-project-file' as const
@@ -126,7 +128,14 @@ export function migrateStoredProject(input: unknown): PersistenceParseResult<Sto
       },
     }
   }
-  return { ok: true, value: parsed.data as StoredLiftPlanProject }
+  const value = parsed.data as StoredLiftPlanProject
+  const planningData = value.planningData
+  const migratedPlanningData = value.liftFamily === 'goods' && planningData && !Array.isArray(planningData) &&
+    typeof planningData === 'object' && planningData.schemaVersion === UNAVAILABLE_LIFT_CONFIGURATION_SCHEMA_VERSION &&
+    Object.keys(planningData).every((key) => key === 'family' || key === 'schemaVersion')
+    ? { family: 'goods', schemaVersion: GOODS_PLANNING_SCHEMA_VERSION, projectName: value.name } as const
+    : planningData
+  return { ok: true, value: { ...value, planningData: migratedPlanningData } }
 }
 
 export function parseLiftPlanProjectFile(source: string): PersistenceParseResult<LiftPlanProjectFile> {
@@ -174,9 +183,19 @@ export function parseLiftPlanProjectFile(source: string): PersistenceParseResult
       },
     }
   }
-  const mismatchedVersion = parsed.data.versions?.find((version) =>
-    version.projectId !== parsed.data.project.id ||
-    version.snapshot.id !== parsed.data.project.id ||
+  const migratedProject = migrateStoredProject(parsed.data.project)
+  if (!migratedProject.ok) return migratedProject
+  const migratedVersions = parsed.data.versions?.map((version) => {
+    const snapshot = migrateStoredProject(version.snapshot)
+    return snapshot.ok ? { ...version, snapshot: snapshot.value } : undefined
+  })
+  if (migratedVersions?.some((version) => version === undefined)) {
+    return { ok: false, error: { code: 'invalid-format', message: 'Eine gespeicherte Version ist ungültig.', paths: ['versions'] } }
+  }
+  const versions = migratedVersions as readonly StoredLiftPlanProjectVersion[] | undefined
+  const mismatchedVersion = versions?.find((version) =>
+    version.projectId !== migratedProject.value.id ||
+    version.snapshot.id !== migratedProject.value.id ||
     version.snapshot.projectVersion !== version.version,
   )
   if (mismatchedVersion) {
@@ -189,7 +208,10 @@ export function parseLiftPlanProjectFile(source: string): PersistenceParseResult
       },
     }
   }
-  return { ok: true, value: parsed.data as LiftPlanProjectFile }
+  return {
+    ok: true,
+    value: { ...parsed.data, project: migratedProject.value, versions } as LiftPlanProjectFile,
+  }
 }
 
 export function serializeLiftPlanProjectFile(

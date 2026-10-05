@@ -1,8 +1,10 @@
 # Technical drawing architecture
 
 LiftPlan technical drawings are deterministic vector projections of the same
-normalized passenger installation, mechanical, door, and spatial models used by
-validation and the Three.js presentation. They do not inspect Three.js meshes,
+family-owned normalized installation and spatial models used by validation and
+the Three.js presentation. Passenger drawings additionally consume the detailed
+mechanical and door models; goods-lift drawings consume the independent goods
+platform, shaft, entrance, level, guide, and explicit load envelopes. They do not inspect Three.js meshes,
 screenshots, DOM dimensions, or rendered pixels.
 
 The pipeline is:

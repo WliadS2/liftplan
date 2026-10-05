@@ -60,7 +60,7 @@ export function createLoadedProjectState(record: StoredLiftPlanProject): LoadedP
 
 function planningDataWithName(planningData: JsonValue, name: string): JsonValue {
   if (!planningData || Array.isArray(planningData) || typeof planningData !== 'object') return planningData
-  if (planningData.family !== 'passenger') return planningData
+  if (planningData.family !== 'passenger' && planningData.family !== 'goods') return planningData
   return { ...planningData, projectName: name }
 }
 
