@@ -39,6 +39,34 @@ function scene(value = configuration()) {
 }
 
 describe('goods-lift semantic 3D model', () => {
+  it('makes floor and configured openings readable without inventing a slab thickness', () => {
+    const render = createGoodsLiftRenderModel(scene().scene, 'platform')
+    const floor = render.assemblies.find((a) => a.kind === 'platform-floor')!
+    expect(floor.size[1]).toBe(0)
+    expect(floor.appearance.opacity).toBe(1)
+    expect(render.assemblies.some((a) => a.kind === 'platform-roof')).toBe(false)
+    expect(render.assemblies.filter((a) => a.kind === 'door')).toHaveLength(2)
+    expect(render.assemblies.filter((a) => a.kind === 'door').every((a) => a.appearance.opacity < 0.1)).toBe(true)
+  })
+  it('keeps all nested load envelopes with distinct weight/dash policies and without opaque fills', () => {
+    const render = createGoodsLiftRenderModel(scene().scene,'loads')
+    const loads = render.assemblies.filter((a) => ['pallet','roll-container','forklift-envelope'].includes(a.kind))
+    expect(loads).toHaveLength(3)
+    expect(new Set(loads.map((a) => a.appearance.lineWidth)).size).toBe(3)
+    expect(loads.every((a) => a.appearance.presentation === 'outline')).toBe(true)
+    expect(render.assemblies.some((a) => a.kind === 'platform-wall' || a.kind === 'platform-roof')).toBe(false)
+  })
+  it.each([2,6,10])('fits all goods modes with the target inside visible semantic bounds at %i stops', (stopCount) => {
+    const model = scene(configuration({ stopCount, storeyHeightsMm: Array(stopCount-1).fill(mm(3500)) })).scene
+    for(const {id} of getAvailableGoodsLiftViewModes(model)) {
+      const frame = getGoodsLiftCameraFrame(model,id)
+      expect(frame.target.every((v,i) => v >= frame.bounds.min[i] && v <= frame.bounds.max[i])).toBe(true)
+      expect(frame).toEqual(getGoodsLiftCameraFrame(model,id))
+      for(const viewport of [{width:1280,height:720},{width:360,height:700}]) {
+        expect(calculateCameraFit(frame.bounds,frame.target,viewport,undefined,undefined,frame.direction).position.every(Number.isFinite)).toBe(true)
+      }
+    }
+  })
   it('preserves shaft and platform dimensions in metres', () => {
     const { scene: model } = scene()
     expect(model.assemblies.find((entry) => entry.id === 'goods-shaft')).toMatchObject({
@@ -74,6 +102,18 @@ describe('goods-lift semantic 3D model', () => {
     const through = scene().scene
     expect(through.assemblies.filter((entry) => entry.kind === 'door').map((entry) => entry.id))
       .toEqual(['goods-front', 'goods-rear'])
+  })
+
+  it('preserves door dimensions, side coordinates and landing elevations without duplicated IDs', () => {
+    const { normalized, scene: model } = scene()
+    const doors = model.assemblies.filter((a) => a.kind === 'door' || a.kind === 'landing-door')
+    expect(new Set(doors.map((a) => a.id)).size).toBe(doors.length)
+    for (const door of doors) {
+      expect(door.size).toEqual([1.4,2.2,0])
+      const side = door.id.endsWith('rear') ? -1 : 1
+      expect(door.center[2]).toBe(side * (door.kind === 'door' ? 1.2 : 1.6))
+      expect(door.center[1]).toBeCloseTo((door.id.includes('level-2') ? normalized.model.levels[1].elevationMm/1000 : 0)+1.1)
+    }
   })
 
   it('creates the configured guide pair with its explicit orientation and spacing', () => {

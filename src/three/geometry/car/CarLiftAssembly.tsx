@@ -1,14 +1,23 @@
-import { Edges, Line } from '@react-three/drei'
+import { Line } from '@react-three/drei'
 import { DoubleSide } from 'three'
 import { CAR_CONTACT_SYMBOL_RADIUS_METRES, type CarLiftRenderModel, type CarRenderableAssembly } from './car-lift-render-model'
+import { TechnicalEnvelope, TechnicalSceneLabel } from '../TechnicalEnvelope'
 
 function CarPrimitive({ assembly: a }: { readonly assembly: CarRenderableAssembly }) {
   const { color, opacity, presentation } = a.appearance
-  if ('start' in a) return <Line name={a.id} points={[a.start, a.end]} color={color}
-    transparent opacity={opacity} dashed dashSize={0.12} gapSize={0.06} lineWidth={1.4} />
+  if ('start' in a) return <group name={a.id}>
+    <Line points={[a.start, a.end]} color={color} transparent opacity={opacity}
+      dashed={a.appearance.dashed} dashSize={0.12} gapSize={0.06} lineWidth={a.appearance.lineWidth ?? 1.4} depthTest={false} />
+    {a.label && <TechnicalSceneLabel position={[(a.start[0]+a.end[0])/2, (a.start[1]+a.end[1])/2,
+      (a.start[2]+a.end[2])/2]}>{a.label}</TechnicalSceneLabel>}
+  </group>
   if (presentation === 'marker') {
     const r = CAR_CONTACT_SYMBOL_RADIUS_METRES
     return <group name={a.id} position={a.center}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[r, 12]} />
+        <meshBasicMaterial color={color} side={DoubleSide} depthTest={false} depthWrite={false} />
+      </mesh>
       <Line points={[[-r, 0, 0], [r, 0, 0]]} color={color} lineWidth={3} depthTest={false} />
       <Line points={[[0, 0, -r], [0, 0, r]]} color={color} lineWidth={3} depthTest={false} />
     </group>
@@ -27,8 +36,13 @@ function CarPrimitive({ assembly: a }: { readonly assembly: CarRenderableAssembl
       {a.size.some((v) => v === 0) ? <planeGeometry args={plane.args} /> : <boxGeometry args={a.size} />}
       {presentation === 'outline' ? <meshBasicMaterial visible={false} />
         : <meshStandardMaterial color={color} transparent opacity={opacity} depthWrite={false} side={DoubleSide} />}
-      <Edges color={color} transparent opacity={opacity} />
     </mesh>
+    <TechnicalEnvelope size={a.size} color={color} opacity={presentation === 'surface' ? Math.min(0.9, opacity * 1.6 + 0.15) : opacity}
+      lineWidth={a.appearance.lineWidth} dashed={a.appearance.dashed} />
+    {(a.kind === 'approach-envelope' || a.kind === 'door-passage-envelope' || a.kind === 'vehicle-swept-envelope') &&
+      <TechnicalSceneLabel position={[0, h / 2, 0]}>{a.kind === 'approach-envelope'
+        ? a.id.includes('entry') ? 'Einfahrtshülle' : 'Ausfahrtshülle'
+        : a.kind === 'door-passage-envelope' ? `Durchfahrt ${a.id.endsWith('rear') ? 'hinten' : 'vorne'}` : 'Bewegungshülle'}</TechnicalSceneLabel>}
   </group>
 }
 

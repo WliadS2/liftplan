@@ -9,6 +9,7 @@ import {
 } from '../../engineering'
 import type { LiftConfiguration } from '../models/lift-configuration'
 import { LIFT_FAMILIES } from '../types/lift-family'
+import { updateUniformLevelIntervals } from './uniform-level-update'
 
 export const GOODS_PLANNING_SCHEMA_VERSION = 'goods-planning-v1' as const
 export const GOODS_LOAD_CATEGORIES = [
@@ -117,5 +118,5 @@ export function updateGoodsLiftPlanningConfiguration(
   configuration: GoodsLiftPlanningConfiguration,
   update: GoodsLiftPlanningConfigurationUpdate,
 ): GoodsLiftPlanningConfiguration {
-  return { ...configuration, ...update }
+  return updateUniformLevelIntervals(configuration, update)
 }

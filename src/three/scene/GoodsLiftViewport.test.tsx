@@ -53,6 +53,14 @@ function renderConfiguration(configuration: GoodsLiftPlanningConfiguration) {
 }
 
 describe('goods-lift viewport', () => {
+  it('resets the active semantic frame without changing the goods view', () => {
+    renderConfiguration(configured())
+    fireEvent.click(screen.getByRole('button', { name: 'Lasten' }))
+    const frame = camera.props!.frame
+    fireEvent.click(screen.getByRole('button', { name: 'Ansicht zurücksetzen' }))
+    expect(camera.props!.frame).toEqual(frame)
+    expect(camera.props!.request).toMatchObject({ viewMode: 'loads', resetRevision: 1 })
+  })
   it('shows the explicit incomplete state when no semantic scene can be created', () => {
     renderConfiguration(createGoodsLiftPlanningConfiguration('Leer'))
     expect(screen.getByText('Planungsdaten eingeben, um die 3D-Ansicht zu starten.')).toBeInTheDocument()

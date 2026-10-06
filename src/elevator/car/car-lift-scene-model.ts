@@ -12,9 +12,10 @@ export interface CarSceneBox {
 
 export interface CarSceneLine {
   readonly id: string
-  readonly kind: 'vehicle-centerline' | 'loading-direction'
+  readonly kind: 'vehicle-centerline' | 'loading-direction' | 'vehicle-axle' | 'vehicle-reference'
   readonly start: readonly [Metres, Metres, Metres]
   readonly end: readonly [Metres, Metres, Metres]
+  readonly label?: string
 }
 
 export interface CarLiftSceneModel {
@@ -179,6 +180,27 @@ export function createCarLiftSceneModel(model: CarLiftNormalizedModel): CarLiftS
       id: 'car-vehicle-centerline', kind: 'vehicle-centerline',
       start: scenePoint(model.vehicle.centerline[0], y), end: scenePoint(model.vehicle.centerline[1], y),
     })
+    const contacts = model.vehicle.wheelContactPoints
+    if (contacts?.length === 4) {
+      const midpoint = (a: CarPlanPointMm, b: CarPlanPointMm): CarPlanPointMm => ({
+        x: millimetres((a.x + b.x) / 2), z: millimetres((a.z + b.z) / 2),
+      })
+      const rear = midpoint(contacts[0], contacts[1]), front = midpoint(contacts[2], contacts[3])
+      const reference = (id: string, a: CarPlanPointMm, b: CarPlanPointMm, label?: string,
+        kind: CarSceneLine['kind'] = 'vehicle-reference') => assemblies.push({
+        id, kind, start: scenePoint(a, y), end: scenePoint(b, y), label,
+      })
+      reference('car-rear-axle', contacts[0], contacts[1], undefined, 'vehicle-axle')
+      reference('car-front-axle', contacts[2], contacts[3], undefined, 'vehicle-axle')
+      reference('car-wheelbase', contacts[1], contacts[3], `Radstand ${model.vehicle.wheelbaseMm} mm`)
+      // Reference lengths come from the normalized endpoints, not invented visual wheel dimensions.
+      const length = (a: CarPlanPointMm, b: CarPlanPointMm) => Math.round(Math.hypot(b.x - a.x, b.z - a.z))
+      reference('car-rear-overhang', model.vehicle.centerline[0], rear,
+        `Überhang hinten ${length(model.vehicle.centerline[0], rear)} mm`)
+      reference('car-front-overhang', front, model.vehicle.centerline[1],
+        `Vorne · Überhang ${length(front, model.vehicle.centerline[1])} mm`)
+      reference('car-track', contacts[0], contacts[1], `Spurbreite ${model.vehicle.trackWidthMm} mm`)
+    }
   }
   return { family: 'car', assemblies }
 }

@@ -139,6 +139,40 @@ describe('Autoaufzug scene and presentation', () => {
 })
 
 describe('Auto camera and export regressions', () => {
+  it('makes platform and vehicle presentation and camera intent distinct', () => {
+    const { scene } = data()
+    const platform = createCarLiftRenderModel(scene, 'platform'), vehicle = createCarLiftRenderModel(scene, 'vehicle')
+    const body = (m: typeof vehicle) => m.assemblies.find((a) => a.kind === 'vehicle-body')!
+    expect(body(vehicle).appearance.presentation).toBe('surface')
+    expect(body(vehicle).appearance.opacity).toBeGreaterThan(body(platform).appearance.opacity)
+    expect(vehicle.assemblies.some((a) => a.kind === 'platform-wall')).toBe(false)
+    expect(platform.assemblies.some((a) => a.kind === 'platform-wall')).toBe(true)
+    expect(getCarLiftCameraFrame(scene, 'vehicle').bounds.height).toBeLessThan(getCarLiftCameraFrame(scene, 'platform').bounds.height)
+    expect(getCarLiftCameraFrame(scene, 'vehicle').direction).not.toEqual(getCarLiftCameraFrame(scene, 'platform').direction)
+  })
+  it.each([0, 90, 180])('derives axle and dimension references only from normalized contacts at %i degrees', (headingDegrees) => {
+    const { scene } = data({ vehiclePosition: { lateralOffsetMm: mm(100), longitudinalOffsetMm: mm(200), headingDegrees } })
+    const contacts = scene.assemblies.filter((a) => a.kind === 'wheel-contact')
+    const rear = scene.assemblies.find((a) => a.id === 'car-rear-axle')!, front = scene.assemblies.find((a) => a.id === 'car-front-axle')!
+    expect('start' in rear && rear.start).toEqual('center' in contacts[0] && contacts[0].center)
+    expect('end' in front && front.end).toEqual('center' in contacts[3] && contacts[3].center)
+    const render = createCarLiftRenderModel(scene, 'vehicle')
+    expect(render.assemblies.filter((a) => a.kind === 'vehicle-reference').map((a) => 'label' in a && a.label))
+      .toEqual(['Radstand 2700 mm','Überhang hinten 900 mm','Vorne · Überhang 900 mm','Spurbreite 1500 mm'])
+    expect(render.assemblies.filter((a) => a.kind === 'vehicle-axle')).toHaveLength(2)
+  })
+  it('retains all approach envelopes with distinct hierarchy without dominating the full-height section', () => {
+    const { scene } = data()
+    const approach = createCarLiftRenderModel(scene, 'approach')
+    const entry = approach.assemblies.find((a) => a.id === 'car-entry-approach')!, exit = approach.assemblies.find((a) => a.id === 'car-exit-approach')!
+    expect(entry.appearance).not.toEqual(exit.appearance)
+    expect(approach.assemblies.filter((a) => a.kind === 'door-passage-envelope')).toHaveLength(2)
+    expect(approach.assemblies.some((a) => a.kind === 'vehicle-swept-envelope')).toBe(true)
+    const section = createCarLiftRenderModel(scene, 'cutaway')
+    expect(section.assemblies.some((a) => a.kind === 'approach-envelope')).toBe(false)
+    expect(section.assemblies.some((a) => a.kind === 'vehicle-swept-envelope')).toBe(false)
+    expect(getCarLiftCameraFrame(scene,'cutaway').bounds.height).toBeCloseTo(18.8)
+  })
   it.each([2, 6, 10])('fits finite deterministic semantic bounds in all views for %i stops', (stopCount) => {
     const { scene } = data({ stopCount, storeyHeightsMm: Array.from({ length: stopCount - 1 }, () => mm(2800)) })
     for (const { id } of CAR_LIFT_VIEW_MODE_CATALOG) {

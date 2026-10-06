@@ -20,8 +20,8 @@ export function getCarAssemblyBounds(assemblies: readonly CarSceneAssembly[]): C
     width: max[0] - min[0], height: max[1] - min[1], depth: max[2] - min[2] }
 }
 const directions: Readonly<Record<CarLiftViewMode, CameraVector>> = {
-  overview: [1, 0.6, 1], platform: [1, 0.6, 1], vehicle: [1, 0.9, 1],
-  doors: [0.08, 0.2, 1], approach: [1, 1.1, 1], cutaway: [1, 0.45, 1],
+  overview: [1, 0.6, 1], platform: [1, 0.7, 1], vehicle: [0.6, 1.3, 1],
+  doors: [0.35, 0.12, 1], approach: [0.7, 1.4, 1], cutaway: [0.65, 0.25, 1],
 }
 export function getCarLiftCameraFrame(scene: CarLiftSceneModel, viewMode: CarLiftViewMode): CameraFrame {
   const visible = createCarLiftRenderModel(scene, viewMode).assemblies

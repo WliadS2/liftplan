@@ -1,6 +1,7 @@
-import { Edges, Line } from '@react-three/drei'
+import { Line } from '@react-three/drei'
 import { DoubleSide } from 'three'
 import type { GoodsLiftRenderModel, GoodsRenderableAssembly } from './goods-lift-render-model'
+import { TechnicalEnvelope, TechnicalSceneLabel } from '../TechnicalEnvelope'
 
 function SurfaceAssembly({ assembly }: { readonly assembly: GoodsRenderableAssembly }) {
   const [width, height, depth] = assembly.size
@@ -16,7 +17,6 @@ function SurfaceAssembly({ assembly }: { readonly assembly: GoodsRenderableAssem
       ? <meshBasicMaterial visible={false} />
       : <meshStandardMaterial color={assembly.appearance.color} transparent={assembly.appearance.opacity < 1}
         opacity={assembly.appearance.opacity} side={DoubleSide} depthWrite={assembly.appearance.opacity >= 1} />}
-    <Edges color={assembly.appearance.color} transparent opacity={assembly.kind === 'level' ? 0.25 : 0.65} />
   </mesh>
 }
 
@@ -27,11 +27,10 @@ function BoxAssembly({ assembly }: { readonly assembly: GoodsRenderableAssembly 
       ? <meshBasicMaterial visible={false} />
       : <meshStandardMaterial color={assembly.appearance.color} transparent={assembly.appearance.opacity < 1}
         opacity={assembly.appearance.opacity} depthWrite={assembly.appearance.opacity >= 1} />}
-    {assembly.appearance.presentation === 'outline' && <Edges color={assembly.appearance.color} />}
   </mesh>
 }
 
-function GoodsAssemblyPrimitive({ assembly }: { readonly assembly: GoodsRenderableAssembly }) {
+function GoodsAssemblyPrimitive({ assembly, showLabels }: { readonly assembly: GoodsRenderableAssembly; readonly showLabels: boolean }) {
   if (assembly.appearance.presentation === 'line') {
     const halfHeight = assembly.size[1] / 2
     return <Line name={assembly.id} points={[
@@ -40,12 +39,25 @@ function GoodsAssemblyPrimitive({ assembly }: { readonly assembly: GoodsRenderab
     ]} color={assembly.appearance.color} transparent opacity={assembly.appearance.opacity} lineWidth={1.5}
     userData={{ semanticKind: assembly.kind }} />
   }
-  if (assembly.size.some((dimension) => dimension === 0)) return <SurfaceAssembly assembly={assembly} />
-  return <BoxAssembly assembly={assembly} />
+  const labels = { pallet: 'Palettenhülle', 'roll-container': 'Rollcontainer-Hülle', 'forklift-envelope': 'Gabelstapler-Hülle' }
+  const loadLabel = labels[assembly.kind as keyof typeof labels]
+  return <group>
+    {assembly.size.some((dimension) => dimension === 0) ? <SurfaceAssembly assembly={assembly} /> : <BoxAssembly assembly={assembly} />}
+    <group position={assembly.center}>
+      <TechnicalEnvelope size={assembly.size} color={assembly.appearance.color}
+        opacity={assembly.appearance.presentation === 'surface' ? Math.min(0.9, assembly.appearance.opacity * 1.6 + 0.2) : assembly.appearance.opacity}
+        lineWidth={assembly.appearance.lineWidth} dashed={assembly.appearance.dashed} />
+      {loadLabel && showLabels && <TechnicalSceneLabel position={[
+        assembly.kind === 'pallet' ? -assembly.size[0]/2 : assembly.kind === 'roll-container' ? assembly.size[0]/2 : 0,
+        assembly.size[1]/2, assembly.kind === 'pallet' ? assembly.size[2]/2 : assembly.kind === 'forklift-envelope' ? -assembly.size[2]/2 : 0,
+      ]}>{loadLabel}</TechnicalSceneLabel>}
+    </group>
+  </group>
 }
 
 export function GoodsLiftAssembly({ model }: { readonly model: GoodsLiftRenderModel }) {
   return <group name="goods-lift-assembly">
-    {model.assemblies.map((assembly) => <GoodsAssemblyPrimitive key={assembly.id} assembly={assembly} />)}
+    {model.assemblies.map((assembly) => <GoodsAssemblyPrimitive key={assembly.id} assembly={assembly}
+      showLabels={model.viewMode === 'platform' || model.viewMode === 'loads'} />)}
   </group>
 }

@@ -45,11 +45,11 @@ function targetForMode(scene: GoodsLiftSceneModel, viewMode: GoodsLiftViewMode, 
 
 const viewDirections: Readonly<Record<GoodsLiftViewMode, CameraVector>> = {
   overview: [1, 0.65, 1],
-  platform: [1, 0.42, 1],
-  doors: [0.08, 0.2, 1],
-  loads: [1, 0.65, 1],
+  platform: [1, 0.8, 1],
+  doors: [0.35, 0.12, 1],
+  loads: [0.6, 1.1, 1],
   guides: [1, 0.35, 1],
-  cutaway: [1, 0.35, 1],
+  cutaway: [0.65, 0.25, 1],
 }
 
 export function getGoodsLiftCameraFrame(scene: GoodsLiftSceneModel, viewMode: GoodsLiftViewMode): CameraFrame {

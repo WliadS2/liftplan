@@ -9,6 +9,7 @@ import {
 } from '../../engineering'
 import type { LiftConfiguration } from '../models/lift-configuration'
 import { LIFT_FAMILIES } from '../types/lift-family'
+import { updateUniformLevelIntervals } from './uniform-level-update'
 
 export const CAR_LIFT_PLANNING_SCHEMA_VERSION = 'car-lift-planning-v1' as const
 export const VEHICLE_LOADING_DIRECTIONS = ['shaft-x', 'shaft-z'] as const
@@ -153,7 +154,7 @@ export function updateCarLiftPlanningConfiguration(
   configuration: CarLiftPlanningConfiguration,
   update: CarLiftPlanningConfigurationUpdate,
 ): CarLiftPlanningConfiguration {
-  return { ...configuration, ...update }
+  return updateUniformLevelIntervals(configuration, update)
 }
 
 export function createCenteredVehiclePosition(headingDegrees = 0): CarLiftVehiclePosition {
