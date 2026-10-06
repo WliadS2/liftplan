@@ -1,16 +1,12 @@
 import { useProjectStore } from '../projects'
 import {
-  loadDevelopmentMechanicalFixture,
-  resetDevelopmentMechanicalFixture,
-  loadDevelopmentGoodsFixture,
+  hasDevelopmentFixture,
+  loadDevelopmentFamilyFixture,
 } from './development-mechanical-session'
 
 /** Development-only controls, loaded from the workspace behind import.meta.env.DEV. */
 export function DevelopmentMechanicalControls() {
   const family = useProjectStore((state) => state.project.liftFamily)
-  const updateConfiguration = useProjectStore(
-    (state) => state.updateConfiguration,
-  )
   const createProject = useProjectStore((state) => state.createProject)
   const loadDevelopmentConfiguration = useProjectStore(
     (state) => state.loadDevelopmentConfiguration,
@@ -21,21 +17,15 @@ export function DevelopmentMechanicalControls() {
       <span>Entwicklungsdaten</span>
       <button
         type="button"
-        onClick={() =>
-          family === 'goods' ? loadDevelopmentGoodsFixture({ loadDevelopmentConfiguration }) : loadDevelopmentMechanicalFixture({
-            updateConfiguration,
-            createProject,
-            loadDevelopmentConfiguration,
-          })
-        }
+        disabled={!hasDevelopmentFixture(family)}
+        title={!hasDevelopmentFixture(family) ? 'Für diesen Aufzugstyp sind noch keine Entwicklungsdaten verfügbar.' : undefined}
+        onClick={() => loadDevelopmentFamilyFixture(family, { loadDevelopmentConfiguration })}
       >
-        {family === 'goods' ? 'Warenaufzug-Demo laden' : 'Demo-Mechanik laden'}
+        Demo laden
       </button>
       <button
         type="button"
-        onClick={() =>
-          resetDevelopmentMechanicalFixture({ updateConfiguration, createProject })
-        }
+        onClick={() => createProject({ liftFamily: family })}
       >
         Demo zurücksetzen
       </button>

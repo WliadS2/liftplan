@@ -18,6 +18,7 @@ vi.mock('../../three/scene/LiftFamilyViewport', () => ({
     if (technicalModel.family === 'car' && technicalModel.normalized?.status === 'empty') {
       return <div>Planungsdaten eingeben, um die 3D-Ansicht zu starten.</div>
     }
+    if (technicalModel.family === 'car') return <div>Autoaufzug 3D</div>
     return <div>3D-Darstellung für diesen Aufzugstyp noch nicht verfügbar.</div>
   },
 }))
@@ -113,14 +114,14 @@ describe('family-specific project workspace forms', () => {
     })
   })
 
-  it('distinguishes missing family planning data from an unavailable detailed 3D renderer', () => {
+  it('dispatches available Auto geometry instead of showing renderer unavailability', () => {
     render(<ProjectWorkspace />)
     selectFamily('car')
     expect(screen.getByText('Planungsdaten eingeben, um die 3D-Ansicht zu starten.')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Plattformbreite (mm)'), { target: { value: '2500' } })
     fireEvent.change(screen.getByLabelText('Plattformtiefe (mm)'), { target: { value: '5500' } })
     fireEvent.change(screen.getByLabelText('Nutzbare Höhe (mm)'), { target: { value: '2400' } })
-    expect(screen.getByText('3D-Darstellung für diesen Aufzugstyp noch nicht verfügbar.')).toBeInTheDocument()
+    expect(screen.getByText('Autoaufzug 3D')).toBeInTheDocument()
   })
 
   it('shows family-specific geometric validation output in German', () => {

@@ -18,6 +18,10 @@ vi.mock('./GoodsLiftViewport', () => ({
   GoodsLiftViewport: ({ normalized }: { readonly normalized: { readonly status: string } }) =>
     <div data-testid="goods-renderer">Warenaufzug-Renderer: {normalized.status}</div>,
 }))
+vi.mock('./CarLiftViewport', () => ({
+  CarLiftViewport: ({ normalized }: { readonly normalized: { readonly status: string } }) =>
+    <div data-testid="car-renderer">Autoaufzug-Renderer: {normalized.status}</div>,
+}))
 
 afterEach(cleanup)
 
@@ -38,11 +42,11 @@ describe('lift-family viewport dispatch', () => {
     expect(screen.queryByTestId('passenger-renderer')).not.toBeInTheDocument()
   })
 
-  it('keeps Autoaufzug explicitly unavailable instead of dispatching goods geometry', () => {
+  it('dispatches Autoaufzug to its own renderer even with incomplete planning data', () => {
     render(<LiftFamilyViewport technicalModel={createLiftFamilyTechnicalModel(
       createCarLiftPlanningConfiguration('Autoaufzug'),
     )} />)
-    expect(screen.getByText('Planungsdaten eingeben, um die 3D-Ansicht zu starten.')).toBeInTheDocument()
+    expect(screen.getByTestId('car-renderer')).toHaveTextContent('Autoaufzug-Renderer: empty')
     expect(screen.queryByTestId('goods-renderer')).not.toBeInTheDocument()
   })
 })

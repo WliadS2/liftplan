@@ -1,6 +1,7 @@
 import type { LiftFamilyTechnicalModel } from '../../lift-families'
 import type { PassengerVisualizationData } from '../../simulation/passenger-simulation-model'
 import { GoodsLiftViewport } from './GoodsLiftViewport'
+import { CarLiftViewport } from './CarLiftViewport'
 import { ThreeConfiguratorViewport } from './ThreeConfiguratorViewport'
 
 export interface LiftFamilyViewportProps {
@@ -28,11 +29,6 @@ export function LiftFamilyViewport({ technicalModel, visualizationData }: LiftFa
     return <GoodsLiftViewport normalized={technicalModel.normalized} sceneModel={technicalModel.scene}
       validation={technicalModel.validation} />
   }
-  if (technicalModel.normalized.status === 'empty') {
-    return <FamilyViewportFallback message="Planungsdaten eingeben, um die 3D-Ansicht zu starten." />
-  }
-  if (technicalModel.validation.status === 'invalid') {
-    return <FamilyViewportFallback message="3D-Darstellung wegen geometrischer Konflikte nicht verfügbar." />
-  }
-  return <FamilyViewportFallback message="3D-Darstellung für diesen Aufzugstyp noch nicht verfügbar." />
+  return <CarLiftViewport normalized={technicalModel.normalized} sceneModel={technicalModel.scene}
+    validation={technicalModel.validation} />
 }

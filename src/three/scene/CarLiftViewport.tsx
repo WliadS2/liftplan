@@ -1,0 +1,61 @@
+import { PerspectiveCamera } from '@react-three/drei'
+import { Canvas } from '@react-three/fiber'
+import { useMemo, useState } from 'react'
+import type { CarLiftNormalizationResult } from '../../elevator/car/car-lift-model'
+import type { CarLiftSceneModel } from '../../elevator/car/car-lift-scene-model'
+import type { CarSpatialValidationResult } from '../../collision/car-lift-spatial-validation'
+import { AutoFitCamera } from '../camera/AutoFitCamera'
+import { getCarLiftCameraFrame, getCarLiftCameraInstallationKey } from '../camera/car-lift-camera'
+import { CarLiftAssembly } from '../geometry/car/CarLiftAssembly'
+import { CAR_LIFT_VIEW_MODE_CATALOG, createCarLiftRenderModel, getCarLiftRenderLegend, type CarLiftViewMode } from '../geometry/car/car-lift-render-model'
+
+export interface CarLiftViewportProps {
+  readonly normalized: CarLiftNormalizationResult
+  readonly sceneModel?: CarLiftSceneModel
+  readonly validation: CarSpatialValidationResult
+  readonly initialViewMode?: CarLiftViewMode
+}
+function Fallback({ children }: { readonly children: string }) {
+  return <div className="viewport-fallback" role="status">{children}</div>
+}
+
+export function CarLiftViewport({ normalized, sceneModel, validation, initialViewMode = 'overview' }: CarLiftViewportProps) {
+  const [viewMode, setViewMode] = useState<CarLiftViewMode>(initialViewMode)
+  const [resetRevision, setResetRevision] = useState(0)
+  const renderModel = useMemo(() => sceneModel ? createCarLiftRenderModel(sceneModel, viewMode) : undefined, [sceneModel, viewMode])
+  const frame = useMemo(() => sceneModel ? getCarLiftCameraFrame(sceneModel, viewMode) : undefined, [sceneModel, viewMode])
+  const installationKey = useMemo(() => sceneModel ? getCarLiftCameraInstallationKey(sceneModel) : 'empty', [sceneModel])
+  const renderable = Boolean(sceneModel?.assemblies.length)
+  return <section className="workspace-panel viewport-panel" aria-labelledby="car-viewport-heading">
+    <div className="viewport-heading-row">
+      <h2 id="car-viewport-heading">3D-Ansicht</h2>
+      {renderable && <div className="viewport-mode-controls" role="group" aria-label="Ansichtsmodus">
+        {CAR_LIFT_VIEW_MODE_CATALOG.map((mode) => <button key={mode.id} type="button"
+          aria-pressed={viewMode === mode.id} onClick={() => setViewMode(mode.id)}>{mode.label}</button>)}
+        <button type="button" onClick={() => setResetRevision((v) => v + 1)}>Ansicht zurücksetzen</button>
+      </div>}
+    </div>
+    {!sceneModel || !sceneModel.assemblies.length ? <Fallback>Planungsdaten eingeben, um die 3D-Ansicht zu starten.</Fallback> : <>
+      <div className="viewport-canvas">
+        <Canvas dpr={[1, 1.5]} gl={{ alpha: false, antialias: true, powerPreference: 'high-performance' }}
+          fallback={<Fallback>3D-Ansicht konnte nicht geladen werden.</Fallback>}>
+          <color attach="background" args={['#eef1f4']} />
+          <PerspectiveCamera makeDefault fov={38} near={0.01} far={100} position={[4, 3, 6]} up={[0, 1, 0]} />
+          <hemisphereLight color="#ffffff" groundColor="#94a3b8" intensity={1.35} />
+          <directionalLight intensity={1.8} position={[5, 8, 6]} />
+          <directionalLight intensity={0.55} position={[-4, 3, -5]} />
+          {renderModel && <CarLiftAssembly model={renderModel} />}
+          {frame && <AutoFitCamera frame={frame} request={{ viewMode, installationKey, doorSelectionKey: '', resetRevision }} />}
+        </Canvas>
+      </div>
+      {!renderModel?.assemblies.length && <p className="viewport-status">Für diesen Ansichtsmodus fehlen Planungsdaten.</p>}
+      {renderModel && <p className="panel-note" aria-label="3D-Legende">{getCarLiftRenderLegend(renderModel).join(' · ')}</p>}
+      {normalized.status === 'partial' && <p className="viewport-status">Teilansicht – weitere Planungsdaten fehlen.</p>}
+      {normalized.status === 'invalid' && <p className="viewport-status" role="alert">Teilansicht – ungültige Planungsdaten werden soweit darstellbar angezeigt.</p>}
+      {validation.status === 'invalid' && normalized.status !== 'invalid' && <p className="viewport-status" role="alert">
+        Die konfigurierte Geometrie enthält Konflikte und wird zur Prüfung weiterhin dargestellt.
+      </p>}
+    </>}
+    <p className="panel-note">Planungsvisualisierung ohne Nachweis technischer oder normativer Konformität.</p>
+  </section>
+}
