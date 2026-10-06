@@ -78,6 +78,10 @@ const goodsMessages: Record<GoodsSpatialIssueCode, string> = {
   'invalid-pit-headroom': 'Grube, Schachtkopf und Installationshöhe sind geometrisch nicht konsistent.',
   'moving-envelope-unavailable': 'Der Bewegungsraum ist noch nicht vollständig bestimmt.',
   'moving-envelope-outside-shaft': 'Der Bewegungsraum überschreitet den angegebenen Schacht.',
+  'guide-system-unavailable': 'Für die geometrische Führungsprüfung fehlen Schienen-, Schacht- oder Ladeflächendaten.',
+  'guide-outside-shaft': 'Die konfigurierten Schienenachsen liegen außerhalb des Schachts.',
+  'guide-inside-moving-envelope': 'Die konfigurierten Schienenachsen liegen innerhalb des Bewegungsraums der Ladefläche.',
+  'load-height-unavailable': 'Die Höhe der Lastenhülle fehlt. Die Höhenpassung ist noch nicht bewertet.',
 }
 
 const carMessages: Record<CarSpatialIssueCode, string> = {

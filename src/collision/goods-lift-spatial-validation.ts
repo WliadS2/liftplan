@@ -1,5 +1,5 @@
 import type { Millimetres } from '../engineering'
-import type { GoodsBoxMm, GoodsLiftNormalizationResult, GoodsLiftNormalizedModel, GoodsPlanRectangleMm } from '../elevator/goods/goods-lift-model'
+import type { GoodsLoadBoxMm, GoodsLiftNormalizationResult, GoodsLiftNormalizedModel, GoodsPlanRectangleMm } from '../elevator/goods/goods-lift-model'
 
 export type GoodsSpatialValidationStatus = 'ok' | 'warning' | 'invalid' | 'unknown'
 export type GoodsSpatialIssueSeverity = 'info' | 'warning' | 'error'
@@ -14,6 +14,8 @@ export type GoodsSpatialIssueCode =
   | 'levels-unavailable' | 'invalid-level-order'
   | 'pit-headroom-unavailable' | 'invalid-pit-headroom'
   | 'moving-envelope-unavailable' | 'moving-envelope-outside-shaft'
+  | 'guide-system-unavailable' | 'guide-outside-shaft' | 'guide-inside-moving-envelope'
+  | 'load-height-unavailable'
 
 export interface GoodsSpatialIssue {
   readonly code: GoodsSpatialIssueCode
@@ -57,15 +59,17 @@ function planMeasurements(container: GoodsPlanRectangleMm, subject: GoodsPlanRec
 }
 
 function loadRule(ruleId: string, unavailable: GoodsSpatialIssueCode, outside: GoodsSpatialIssueCode,
-  id: string, load: GoodsPlanRectangleMm | undefined, model: GoodsLiftNormalizedModel) {
+  id: string, load: GoodsLoadBoxMm | undefined, model: GoodsLiftNormalizedModel) {
   if (!load) return result(ruleId, 'unknown', [issue(unavailable, 'info', [])])
   if (!model.platform) return result(ruleId, 'unknown', [issue('geometry-unavailable', 'info', [id])])
   const measurements = planMeasurements(model.platform, load)
-  const heightFits = !('maxY' in load) || (load as GoodsBoxMm).maxY - (load as GoodsBoxMm).minY <=
+  const heightFits = load.maxY - load.minY <=
     model.platform.maxY - model.platform.minY
-  return contains(model.platform, load) && heightFits
-    ? result(ruleId, 'ok')
-    : result(ruleId, 'invalid', [issue(outside, 'error', [id, 'goods-platform'], measurements)])
+  if (!contains(model.platform, load) || !heightFits) {
+    return result(ruleId, 'invalid', [issue(outside, 'error', [id, 'goods-platform'], measurements)])
+  }
+  return load.heightKnown ? result(ruleId, 'ok')
+    : result(ruleId, 'unknown', [issue('load-height-unavailable', 'info', [id])])
 }
 
 function evaluateModel(model: GoodsLiftNormalizedModel): readonly GoodsSpatialRuleResult[] {
@@ -99,11 +103,29 @@ function evaluateModel(model: GoodsLiftNormalizedModel): readonly GoodsSpatialRu
   if (model.throughCar === undefined || model.frontAccess === undefined || model.rearAccess === undefined) {
     rules.push(result('goods.access.consistency', 'unknown', [issue('access-configuration-unavailable', 'info', [])]))
   } else {
-    const matches = model.throughCar
+    const matches = (model.frontAccess || model.rearAccess) && (model.throughCar
       ? model.frontAccess && model.rearAccess
-      : !(model.frontAccess && model.rearAccess)
+      : !(model.frontAccess && model.rearAccess))
     rules.push(matches ? result('goods.access.consistency', 'ok')
       : result('goods.access.consistency', 'invalid', [issue('access-configuration-mismatch', 'error', ['goods-front', 'goods-rear'])]))
+  }
+  // Rail records describe vertical axes only, not profiles or certified clearances.
+  // An axis strictly inside the moving footprint is a real geometric conflict;
+  // boundary contact remains contact, with no invented clearance requirement.
+  if (!model.guideSystem || !model.shaft || !model.platform) {
+    rules.push(result('goods.guides.geometry', 'unknown', [issue('guide-system-unavailable', 'info', [])]))
+  } else {
+    const axis = model.guideSystem.orientation
+    const coordinates = [-model.guideSystem.spacingMm / 2, model.guideSystem.spacingMm / 2]
+    const min = axis === 'x' ? model.shaft.minX : model.shaft.minZ
+    const max = axis === 'x' ? model.shaft.maxX : model.shaft.maxZ
+    const movingMin = axis === 'x' ? model.platform.minX : model.platform.minZ
+    const movingMax = axis === 'x' ? model.platform.maxX : model.platform.maxZ
+    if (coordinates.some((coordinate) => coordinate < min || coordinate > max)) {
+      rules.push(result('goods.guides.geometry', 'invalid', [issue('guide-outside-shaft', 'error', ['goods-guide-a', 'goods-guide-b', 'goods-shaft'])]))
+    } else if (coordinates.some((coordinate) => coordinate > movingMin && coordinate < movingMax)) {
+      rules.push(result('goods.guides.geometry', 'invalid', [issue('guide-inside-moving-envelope', 'error', ['goods-guide-a', 'goods-guide-b', 'goods-moving-envelope'])]))
+    } else rules.push(result('goods.guides.geometry', 'ok'))
   }
 
   if (!model.levels.length) {

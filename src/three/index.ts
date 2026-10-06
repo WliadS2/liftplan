@@ -38,3 +38,19 @@ export type {
 } from './scene/view-mode'
 export { ThreeConfiguratorViewport } from './scene/ThreeConfiguratorViewport'
 export type { ThreeConfiguratorViewportProps } from './scene/ThreeConfiguratorViewport'
+export { LiftFamilyViewport } from './scene/LiftFamilyViewport'
+export type { LiftFamilyViewportProps } from './scene/LiftFamilyViewport'
+export { GoodsLiftViewport } from './scene/GoodsLiftViewport'
+export type { GoodsLiftViewportProps } from './scene/GoodsLiftViewport'
+export {
+  createGoodsLiftRenderModel,
+  getAvailableGoodsLiftViewModes,
+  GOODS_LIFT_VIEW_MODES,
+  GOODS_LIFT_VIEW_MODE_CATALOG,
+} from './geometry/goods/goods-lift-render-model'
+export type {
+  GoodsLiftRenderModel,
+  GoodsLiftViewMode,
+  GoodsRenderableAssembly,
+} from './geometry/goods/goods-lift-render-model'
+export { getGoodsLiftCameraFrame, getGoodsLiftCameraInstallationKey } from './camera/goods-lift-camera'

@@ -1,8 +1,7 @@
 import { OrbitControls } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useRef, type ElementRef } from 'react'
-import type { PassengerCameraFrame } from './passenger-camera-bounds'
-import { calculateCameraFit, CAMERA_MAX_POLAR_ANGLE, CAMERA_MIN_POLAR_ANGLE } from './camera-fit'
+import { calculateCameraFit, CAMERA_MAX_POLAR_ANGLE, CAMERA_MIN_POLAR_ANGLE, type CameraFrame } from './camera-fit'
 import {
   getCameraFrameTrigger, transitionCameraInteraction,
   type CameraFrameRequest, type CameraInteractionState,
@@ -10,9 +9,11 @@ import {
 import type { PassengerSimulationController } from '../../simulation/passenger-simulation'
 import type { PassengerSimulationInputs } from '../../simulation/passenger-simulation-model'
 import { getPassengerSimulationCameraFrame } from './passenger-simulation-camera-frame'
+import type { ThreeViewMode } from '../scene/view-mode'
+import type { PassengerCameraFrame } from './passenger-camera-bounds'
 
 export interface AutoFitCameraProps {
-  readonly frame: PassengerCameraFrame
+  readonly frame: CameraFrame
   readonly request: Omit<CameraFrameRequest, 'viewportKey'>
   readonly simulation?: PassengerSimulationController
   readonly simulationInputs?: PassengerSimulationInputs
@@ -33,8 +34,9 @@ export function AutoFitCamera({ frame, request, simulation, simulationInputs }: 
     if (!decision.reframe || !controlsRef.current) return
 
     const effectiveFrame = simulation && simulationInputs
-      ? getPassengerSimulationCameraFrame(request.viewMode, frame, simulationInputs, simulation.getPose()) : frame
-    const fit = calculateCameraFit(effectiveFrame.bounds, effectiveFrame.target, size)
+      ? getPassengerSimulationCameraFrame(request.viewMode as ThreeViewMode, frame as PassengerCameraFrame,
+          simulationInputs, simulation.getPose()) : frame
+    const fit = calculateCameraFit(effectiveFrame.bounds, effectiveFrame.target, size, undefined, undefined, effectiveFrame.direction)
     camera.up.set(...fit.up)
     camera.position.set(...fit.position)
     camera.near = fit.near

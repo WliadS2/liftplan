@@ -1,4 +1,5 @@
 import { createPassengerMechanicalFixture } from './fixtures/passenger-mechanical-fixture'
+import { createGoodsLiftQaFixture } from './fixtures/goods-lift-qa-fixture'
 
 export interface DevelopmentMechanicalProjectActions {
   updateConfiguration: (configuration: unknown) => unknown
@@ -27,4 +28,13 @@ export function resetDevelopmentMechanicalFixture(
   actions: DevelopmentMechanicalProjectActions,
 ) {
   actions.createProject()
+}
+
+/** Goods QA data use the same ephemeral persistence boundary as the passenger demo. */
+export function loadDevelopmentGoodsFixture(
+  actions: Required<Pick<DevelopmentMechanicalProjectActions, 'loadDevelopmentConfiguration'>>,
+) {
+  const configuration = createGoodsLiftQaFixture()
+  actions.loadDevelopmentConfiguration(configuration)
+  return configuration
 }

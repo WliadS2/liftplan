@@ -1,10 +1,8 @@
-import type { ThreeViewMode } from '../scene/view-mode'
-
 export type CameraInteractionState = 'auto' | 'user'
 export type CameraFrameTrigger = 'initial' | 'view-mode' | 'installation-bounds' | 'door-selection' | 'viewport' | 'reset' | 'render' | 'user-interaction'
 
 export interface CameraFrameRequest {
-  readonly viewMode: ThreeViewMode
+  readonly viewMode: string
   readonly installationKey: string
   readonly doorSelectionKey: string
   readonly viewportKey: string

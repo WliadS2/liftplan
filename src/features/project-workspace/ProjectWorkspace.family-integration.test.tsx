@@ -7,8 +7,19 @@ import { createLoadedProjectState, createStoredProject, useProjectStore } from '
 import { ProjectWorkspace } from './ProjectWorkspace'
 
 vi.mock('./ProjectPersistenceControls', () => ({ ProjectPersistenceControls: () => null }))
-vi.mock('../../three/scene/ThreeConfiguratorViewport', () => ({
-  ThreeConfiguratorViewport: () => <div>Personenaufzug 3D</div>,
+vi.mock('../../three/scene/LiftFamilyViewport', () => ({
+  LiftFamilyViewport: ({ technicalModel }: { technicalModel: {
+    readonly status: string
+    readonly family: string
+    readonly normalized?: { readonly status: string }
+  } }) => {
+    if (technicalModel.family === 'passenger') return <div>Personenaufzug 3D</div>
+    if (technicalModel.family === 'goods') return <div>Warenaufzug 3D</div>
+    if (technicalModel.family === 'car' && technicalModel.normalized?.status === 'empty') {
+      return <div>Planungsdaten eingeben, um die 3D-Ansicht zu starten.</div>
+    }
+    return <div>3D-Darstellung für diesen Aufzugstyp noch nicht verfügbar.</div>
+  },
 }))
 
 beforeEach(() => {

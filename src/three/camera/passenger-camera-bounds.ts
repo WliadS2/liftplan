@@ -7,8 +7,9 @@ import type { PassengerSafetyModel } from '../geometry/passenger/mechanical/pass
 import type { DoorInspection, PassengerDoorSystemModel } from '../geometry/passenger/doors/passenger-door-model'
 import type { PassengerInstallationModel } from '../geometry/passenger/passenger-installation-model'
 import { metres } from '../../engineering'
+import type { CameraFrame } from './camera-fit'
 
-export interface PassengerCameraFrame {
+export interface PassengerCameraFrame extends CameraFrame {
   readonly bounds: MechanicalBounds
   readonly target: MechanicalBounds['center']
 }

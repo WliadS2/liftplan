@@ -1,4 +1,5 @@
 import { millimetres, type Millimetres } from '../engineering'
+import { layoutGoodsDrawingAnnotations } from './goods-drawing-annotation-layout'
 
 export const TECHNICAL_DRAWING_SCALES = ['auto', '1:20', '1:25', '1:50', '1:100'] as const
 export type TechnicalDrawingScale = (typeof TECHNICAL_DRAWING_SCALES)[number]
@@ -97,6 +98,7 @@ export interface DrawingText extends DrawingPrimitiveBase {
   readonly text: string
   readonly anchor?: 'start' | 'middle' | 'end'
   readonly sizeMm?: Millimetres
+  readonly annotationSide?: 'left' | 'right'
 }
 
 export interface DrawingAnnotationOptions {
@@ -116,6 +118,7 @@ export interface DrawingDimension extends DrawingPrimitiveBase {
   readonly dimensionEnd: DrawingPoint
   readonly labelPosition: DrawingPoint
   readonly textSizeMm?: Millimetres
+  readonly paperOffsetMm?: number
 }
 
 export interface DrawingSectionMarker extends DrawingPrimitiveBase {
@@ -139,6 +142,7 @@ export interface TechnicalDrawingPage {
 }
 
 export interface TechnicalDrawingDocument {
+  readonly annotationLayout?: 'goods-columns'
   readonly id: string
   readonly title: string
   readonly view: TechnicalDrawingView
@@ -385,7 +389,7 @@ export function createTechnicalDrawingPresentation(
       const sourceOffset = horizontal
         ? primitive.dimensionStart.y - primitive.start.y
         : primitive.dimensionStart.x - primitive.start.x
-      const offset = Math.sign(sourceOffset || 1) * dimensionPaperOffset(primitive.semantic)
+      const offset = Math.sign(sourceOffset || 1) * (primitive.paperOffsetMm ?? dimensionPaperOffset(primitive.semantic))
       const dimensionStart = horizontal ? point(start.x, start.y + offset) : point(start.x + offset, start.y)
       const dimensionEnd = horizontal ? point(end.x, end.y + offset) : point(end.x + offset, end.y)
       return { ...primitive, start, end, dimensionStart, dimensionEnd,
@@ -421,15 +425,17 @@ export function createTechnicalDrawingPresentation(
     return primitive
   })
 
-  const geometryBounds = calculateDrawingBounds(transformed, 'geometry')
-  const annotationBounds = calculateDrawingBounds(transformed, 'annotation')
+  const presented = document.annotationLayout === 'goods-columns'
+    ? layoutGoodsDrawingAnnotations(transformed, textSize) : transformed
+  const geometryBounds = calculateDrawingBounds(presented, 'geometry')
+  const annotationBounds = calculateDrawingBounds(presented, 'annotation')
   // Include paper-space strokes and dimension arrowheads without changing model geometry.
-  const completeBounds = expandDrawingBounds(calculateDrawingBounds(transformed), millimetres(0.7))
+  const completeBounds = expandDrawingBounds(calculateDrawingBounds(presented), millimetres(0.7))
   const fits = completeBounds.minX >= contentBounds.minX && completeBounds.maxX <= contentBounds.maxX &&
     completeBounds.minY >= contentBounds.minY && completeBounds.maxY <= contentBounds.maxY
 
   return {
-    mode: 'fixed-page', primitives: transformed,
+    mode: 'fixed-page', primitives: presented,
     geometryBounds, annotationBounds, completeBounds, fit: fits ? 'fits' : 'does-not-fit',
     viewBounds: { minX: millimetres(0), minY: millimetres(0), maxX: millimetres(pageWidth), maxY: millimetres(pageHeight) },
     page: { format: 'A4', orientation: portrait ? 'portrait' : 'landscape', widthMm: millimetres(pageWidth),

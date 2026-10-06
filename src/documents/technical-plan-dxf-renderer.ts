@@ -113,10 +113,13 @@ function primitiveKey(primitive: TechnicalDrawingPrimitive): string {
 /** Assigns semantic CAD layers without changing or recreating drawing geometry. */
 export function technicalDxfLayerForPrimitive(primitive: TechnicalDrawingPrimitive): TechnicalDxfLayer {
   if (primitive.kind === 'dimension' || primitive.role === 'dimension') return 'DIMENSIONS'
+  const key = primitiveKey(primitive)
+  // Envelope line patterns express visual hierarchy, not centerline ownership.
+  if (primitive.layer === 'geometry' && ['goods-pallet', 'goods-roll-container', 'goods-forklift-envelope']
+    .some((id) => key.includes(id))) return 'LOADS'
   if (primitive.kind === 'centerline' || primitive.role === 'centerline' || primitive.role === 'level') return 'CENTERLINES'
   if (primitive.layer === 'annotation') return 'ANNOTATIONS'
 
-  const key = primitiveKey(primitive)
   if (key.includes('buffer')) return 'BUFFERS'
   if (key.includes('car-entry-approach') || key.includes('car-exit-approach') || key.includes('car-vehicle-sweep') ||
     key.includes('car-door-passage-envelope')) return 'APPROACH'
@@ -126,7 +129,7 @@ export function technicalDxfLayerForPrimitive(primitive: TechnicalDrawingPrimiti
   if (key.includes('door') || key.includes('entrance') || key.includes('landing-') || key.includes('cabin-front') ||
     key.includes('cabin-rear') || key.includes('panel') || key.includes('jamb') || key.includes('sill') ||
     key.includes('operator') || key.includes('hanger')) return 'DOORS'
-  if (key.includes('rail') || key.includes('shoe')) return 'GUIDE_RAILS'
+  if (key.includes('rail') || key.includes('shoe') || key.includes('goods-guide')) return 'GUIDE_RAILS'
   if (key.includes('counterweight')) return 'COUNTERWEIGHT'
   if (key.includes('car-frame') || key.includes('car-upright') || key.includes('car-crosshead') ||
     key.includes('car-lower') || key.includes('car-platform')) return 'CAR_FRAME'

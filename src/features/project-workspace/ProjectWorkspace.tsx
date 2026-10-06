@@ -30,12 +30,12 @@ import { ProjectPersistenceControls } from './ProjectPersistenceControls'
 import './ProjectWorkspace.css'
 
 const liftTypes = getLiftTypeDefinitions()
-const ThreeConfiguratorViewport = lazy(async () => {
+const LiftFamilyViewport = lazy(async () => {
   const module = await import(
-    '../../three/scene/ThreeConfiguratorViewport'
+    '../../three/scene/LiftFamilyViewport'
   )
 
-  return { default: module.ThreeConfiguratorViewport }
+  return { default: module.LiftFamilyViewport }
 })
 
 const DevelopmentMechanicalControls = import.meta.env.DEV
@@ -141,18 +141,6 @@ export function ProjectWorkspace() {
     'family' in configurationDraft && configurationDraft.family === LIFT_FAMILIES.car
     ? configurationDraft as CarLiftPlanningConfiguration
     : isCarLift ? project.configuration : undefined
-
-  const family3dMessage = isPassengerLift ? undefined
-    : !isGoodsLift && !isCarLift
-      ? '3D-Darstellung für diesen Aufzugstyp noch nicht verfügbar.'
-      : validation.status === 'invalid'
-      ? 'Eingaben prüfen, bevor die technische Darstellung aktualisiert werden kann.'
-      : technicalFamilyModel.status !== 'available' || !('normalized' in technicalFamilyModel) ||
-          technicalFamilyModel.normalized.status === 'empty'
-        ? 'Planungsdaten eingeben, um die 3D-Ansicht zu starten.'
-        : technicalFamilyModel.validation.status === 'invalid'
-          ? '3D-Darstellung wegen geometrischer Konflikte nicht verfügbar.'
-          : '3D-Darstellung für diesen Aufzugstyp noch nicht verfügbar.'
 
   const updatePassengerConfiguration = (
     update: Parameters<typeof updatePassengerPlanningConfiguration>[1],
@@ -542,19 +530,11 @@ export function ProjectWorkspace() {
             </button>
           </div>
           <div className="central-content" style={{ display: activeTab === '3d' ? 'flex' : 'none' }}>
-            {isPassengerLift ? (
-              <ThreeSceneErrorBoundary>
-                <Suspense
-                  fallback={
-                    <div className="viewport-fallback">3D-Ansicht wird geladen.</div>
-                  }
-                >
-                  <ThreeConfiguratorViewport geometryInput={geometryInput} />
-                </Suspense>
-              </ThreeSceneErrorBoundary>
-            ) : (
-              <div className="viewport-fallback" role="status">{family3dMessage}</div>
-            )}
+            <ThreeSceneErrorBoundary>
+              <Suspense fallback={<div className="viewport-fallback">3D-Ansicht wird geladen.</div>}>
+                <LiftFamilyViewport technicalModel={technicalFamilyModel} />
+              </Suspense>
+            </ThreeSceneErrorBoundary>
           </div>
           <div className="central-content" style={{ display: activeTab === 'plans' ? 'flex' : 'none' }}>
              <PlansWorkspace context={drawingContext} project={project} />

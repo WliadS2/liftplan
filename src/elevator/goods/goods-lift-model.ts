@@ -24,6 +24,10 @@ export interface GoodsBoxMm extends GoodsPlanRectangleMm {
   readonly maxY: Millimetres
 }
 
+export interface GoodsLoadBoxMm extends GoodsBoxMm {
+  readonly heightKnown: boolean
+}
+
 export interface GoodsLevelModel {
   readonly id: string
   readonly index: number
@@ -46,9 +50,9 @@ export interface GoodsLiftNormalizedModel {
   readonly movingEnvelope?: GoodsBoxMm
   readonly entrances: readonly GoodsEntranceModel[]
   readonly levels: readonly GoodsLevelModel[]
-  readonly pallet?: GoodsBoxMm
-  readonly rollContainer?: GoodsBoxMm
-  readonly forkliftEnvelope?: GoodsBoxMm
+  readonly pallet?: GoodsLoadBoxMm
+  readonly rollContainer?: GoodsLoadBoxMm
+  readonly forkliftEnvelope?: GoodsLoadBoxMm
   readonly guideSystem?: {
     readonly orientation: 'x' | 'z'
     readonly spacingMm: Millimetres
@@ -74,13 +78,14 @@ function centeredRectangle(widthMm: Millimetres, depthMm: Millimetres): GoodsPla
   }
 }
 
-function centeredLoadBox(envelope: GoodsLoadEnvelope | undefined): GoodsBoxMm | undefined {
+function centeredLoadBox(envelope: GoodsLoadEnvelope | undefined, floorMm: Millimetres): GoodsLoadBoxMm | undefined {
   if (!positive(envelope?.widthMm) || !positive(envelope?.depthMm)) return undefined
   const plan = centeredRectangle(envelope!.widthMm!, envelope!.depthMm!)
   return {
     ...plan,
-    minY: millimetres(0),
-    maxY: millimetres(positive(envelope?.heightMm) ? envelope!.heightMm! : 0),
+    minY: floorMm,
+    maxY: millimetres(floorMm + (positive(envelope?.heightMm) ? envelope!.heightMm! : 0)),
+    heightKnown: positive(envelope?.heightMm),
   }
 }
 
@@ -147,6 +152,13 @@ export function createGoodsLiftNormalizedModel(
   const levelResult = normalizeLevels(configuration)
   missing.push(...levelResult.missing)
   invalid.push(...levelResult.invalid)
+  for (const field of ['pallet', 'rollContainer', 'forkliftEnvelope'] as const) {
+    const envelope = configuration[field]
+    if (envelope && Object.values(envelope).some((value) => value !== undefined && !positive(value))) invalid.push(field)
+  }
+  if (configuration.guideSystem?.spacingMm !== undefined && !positive(configuration.guideSystem.spacingMm)) {
+    invalid.push('guideSystem')
+  }
 
   const platformPlan = positive(configuration.platformWidthMm) && positive(configuration.platformDepthMm)
     ? centeredRectangle(configuration.platformWidthMm!, configuration.platformDepthMm!) : undefined
@@ -188,9 +200,9 @@ export function createGoodsLiftNormalizedModel(
     movingEnvelope,
     entrances,
     levels: levelResult.levels,
-    pallet: centeredLoadBox(configuration.pallet),
-    rollContainer: centeredLoadBox(configuration.rollContainer),
-    forkliftEnvelope: centeredLoadBox(configuration.forkliftEnvelope),
+    pallet: centeredLoadBox(configuration.pallet, platform?.minY ?? millimetres(0)),
+    rollContainer: centeredLoadBox(configuration.rollContainer, platform?.minY ?? millimetres(0)),
+    forkliftEnvelope: centeredLoadBox(configuration.forkliftEnvelope, platform?.minY ?? millimetres(0)),
     guideSystem: configuration.guideSystem?.orientation && positive(configuration.guideSystem.spacingMm)
       ? { orientation: configuration.guideSystem.orientation, spacingMm: configuration.guideSystem.spacingMm! }
       : undefined,

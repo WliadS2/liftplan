@@ -1,6 +1,17 @@
-import type { MechanicalBounds, MechanicalPoint } from '../geometry/passenger/mechanical/passenger-mechanical-layout'
-
 export type CameraVector = readonly [number, number, number]
+export interface CameraBounds {
+  readonly min: CameraVector
+  readonly max: CameraVector
+  readonly center: CameraVector
+  readonly width: number
+  readonly height: number
+  readonly depth: number
+}
+export interface CameraFrame {
+  readonly bounds: CameraBounds
+  readonly target: CameraVector
+  readonly direction?: CameraVector
+}
 export interface CameraViewport { readonly width: number; readonly height: number }
 export interface CameraFit {
   readonly target: CameraVector
@@ -27,13 +38,13 @@ function normalize(vector: CameraVector): CameraVector {
   return length > 0 ? [vector[0] / length, vector[1] / length, vector[2] / length] : [0, 0, 1]
 }
 
-function corners(bounds: MechanicalBounds): CameraVector[] {
+function corners(bounds: CameraBounds): CameraVector[] {
   return [bounds.min[0], bounds.max[0]].flatMap((x) => [bounds.min[1], bounds.max[1]].flatMap((y) =>
     [bounds.min[2], bounds.max[2]].map((z): CameraVector => [x, y, z])))
 }
 
 /** Perspective fit for an arbitrary semantic target and a canonical, roll-free technical view direction. */
-export function calculateCameraFit(bounds: MechanicalBounds, target: MechanicalPoint, viewport: CameraViewport,
+export function calculateCameraFit(bounds: CameraBounds, target: CameraVector, viewport: CameraViewport,
   fovDegrees = CAMERA_VERTICAL_FOV_DEGREES, padding = 1.15, direction: CameraVector = CAMERA_DEFAULT_DIRECTION): CameraFit {
   const offsetDirection = normalize(direction)
   const forward = normalize([-offsetDirection[0], -offsetDirection[1], -offsetDirection[2]])
