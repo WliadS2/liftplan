@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { getLiftTypeDefinitions } from '../../elevator'
 import {
   PROJECT_SAVE_STATUS_LABELS,
   ProjectAutosaveController,
@@ -42,11 +43,21 @@ export function ProjectPersistenceControls() {
   const setProjectVersion = useProjectStore((state) => state.setProjectVersion)
   const [projects, setProjects] = useState<readonly StoredLiftPlanProject[]>([])
   const [versions, setVersions] = useState<readonly StoredLiftPlanProjectVersion[]>([])
-  const [selectedProjectId, setSelectedProjectId] = useState(project.id)
+  
   const [versionNote, setVersionNote] = useState('')
+  const [renameInput, setRenameInput] = useState('')
   const [status, setStatus] = useState<ProjectSaveStatus>('saved')
   const [message, setMessage] = useState<string>()
   const importRef = useRef<HTMLInputElement>(null)
+  
+  const openDialogRef = useRef<HTMLDialogElement>(null)
+  const renameDialogRef = useRef<HTMLDialogElement>(null)
+  const deleteDialogRef = useRef<HTMLDialogElement>(null)
+
+  const liftTypes = useMemo(() => getLiftTypeDefinitions(), [])
+  const getLiftFamilyName = useCallback((id: string) => {
+    return liftTypes.find((t) => t.id === id)?.displayName || id
+  }, [liftTypes])
 
   const refreshProjects = useCallback(async () => {
     setProjects(await repository.listProjects())
@@ -94,7 +105,6 @@ export function ProjectPersistenceControls() {
     autosave.cancel()
     const loaded = createLoadedProjectState(record)
     loadProject(loaded.project, loaded.configurationDraft)
-    setSelectedProjectId(record.id)
     setMessage(undefined)
   }
 
@@ -102,20 +112,21 @@ export function ProjectPersistenceControls() {
 
   const handleCreate = () => {
     createProject()
-    setSelectedProjectId(useProjectStore.getState().project.id)
     setMessage(undefined)
   }
 
-  const handleOpen = async () => {
-    const effectiveProjectId = projects.some((entry) => entry.id === selectedProjectId)
-      ? selectedProjectId
-      : project.id
-    const record = await repository.getProject(effectiveProjectId)
+  const handleOpenClick = () => {
+    openDialogRef.current?.showModal()
+  }
+
+  const confirmOpen = async (id: string) => {
+    const record = await repository.getProject(id)
     if (!record) {
       setMessage('Das ausgewählte Projekt wurde nicht gefunden.')
       return
     }
     loadRecord(record)
+    openDialogRef.current?.close()
   }
 
   const handleDuplicate = async () => {
@@ -131,27 +142,37 @@ export function ProjectPersistenceControls() {
     await refreshProjects()
   }
 
-  const handleRename = async () => {
+  const handleRenameClick = () => {
     if (persistenceMode !== 'project') return
-    const name = window.prompt('Neuer Projektname', project.name)?.trim()
+    setRenameInput(project.name)
+    renameDialogRef.current?.showModal()
+  }
+
+  const confirmRename = async () => {
+    const name = renameInput.trim()
     if (!name) return
     const renamed = renameStoredProject(currentRecord(), name, new Date().toISOString())
     await repository.saveProject(renamed)
     setProjectName(name)
     await refreshProjects()
+    renameDialogRef.current?.close()
   }
 
-  const handleDelete = async () => {
+  const handleDeleteClick = () => {
     if (persistenceMode !== 'project') return
-    if (!window.confirm(`Projekt „${project.name}“ wirklich löschen?`)) return
+    deleteDialogRef.current?.showModal()
+  }
+
+  const confirmDelete = async () => {
     autosave.cancel()
     await repository.deleteProject(project.id)
     createProject()
-    setSelectedProjectId(useProjectStore.getState().project.id)
     await refreshProjects()
+    deleteDialogRef.current?.close()
   }
 
-  const handleVersionSave = async () => {
+  const handleVersionSave = async (e: React.FormEvent) => {
+    e.preventDefault()
     if (persistenceMode !== 'project') return
     const result = await saveProjectVersion(
       repository,
@@ -181,12 +202,13 @@ export function ProjectPersistenceControls() {
     const history = await repository.listVersions(project.id)
     const content = serializeLiftPlanProjectFile(currentRecord(), new Date().toISOString(), history)
     downloadProjectFile(content, `LiftPlan_${safeFilename(project.name)}.liftplan.json`)
+    setMessage('Projektdatei wurde erfolgreich exportiert.')
   }
 
   const handleImport = async (file: File) => {
     const parsed = parseLiftPlanProjectFile(await file.text())
     if (!parsed.ok) {
-      setMessage(`${parsed.error.message}${parsed.error.paths.length ? ` (${parsed.error.paths.join(', ')})` : ''}`)
+      setMessage(`Import fehlgeschlagen: ${parsed.error.message}${parsed.error.paths.length ? ` (${parsed.error.paths.join(', ')})` : ''}`)
       return
     }
     const history = parsed.value.versions ?? []
@@ -194,7 +216,7 @@ export function ProjectPersistenceControls() {
     loadRecord(parsed.value.project)
     await refreshProjects()
     await refreshVersions(parsed.value.project.id)
-    setMessage('Projektdatei wurde importiert.')
+    setMessage('Projektdatei wurde erfolgreich importiert.')
   }
 
   const disabled = persistenceMode !== 'project'
@@ -206,18 +228,11 @@ export function ProjectPersistenceControls() {
         <button type="button" className="primary-action" disabled={disabled} onClick={() => void autosave.saveNow(currentRecord())}>
           Projekt speichern
         </button>
-        <select
-          aria-label="Gespeichertes Projekt"
-          value={selectedProjectId}
-          onChange={(event) => setSelectedProjectId(event.target.value)}
-        >
-          {!projects.some((entry) => entry.id === selectedProjectId) && <option value={selectedProjectId}>{project.name}</option>}
-          {projects.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
-        </select>
-        <button type="button" onClick={() => void handleOpen()}>Projekt öffnen</button>
+        <span className="toolbar-divider" />
+        <button type="button" onClick={handleOpenClick}>Projekt öffnen…</button>
         <button type="button" disabled={disabled} onClick={() => void handleDuplicate()}>Projekt duplizieren</button>
-        <button type="button" disabled={disabled} onClick={() => void handleRename()}>Projekt umbenennen</button>
-        <button type="button" disabled={disabled} onClick={() => void handleDelete()}>Projekt löschen</button>
+        <button type="button" disabled={disabled} onClick={handleRenameClick}>Projekt umbenennen…</button>
+        <button type="button" disabled={disabled} onClick={handleDeleteClick}>Projekt löschen…</button>
       </div>
       <div className="project-persistence-actions secondary-project-actions">
         <button type="button" disabled={disabled} onClick={() => void handleExport()}>Projektdatei exportieren</button>
@@ -237,7 +252,7 @@ export function ProjectPersistenceControls() {
       </div>
       <details className="project-versions">
         <summary>Versionsverlauf ({versions.length})</summary>
-        <div className="version-save-row">
+        <form className="version-save-form" onSubmit={(e) => void handleVersionSave(e)}>
           <input
             aria-label="Versionsnotiz"
             maxLength={240}
@@ -245,22 +260,79 @@ export function ProjectPersistenceControls() {
             value={versionNote}
             onChange={(event) => setVersionNote(event.target.value)}
           />
-          <button type="button" disabled={disabled} onClick={() => void handleVersionSave()}>Version speichern</button>
-        </div>
-        {versions.length === 0 ? <p>Keine gespeicherten Versionen.</p> : (
-          <ul>
+          <button type="submit" disabled={disabled}>Version speichern</button>
+        </form>
+        {versions.length === 0 ? <p className="versions-empty">Keine gespeicherten Versionen.</p> : (
+          <div className="version-history-list">
             {versions.map((version) => (
-              <li key={version.version}>
-                <span>Version {version.version} · {new Date(version.createdAt).toLocaleString('de-CH')}{version.note ? ` · ${version.note}` : ''}</span>
-                <button type="button" onClick={() => void handleRestore(version)}>Wiederherstellen</button>
-              </li>
+              <div key={version.version} className="version-item">
+                <div className="version-info">
+                  <strong>v{version.version}</strong>
+                  <span className="version-date">{new Date(version.createdAt).toLocaleString('de-CH', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                  {version.note && <span className="version-note">{version.note}</span>}
+                </div>
+                <button type="button" className="restore-action" onClick={() => void handleRestore(version)}>Wiederherstellen</button>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </details>
-      {(message || disabled) && <p className="project-persistence-message" role="status">
+      {(message || disabled) && <p className={`project-persistence-message ${message?.includes('fehlgeschlagen') ? 'error' : 'success'}`} role="status">
         {disabled ? 'Entwicklungsdemo wird nicht gespeichert.' : message}
       </p>}
+
+      {/* Dialogs */}
+      <dialog ref={openDialogRef} className="liftplan-dialog open-project-dialog">
+        <div className="dialog-content">
+          <div className="dialog-header">
+            <h3 className="dialog-title">Projekt öffnen</h3>
+            <button type="button" aria-label="Schließen" className="close-button" onClick={() => openDialogRef.current?.close()}>&times;</button>
+          </div>
+          {projects.length === 0 ? (
+            <p className="dialog-empty">Keine gespeicherten Projekte vorhanden.</p>
+          ) : (
+            <ul className="project-list">
+              {projects.map((entry) => (
+                <li key={entry.id} className={`project-list-item ${entry.id === project.id ? 'active' : ''}`}>
+                  <button type="button" onClick={() => void confirmOpen(entry.id)}>
+                    <span className="project-name">{entry.name}</span>
+                    <span className="project-meta">
+                      {getLiftFamilyName(entry.liftFamily)} · {new Date(entry.updatedAt).toLocaleString('de-CH', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </dialog>
+
+      <dialog ref={renameDialogRef} className="liftplan-dialog" onClose={() => setRenameInput('')}>
+        <form method="dialog" onSubmit={(e) => { e.preventDefault(); void confirmRename(); }}>
+          <div className="dialog-content">
+            <h3 className="dialog-title">Projekt umbenennen</h3>
+            <label className="field">
+              <span>Neuer Projektname</span>
+              <input autoFocus value={renameInput} onChange={(e) => setRenameInput(e.target.value)} />
+            </label>
+            <div className="dialog-actions">
+              <button type="button" onClick={() => renameDialogRef.current?.close()}>Abbrechen</button>
+              <button type="submit" className="primary-action">Umbenennen</button>
+            </div>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog ref={deleteDialogRef} className="liftplan-dialog">
+        <div className="dialog-content">
+          <h3 className="dialog-title">Projekt löschen</h3>
+          <p>Möchten Sie das Projekt „{project.name}“ wirklich unwiderruflich löschen?</p>
+          <div className="dialog-actions">
+            <button type="button" onClick={() => deleteDialogRef.current?.close()}>Abbrechen</button>
+            <button type="button" className="danger-action" onClick={() => void confirmDelete()}>Löschen</button>
+          </div>
+        </div>
+      </dialog>
     </section>
   )
 }
