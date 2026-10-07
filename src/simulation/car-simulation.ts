@@ -25,17 +25,21 @@ export function createCarSimulationModel(normalized: CarLiftNormalizationResult,
   const guidePenetration = m.guideSystem && [m.platform, ...carried ? [carried] : []].some((footprint) => [-m.guideSystem!.spacingMm/2, m.guideSystem!.spacingMm/2].some((axis) =>
     m.guideSystem!.orientation === 'x' ? axis > footprint.minX && axis < footprint.maxX && footprint.minZ < 0 && footprint.maxZ > 0
       : axis > footprint.minZ && axis < footprint.maxZ && footprint.minX < 0 && footprint.maxX > 0))
-  if (conflicts.length || outside || guidePenetration) return { status: 'invalid', issues: [{ code: 'geometric-conflict',
-    path: conflicts[0]?.code ?? (outside ? 'vehicle.shaft-sweep' : 'guide.moving-assembly') }] }
+  const mechanicalConflict = validation.results.find((r)=>r.ruleId === 'car.carrier.explicit-components' && r.status === 'invalid')
+  if (conflicts.length || outside || guidePenetration || mechanicalConflict) return { status: 'invalid', issues: [{ code: 'geometric-conflict',
+    path: conflicts[0]?.code ?? mechanicalConflict?.ruleId ?? (outside ? 'vehicle.shaft-sweep' : 'guide.moving-assembly') }] }
+  const door = (side: 'front' | 'rear') => m.entrances.some((entrance)=>entrance.side === side &&
+    entrance.clearWidthMm <= m.platform!.maxX-m.platform!.minX &&
+    entrance.clearHeightMm <= m.platform!.maxY-m.platform!.minY)
   return { status: 'available', availability: 'partial', model: {
     family: 'car', levels: m.levels, referenceFloorMm: m.platform.minY,
     nominalSpeedMetresPerSecond: m.nominalSpeedMetresPerSecond, timing: PLATFORM_VISUALIZATION_TIMING,
     capabilities: {
       platformMovement: { available: true, path: 'platform.levels' },
       loadEnvelopeMovement: { available: !!carried, path: 'vehicle' },
-      frontDoorMovement: { available: false, path: 'doors.animation' },
-      rearDoorMovement: { available: false, path: 'doors.animation' },
-      landingDoorMovement: { available: false, path: 'doors.animation' },
+      frontDoorMovement: { available: door('front'), path: 'entrances.front' },
+      rearDoorMovement: { available: door('rear'), path: 'entrances.rear' },
+      landingDoorMovement: { available: door('front') || door('rear'), path: 'entrances.levels' },
     }, unavailableBehaviors: ['driveSimulation', 'counterweightSimulation', 'ropeSimulation', 'safetyGearSimulation'],
   } }
 }

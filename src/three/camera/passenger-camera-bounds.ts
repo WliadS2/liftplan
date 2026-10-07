@@ -55,7 +55,11 @@ export function getPassengerCameraFrame(mode: ThreeViewMode, installation: Passe
   const subsystemBounds = getPassengerCameraBounds(mode, components, drive, safety, doors, inspection)
   const completeBounds = combine([installationBounds(installation), components.bounds, drive.bounds, safety?.bounds, doors?.bounds])
   const cabin = installation.cabin
-  if (cabin && (mode === 'overview' || mode === 'mechanical' || mode === 'cutaway')) {
+  if (mode === 'overview' || mode === 'cutaway') {
+    return {bounds:completeBounds,target:completeBounds.center,
+      direction:mode === 'cutaway' ? [0.65,0.25,1] : undefined}
+  }
+  if (cabin && mode === 'mechanical') {
     const cabinBounds = createMechanicalBounds([
       [metres(-cabin.width/2), cabin.bottomY, metres(-cabin.depth/2)],
       [metres(cabin.width/2), metres(cabin.bottomY + cabin.height), metres(cabin.depth/2)],
@@ -63,21 +67,11 @@ export function getPassengerCameraFrame(mode: ThreeViewMode, installation: Passe
     const carBounds = combine([cabinBounds, components.carSling?.bounds,
       ...components.carGuideShoes.flatMap((shoe) => shoe.boxes.map(componentBoxBounds)),
       ...doors?.cabin.map((door) => door.bounds) ?? [], safety?.linkage?.bounds])
-    const semantic = getSemanticMovingFrame(carBounds, undefined, mode === 'overview' ? completeBounds : undefined)
+    const semantic = getSemanticMovingFrame(carBounds)
     return { ...semantic, bounds: createMechanicalBounds([
       semantic.bounds.min.map(metres) as unknown as MechanicalBounds['min'],
       semantic.bounds.max.map(metres) as unknown as MechanicalBounds['max'],
     ]), target: carBounds.center }
-  }
-  if (mode === 'overview') {
-    const region = installation.vertical.travelRegion
-    const targetY = region ? (region.bottomY + region.topY) / 2 : installation.cabin?.centerY ?? installation.bounds.centerY
-    return { bounds: completeBounds, target: [metres(0), metres(targetY), metres(0)] }
-  }
-  if (mode === 'cutaway') {
-    const cutawayBounds = combine([components.carSling?.bounds, components.counterweightFrame?.bounds,
-      safety?.linkage?.bounds, ...doors?.cabin.map((entry) => entry.bounds) ?? []])
-    return { bounds: cutawayBounds, target: [metres(0), installation.cabin?.centerY ?? cutawayBounds.centerY, metres(0)] }
   }
   if (mode === 'drive') {
     const driveFocus = [drive.machine?.bounds, ...drive.sheaves.filter((item) => item.role === 'traction' || item.role === 'deflection').map((item) => item.bounds),
@@ -92,7 +86,11 @@ export function getPassengerCameraFrame(mode: ThreeViewMode, installation: Passe
     return { bounds: subsystemBounds, target: averageCenters(safetyFocus, subsystemBounds.center) }
   }
   if (mode === 'doors') {
-    return { bounds: subsystemBounds, target: inspection?.landing?.bounds.center ?? inspection?.cabin?.bounds.center ?? subsystemBounds.center }
+    const cabinDoor=inspection?.cabin,landing=inspection?.landing
+    const offset=inspection?.level && cabinDoor ? inspection.level.elevationY-cabinDoor.origin[1] : 0
+    const alignedCabin=cabinDoor ? createMechanicalBounds([cabinDoor.bounds.min,cabinDoor.bounds.max].map(p=>
+      [p[0],metres(p[1]+offset),p[2]])) : undefined
+    return { bounds:combine([subsystemBounds,alignedCabin]), target:landing?.bounds.center ?? alignedCabin?.center ?? subsystemBounds.center }
   }
   const mechanicalFocus = [components.carSling?.bounds, components.counterweightFrame?.bounds, safety?.linkage?.bounds]
   return { bounds: subsystemBounds, target: averageCenters(mechanicalFocus, subsystemBounds.center) }
@@ -100,8 +98,6 @@ export function getPassengerCameraFrame(mode: ThreeViewMode, installation: Passe
 
 export function getPassengerCameraInstallationKey(model: PassengerInstallationModel, components: PassengerMechanicalComponentModel,
   drive: TractionDriveModel, safety?: PassengerSafetyModel, doors?: PassengerDoorSystemModel): string {
-  const vertical = model.vertical
-  return [model.shaft?.width, model.shaft?.depth, vertical.pitBottomY, vertical.shaftTopY,
-    vertical.cabinElevationY, vertical.landingElevations.join(','), !!components.carSling, !!components.counterweightFrame,
-    !!drive.machine, !!drive.suspension, !!safety?.governor, !!safety?.tension, !!doors?.bounds].join(':')
+  // Numeric geometry, not subsystem-presence booleans: dimension edits must reframe details too.
+  return JSON.stringify([model.bounds,model.cabin,model.vertical,components.bounds,drive.bounds,safety?.bounds,doors?.bounds])
 }

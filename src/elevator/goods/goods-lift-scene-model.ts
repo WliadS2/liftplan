@@ -6,9 +6,11 @@ export interface GoodsSceneBox {
   readonly kind: 'shaft' | 'pit' | 'headroom' | 'level' |
     'platform' | 'platform-floor' | 'platform-roof' | 'platform-wall' |
     'door' | 'landing-door' | 'guide' | 'moving-envelope' |
+    'carrier-frame' | 'floor-structure' | 'guide-shoe' | 'buffer' |
     'pallet' | 'roll-container' | 'forklift-envelope'
   readonly center: readonly [Metres, Metres, Metres]
   readonly size: readonly [Metres, Metres, Metres]
+  readonly componentSource?: import('../configuration/carrier-mechanical-planning').CarrierComponentSource
   readonly doorAttachment?:
     | { readonly role: 'platform'; readonly side: 'front' | 'rear' }
     | { readonly role: 'landing'; readonly side: 'front' | 'rear'; readonly levelId: string }
@@ -125,7 +127,7 @@ export function createGoodsLiftSceneModel(model: GoodsLiftNormalizedModel): Good
   if (model.rollContainer) assemblies.push(box('goods-roll-container', 'roll-container', model.rollContainer))
   if (model.forkliftEnvelope) assemblies.push(box('goods-forklift-envelope', 'forklift-envelope', model.forkliftEnvelope))
   if (model.movingEnvelope) assemblies.push(box('goods-moving-envelope', 'moving-envelope', model.movingEnvelope))
-  if (model.guideSystem && model.shaft) {
+  if (model.guideSystem && model.shaft && !model.mechanical?.parts.some((part)=>part.kind === 'guide')) {
     const halfSpacing = model.guideSystem.spacingMm / 2
     const height = millimetres(model.shaft.maxY - model.shaft.minY)
     const centerY = millimetres((model.shaft.minY + model.shaft.maxY) / 2)
@@ -165,6 +167,10 @@ export function createGoodsLiftSceneModel(model: GoodsLiftNormalizedModel): Good
         })
       }
     })
+  }
+  for (const part of model.mechanical?.parts ?? []) {
+    const id = part.id === 'rail-0' ? 'goods-guide-a' : part.id === 'rail-1' ? 'goods-guide-b' : `goods-${part.id}`
+    assemblies.push({ ...box(id,part.kind,part.bounds), componentSource: part.source })
   }
   return { family: 'goods', assemblies }
 }

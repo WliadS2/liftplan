@@ -1,5 +1,6 @@
 import { createCarLiftPlanningConfiguration, createCenteredVehiclePosition, type CarLiftPlanningConfiguration } from '../../elevator'
 import { kilograms, metresPerSecond, millimetres as mm } from '../../engineering'
+import { createCarrierMechanicalDemo } from './carrier-mechanical-demo'
 
 /** Development planning data only: no manufacturer, certified or regulatory provenance. */
 export function createCarLiftQaFixture(): CarLiftPlanningConfiguration {
@@ -13,6 +14,7 @@ export function createCarLiftQaFixture(): CarLiftPlanningConfiguration {
     doorClearWidthMm: mm(2600), doorClearHeightMm: mm(2300),
     frontAccess: true, rearAccess: true, throughCar: true,
     guideSystem: { orientation: 'x', spacingMm: mm(3000) },
+    mechanical: createCarrierMechanicalDemo('car'),
     vehicle: { widthMm: mm(1800), lengthMm: mm(4500), heightMm: mm(1600), massKg: kilograms(1800),
       frontOverhangMm: mm(900), rearOverhangMm: mm(900), wheelbaseMm: mm(2700), trackWidthMm: mm(1500) },
     vehiclePosition: createCenteredVehiclePosition(),

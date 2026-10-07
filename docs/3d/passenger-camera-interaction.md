@@ -4,7 +4,7 @@
 
 Camera state is local to the Three.js viewport; it is not project/domain state and is not stored in Zustand. `AutoFitCamera` owns one OrbitControls instance and records whether the latest action belongs to automatic framing or the user. Starting orbit, pan or zoom transfers ownership to the user. Ordinary React renders then do not alter camera position, target, zoom or orientation.
 
-Automatic framing is requested only for initial scene availability, view-mode changes, normalized installation-bound changes, selected door changes, viewport-size changes and the explicit reset button. Stop/storey/pit/headroom/current-level changes are represented by the installation key. Subsystem availability is also part of that key so loading or clearing explicit mechanical demo data gets one appropriate frame. Small component detail changes are deliberately absent.
+Automatic framing is requested only for initial scene availability, view-mode changes, normalized installation-bound changes, selected door changes, viewport-size changes and the explicit reset button. Numeric cabin, installation and subsystem bounds are represented by the installation key so dimension edits and loading/clearing explicit mechanical demo data get an appropriate frame. Runtime floor/target changes do not change this key. Door-selection events apply only to Türen, not Gesamtansicht.
 
 ## Coordinate and orientation contract
 
@@ -18,14 +18,16 @@ Orbit tuning is intentionally restrained: damping `0.075`, rotation `0.72`, zoom
 
 | Mode | Orbit target | Fit bounds |
 | --- | --- | --- |
-| Gesamtansicht | Midpoint of normalized car-travel landing references | Complete normalized installation and represented systems |
-| Mechanik | Mean of current car sling, counterweight and linkage centres | Current car/counterweight mechanical assembly; long rails and pit parts excluded |
+| Gesamtansicht | Full installation bounds centre, fixed during travel | Complete normalized installation and represented systems, including pit and headroom |
+| Mechanik | Moving cabin/car-sling/shoe/door assembly centre | Local car assembly; long fixed rails and pit parts do not force a tower fit |
 | Antrieb | Mean of machine, traction/deflection wheels, supports and brake | Same upper drive subsystem |
 | Sicherheit | Midpoint of governor and pit tension assemblies | Explicit governor/safety route and car sling context |
-| Türen | Selected landing entrance centre, or current cabin entrance fallback | Selected entrance inspection bounds |
-| Schnittansicht | Current normalized cabin elevation | Current cabin/sling/counterweight/cabin-door inspection region |
+| Türen | Explicitly selected landing, otherwise the served landing; cabin fallback | Selected landing plus cabin-door inspection extents aligned to that floor for framing only |
+| Schnittansicht | Complete installation centre, fixed during travel | Vertical sectional overview of the installation |
 
 No target contains fixture coordinates. Missing optional systems fall back to the available normalized bounds.
+
+Only Mechanik uses rigid runtime camera/target translation. User orbit, zoom and pan relationships survive that translation; no frame-by-frame fitting occurs. Gesamtansicht and Schnittansicht have zero follow offset. The shared family-specific policy and Chrome acceptance checks are documented in [installation/detail camera QA](../qa/installation-camera-qa.md).
 
 ## Responsive fit and clipping
 

@@ -3,6 +3,8 @@ import { DoubleSide } from 'three'
 import { CAR_CONTACT_SYMBOL_RADIUS_METRES, type CarLiftRenderModel, type CarRenderableAssembly } from './car-lift-render-model'
 import { TechnicalEnvelope, TechnicalSceneLabel } from '../TechnicalEnvelope'
 import { isCarMovingAssembly } from './car-motion-bindings'
+import { CarrierDoor } from '../carrier/CarrierDoor'
+import { createCarrierDoorLayouts } from '../carrier/carrier-door-model'
 
 function CarPrimitive({ assembly: a }: { readonly assembly: CarRenderableAssembly }) {
   const { color, opacity, presentation } = a.appearance
@@ -36,7 +38,7 @@ function CarPrimitive({ assembly: a }: { readonly assembly: CarRenderableAssembl
     <mesh rotation={a.size.some((v) => v === 0) ? plane.rotation : [0, 0, 0]}>
       {a.size.some((v) => v === 0) ? <planeGeometry args={plane.args} /> : <boxGeometry args={a.size} />}
       {presentation === 'outline' ? <meshBasicMaterial visible={false} />
-        : <meshStandardMaterial color={color} transparent opacity={opacity} depthWrite={false} side={DoubleSide} />}
+        : <meshStandardMaterial color={color} metalness={0.4} roughness={0.48} transparent={opacity < 1} opacity={opacity} depthWrite={opacity >= 1} side={DoubleSide} />}
     </mesh>
     <TechnicalEnvelope size={a.size} color={color} opacity={presentation === 'surface' ? Math.min(0.9, opacity * 1.6 + 0.15) : opacity}
       lineWidth={a.appearance.lineWidth} dashed={a.appearance.dashed} />
@@ -49,8 +51,14 @@ function CarPrimitive({ assembly: a }: { readonly assembly: CarRenderableAssembl
 
 /** Dedicated Autoaufzug materialization; no goods assembly, store, or vehicle calculation. */
 export function CarLiftAssembly({ model }: { readonly model: CarLiftRenderModel }) {
+  const doors = createCarrierDoorLayouts(model.assemblies.filter((a)=>'center' in a))
+  const primitive = (a: CarRenderableAssembly) => {
+    const door = doors.find((d)=>d.id === a.id)
+    return door ? <CarrierDoor key={a.id} door={door} cutaway={model.viewMode === 'cutaway'} inspection={model.viewMode === 'doors'} />
+      : <CarPrimitive key={a.id} assembly={a} />
+  }
   return <group name="car-lift-assembly">
-    <group name="car-fixed-assembly">{model.assemblies.filter((a) => !isCarMovingAssembly(a)).map((a) => <CarPrimitive key={a.id} assembly={a} />)}</group>
-    <group name="car-moving-assembly">{model.assemblies.filter(isCarMovingAssembly).map((a) => <CarPrimitive key={a.id} assembly={a} />)}</group>
+    <group name="car-fixed-assembly">{model.assemblies.filter((a) => !isCarMovingAssembly(a)).map(primitive)}</group>
+    <group name="car-moving-assembly">{model.assemblies.filter(isCarMovingAssembly).map(primitive)}</group>
   </group>
 }

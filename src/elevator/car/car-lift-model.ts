@@ -1,4 +1,5 @@
 import { millimetres, type Millimetres, type MetresPerSecond } from '../../engineering'
+import { normalizeCarrierMechanics, type CarrierMechanicalModel } from '../models/carrier-mechanical-model'
 import type {
   CarLiftApproachEnvelope,
   CarLiftPlanningConfiguration,
@@ -73,6 +74,7 @@ export interface NormalizedCarApproachEnvelope {
 export interface CarLiftNormalizedModel {
   readonly nominalSpeedMetresPerSecond?: MetresPerSecond
   readonly family: 'car'
+  readonly mechanical?: CarrierMechanicalModel
   readonly sourceSchemaVersion: string
   readonly projectName: string
   readonly platform?: CarBoxMm
@@ -336,9 +338,10 @@ export function createCarLiftNormalizedModel(configuration: CarLiftPlanningConfi
     vehicleLoadingDirection: configuration.vehicleLoadingDirection,
     throughCar: configuration.throughCar, frontAccess: configuration.frontAccess, rearAccess: configuration.rearAccess,
   }
-  if (invalid.length) return { status: 'invalid', model, missingFields: [...new Set(missing)], invalidFields: [...new Set(invalid)] }
+  const withMechanics = { ...model, mechanical: normalizeCarrierMechanics(configuration.mechanical, model) }
+  if (invalid.length) return { status: 'invalid', model: withMechanics, missingFields: [...new Set(missing)], invalidFields: [...new Set(invalid)] }
   const hasGeometry = Boolean(platform || shaft || entrances.length || levels.levels.length || model.vehicle)
   if (!hasGeometry) return { status: 'empty', missingFields: [...new Set(missing)] }
-  if (missing.length) return { status: 'partial', model, missingFields: [...new Set(missing)] }
-  return { status: 'complete', model, missingFields: [] }
+  if (missing.length) return { status: 'partial', model: withMechanics, missingFields: [...new Set(missing)] }
+  return { status: 'complete', model: withMechanics, missingFields: [] }
 }

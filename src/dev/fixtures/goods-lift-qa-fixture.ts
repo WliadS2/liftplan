@@ -1,5 +1,6 @@
 import { createGoodsLiftPlanningConfiguration, type GoodsLiftPlanningConfiguration } from '../../elevator'
 import { kilograms, metresPerSecond, millimetres as mm } from '../../engineering'
+import { createCarrierMechanicalDemo } from './carrier-mechanical-demo'
 
 /** Deterministic development planning data, never production defaults or engineering recommendations. */
 export function createGoodsLiftQaFixture(): GoodsLiftPlanningConfiguration {
@@ -12,6 +13,7 @@ export function createGoodsLiftQaFixture(): GoodsLiftPlanningConfiguration {
     doorWidthMm: mm(1600), doorHeightMm: mm(2200),
     frontAccess: true, rearAccess: true, throughCar: true, loadCategory: 'mixed',
     guideSystem: { orientation: 'x', spacingMm: mm(2100) },
+    mechanical: createCarrierMechanicalDemo('goods'),
     pallet: { widthMm: mm(1200), depthMm: mm(800), heightMm: mm(1600) },
     rollContainer: { widthMm: mm(800), depthMm: mm(1200), heightMm: mm(1800) },
     forkliftEnvelope: { widthMm: mm(1500), depthMm: mm(2200), heightMm: mm(2200) },

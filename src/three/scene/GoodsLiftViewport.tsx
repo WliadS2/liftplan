@@ -7,11 +7,13 @@ import { GoodsSimulationDriver } from './GoodsSimulationDriver'
 import { GoodsSimulationControls, GoodsSimulationUnavailable } from './GoodsSimulationControls'
 import { millimetresToMetres } from '../../engineering'
 import { useKinematicRuntime, withoutNominalSpeedKey } from './use-kinematic-runtime'
+import { useCarrierInspectionLevel } from './use-carrier-inspection-level'
 import type { GoodsLiftNormalizationResult } from '../../elevator/goods/goods-lift-model'
 import type { GoodsLiftSceneModel } from '../../elevator/goods/goods-lift-scene-model'
 import type { GoodsSpatialValidationResult } from '../../collision/goods-lift-spatial-validation'
 import { AutoFitCamera } from '../camera/AutoFitCamera'
 import { getGoodsLiftCameraFrame, getGoodsLiftCameraInstallationKey } from '../camera/goods-lift-camera'
+import { GOODS_CAMERA_POLICIES } from '../camera/view-camera-policy'
 import { GoodsLiftAssembly } from '../geometry/goods/GoodsLiftAssembly'
 import {
   createGoodsLiftRenderModel,
@@ -42,20 +44,21 @@ export function GoodsLiftViewport({
   const availableModes = useMemo(() => sceneModel ? getAvailableGoodsLiftViewModes(sceneModel) : [], [sceneModel])
   const activeViewMode = availableModes.some((entry) => entry.id === viewMode) ? viewMode : 'overview'
 
-  const renderModel = useMemo(() => sceneModel
-    ? createGoodsLiftRenderModel(sceneModel, activeViewMode) : undefined, [activeViewMode, sceneModel])
-  const cameraFrame = useMemo(() => sceneModel
-    ? getGoodsLiftCameraFrame(sceneModel, activeViewMode, true) : undefined, [activeViewMode, sceneModel])
   const installationKey = useMemo(() => sceneModel
     ? getGoodsLiftCameraInstallationKey(sceneModel) : 'unavailable', [sceneModel])
   const simulationResult = useMemo(() => createGoodsSimulationModel(normalized, validation), [normalized, validation])
   const simulation = useKinematicRuntime(simulationResult, 'model' in normalized ? normalized.model.nominalSpeedMetresPerSecond : undefined,
     withoutNominalSpeedKey(normalized), createGoodsSimulationController)
+  const inspectionLevel = useCarrierInspectionLevel(simulation,'model' in normalized ? normalized.model.levels[0]?.id : undefined)
+  const renderModel = useMemo(() => sceneModel
+    ? createGoodsLiftRenderModel(sceneModel, activeViewMode,inspectionLevel) : undefined, [activeViewMode, sceneModel,inspectionLevel])
+  const cameraFrame = useMemo(() => sceneModel
+    ? getGoodsLiftCameraFrame(sceneModel, activeViewMode, true, inspectionLevel) : undefined, [activeViewMode, sceneModel, inspectionLevel])
   const doors = useMemo(() => sceneModel ? createGoodsVisualDoorLayouts(sceneModel) : [], [sceneModel])
   const cameraMotion = useMemo(() => simulation ? {
     identity: simulation,
     getOffset: (): readonly [number, number, number] => [0,
-      ['overview', 'platform', 'loads', 'cutaway'].includes(activeViewMode) ? millimetresToMetres(simulation.getPose().platformOffsetMm) : 0, 0],
+      GOODS_CAMERA_POLICIES[activeViewMode] === 'moving-detail' ? millimetresToMetres(simulation.getPose().platformOffsetMm) : 0, 0],
   } : undefined, [simulation, activeViewMode])
 
   return <section className="workspace-panel viewport-panel" aria-labelledby="goods-viewport-heading">
@@ -90,7 +93,7 @@ export function GoodsLiftViewport({
               {renderModel && <GoodsLiftAssembly model={renderModel} doors={doors} />}
             </GoodsSimulationDriver>
             {cameraFrame && <AutoFitCamera frame={cameraFrame} motion={cameraMotion} request={{
-              viewMode: activeViewMode, installationKey, doorSelectionKey: '', resetRevision: cameraResetRevision,
+              viewMode: activeViewMode, installationKey, doorSelectionKey: activeViewMode === 'doors' ? inspectionLevel ?? '' : '', resetRevision: cameraResetRevision,
             }} />}
           </Canvas>
         </div>

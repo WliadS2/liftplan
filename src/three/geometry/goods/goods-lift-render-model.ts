@@ -40,6 +40,7 @@ export interface GoodsLiftRenderModel {
 const loadKinds = new Set<GoodsSceneBox['kind']>(['pallet', 'roll-container', 'forklift-envelope'])
 const platformKinds = new Set<GoodsSceneBox['kind']>([
   'platform', 'platform-floor', 'platform-roof', 'platform-wall', 'door',
+  'carrier-frame', 'floor-structure', 'guide-shoe',
 ])
 
 function visibleInMode(assembly: GoodsSceneBox, mode: GoodsLiftViewMode): boolean {
@@ -49,10 +50,11 @@ function visibleInMode(assembly: GoodsSceneBox, mode: GoodsLiftViewMode): boolea
     return assembly.kind === 'door' || assembly.kind === 'landing-door' || assembly.kind === 'level' ||
       assembly.kind === 'shaft' || assembly.kind === 'platform' || assembly.kind === 'platform-wall'
   }
-  if (mode === 'loads') return loadKinds.has(assembly.kind) || ['platform-floor', 'platform', 'door'].includes(assembly.kind)
+  if (mode === 'loads') return loadKinds.has(assembly.kind) || ['platform-floor', 'floor-structure', 'platform', 'door'].includes(assembly.kind)
   if (mode === 'guides') {
     return assembly.kind === 'guide' || assembly.kind === 'shaft' || assembly.kind === 'platform' ||
-      assembly.kind === 'moving-envelope' || assembly.kind === 'level'
+      assembly.kind === 'moving-envelope' || assembly.kind === 'level' ||
+      ['carrier-frame','floor-structure','guide-shoe','buffer'].includes(assembly.kind)
   }
   if (assembly.kind === 'platform-roof' || (assembly.kind === 'platform-wall' &&
     (assembly.id.includes('-front') || assembly.id.endsWith('-right')))) return false
@@ -60,6 +62,10 @@ function visibleInMode(assembly: GoodsSceneBox, mode: GoodsLiftViewMode): boolea
 }
 
 function appearance(assembly: GoodsSceneBox, mode: GoodsLiftViewMode): GoodsRenderAppearance {
+  if (assembly.kind === 'carrier-frame') return { color: '#5e707c', opacity: 1, presentation: 'solid', lineWidth: 1.2 }
+  if (assembly.kind === 'floor-structure') return { color: '#687d88', opacity: 1, presentation: 'solid', lineWidth: 1.2 }
+  if (assembly.kind === 'guide-shoe') return { color: '#364953', opacity: 1, presentation: 'solid', lineWidth: 1 }
+  if (assembly.kind === 'buffer') return { color: assembly.id.endsWith('contact') ? '#9caab2' : '#5f6e76', opacity: 1, presentation: 'solid', lineWidth: 1 }
   if (assembly.kind === 'shaft') return { color: '#64748b', opacity: 0.45, presentation: 'outline', lineWidth: 1 }
   if (assembly.kind === 'pit' || assembly.kind === 'headroom') return { color: '#64748b', opacity: 0.055, presentation: 'outline' }
   if (assembly.kind === 'level') return { color: '#64748b', opacity: 0.25, presentation: 'outline' }
@@ -72,7 +78,7 @@ function appearance(assembly: GoodsSceneBox, mode: GoodsLiftViewMode): GoodsRend
     opacity: mode === 'doors' ? 0.08 : 0.025,
     presentation: 'surface', lineWidth: mode === 'doors' ? 2 : 1.6,
   }
-  if (assembly.kind === 'guide') return { color: '#334155', opacity: 1, presentation: 'line' }
+  if (assembly.kind === 'guide') return { color: '#75858e', opacity: 1, presentation: assembly.componentSource ? 'solid' : 'line', lineWidth: 1 }
   if (assembly.kind === 'moving-envelope') return { color: '#64748b', opacity: 0.18, presentation: 'outline' }
   if (assembly.kind === 'pallet') return { color: '#716349', opacity: 1, presentation: 'outline', lineWidth: 2.5 }
   if (assembly.kind === 'roll-container') return { color: '#435f6a', opacity: 1, presentation: 'outline', lineWidth: 1.8, dashed: true }
@@ -83,12 +89,13 @@ const assemblyLabels: Partial<Record<GoodsSceneBox['kind'], string>> = {
   shaft: 'Schacht', platform: 'Ladefläche/Kabine', level: 'Haltestellen', guide: 'Schienenachsen',
   'moving-envelope': 'Bewegungsraum', pallet: 'Palettenhülle', 'roll-container': 'Rollcontainer-Hülle',
   'forklift-envelope': 'Gabelstapler-Hülle',
+  'carrier-frame': 'Tragrahmen', 'floor-structure': 'Plattformboden', 'guide-shoe': 'Führungsschuhe', buffer: 'Puffer',
 }
 
 export function getGoodsLiftRenderLegend(model: GoodsLiftRenderModel): readonly { label: string; color: string }[] {
   const entries = new Map<string, string>()
   for (const assembly of model.assemblies) {
-    const label = assembly.kind === 'door' || assembly.kind === 'landing-door'
+    const label = assembly.kind === 'guide' && assembly.componentSource ? 'Führungsschienen (Hüllkörper)' : assembly.kind === 'door' || assembly.kind === 'landing-door'
       ? `Türen ${assembly.id.endsWith('rear') ? 'hinten' : 'vorne'}` : assemblyLabels[assembly.kind]
     if (label) entries.set(label, assembly.appearance.color)
   }
@@ -99,12 +106,19 @@ export function getGoodsLiftRenderLegend(model: GoodsLiftRenderModel): readonly 
 export function createGoodsLiftRenderModel(
   scene: GoodsLiftSceneModel,
   viewMode: GoodsLiftViewMode,
+  inspectionLevel?: string,
 ): GoodsLiftRenderModel {
+  const firstDoor = scene.assemblies.find((a)=>a.doorAttachment?.role === 'landing')
+  const level = inspectionLevel ?? (firstDoor?.doorAttachment?.role === 'landing' ? firstDoor.doorAttachment.levelId : undefined)
   return {
     family: 'goods',
     viewMode,
     assemblies: scene.assemblies
       .filter((assembly) => visibleInMode(assembly, viewMode))
+      .filter((a)=>viewMode !== 'doors' || !level ||
+        (a.kind !== 'landing-door' || (a.doorAttachment?.role === 'landing' && a.doorAttachment.levelId === level)) &&
+        (a.kind !== 'level' || a.id === `goods-${level}`))
+      .filter((a)=>a.kind !== 'platform-floor' || !scene.assemblies.some((p)=>p.kind === 'floor-structure' && visibleInMode(p,viewMode)))
       .map((assembly) => ({ ...assembly, appearance: appearance(assembly, viewMode) })),
   }
 }

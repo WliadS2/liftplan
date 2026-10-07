@@ -5,13 +5,16 @@ import { millimetresToMetres } from '../../engineering'
 import { createCarSimulationModel } from '../../simulation/car-simulation'
 import { createPlatformSimulationController } from '../../simulation/platform-simulation'
 import { useKinematicRuntime, withoutNominalSpeedKey } from './use-kinematic-runtime'
+import { useCarrierInspectionLevel } from './use-carrier-inspection-level'
 import { PlatformSimulationControls, PlatformSimulationUnavailable } from './PlatformSimulationControls'
 import { CarSimulationDriver } from './CarSimulationDriver'
+import { createCarrierDoorLayouts } from '../geometry/carrier/carrier-door-model'
 import type { CarLiftNormalizationResult } from '../../elevator/car/car-lift-model'
 import type { CarLiftSceneModel } from '../../elevator/car/car-lift-scene-model'
 import type { CarSpatialValidationResult } from '../../collision/car-lift-spatial-validation'
 import { AutoFitCamera } from '../camera/AutoFitCamera'
 import { getCarLiftCameraFrame, getCarLiftCameraInstallationKey } from '../camera/car-lift-camera'
+import { CAR_CAMERA_POLICIES } from '../camera/view-camera-policy'
 import { CarLiftAssembly } from '../geometry/car/CarLiftAssembly'
 import { CAR_LIFT_VIEW_MODE_CATALOG, createCarLiftRenderModel, getCarLiftRenderLegend, type CarLiftViewMode } from '../geometry/car/car-lift-render-model'
 
@@ -28,15 +31,17 @@ function Fallback({ children }: { readonly children: string }) {
 export function CarLiftViewport({ normalized, sceneModel, validation, initialViewMode = 'overview' }: CarLiftViewportProps) {
   const [viewMode, setViewMode] = useState<CarLiftViewMode>(initialViewMode)
   const [resetRevision, setResetRevision] = useState(0)
-  const renderModel = useMemo(() => sceneModel ? createCarLiftRenderModel(sceneModel, viewMode) : undefined, [sceneModel, viewMode])
-  const frame = useMemo(() => sceneModel ? getCarLiftCameraFrame(sceneModel, viewMode) : undefined, [sceneModel, viewMode])
   const installationKey = useMemo(() => sceneModel ? getCarLiftCameraInstallationKey(sceneModel) : 'empty', [sceneModel])
   const simulationResult = useMemo(() => createCarSimulationModel(normalized, validation), [normalized, validation])
   const simulation = useKinematicRuntime(simulationResult, 'model' in normalized ? normalized.model.nominalSpeedMetresPerSecond : undefined,
     withoutNominalSpeedKey(normalized), createPlatformSimulationController)
+  const inspectionLevel = useCarrierInspectionLevel(simulation,'model' in normalized ? normalized.model.levels[0]?.id : undefined)
+  const renderModel = useMemo(() => sceneModel ? createCarLiftRenderModel(sceneModel, viewMode,inspectionLevel) : undefined, [sceneModel, viewMode,inspectionLevel])
+  const frame = useMemo(() => sceneModel ? getCarLiftCameraFrame(sceneModel, viewMode, inspectionLevel) : undefined, [sceneModel, viewMode, inspectionLevel])
+  const doors = useMemo(()=>sceneModel ? createCarrierDoorLayouts(sceneModel.assemblies.filter((a)=>'center' in a)) : [],[sceneModel])
   const cameraMotion = useMemo(() => simulation ? { identity: simulation,
     getOffset: (): readonly [number, number, number] => [0,
-      ['overview', 'platform', 'vehicle', 'cutaway'].includes(viewMode) ? millimetresToMetres(simulation.getPose().platformOffsetMm) : 0, 0],
+      CAR_CAMERA_POLICIES[viewMode] === 'moving-detail' ? millimetresToMetres(simulation.getPose().platformOffsetMm) : 0, 0],
   } : undefined, [simulation, viewMode])
   const renderable = Boolean(sceneModel?.assemblies.length)
   return <section className="workspace-panel viewport-panel" aria-labelledby="car-viewport-heading">
@@ -62,8 +67,8 @@ export function CarLiftViewport({ normalized, sceneModel, validation, initialVie
           <hemisphereLight color="#ffffff" groundColor="#94a3b8" intensity={1.35} />
           <directionalLight intensity={1.8} position={[5, 8, 6]} />
           <directionalLight intensity={0.55} position={[-4, 3, -5]} />
-          <CarSimulationDriver controller={simulation}>{renderModel && <CarLiftAssembly model={renderModel} />}</CarSimulationDriver>
-          {frame && <AutoFitCamera frame={frame} motion={cameraMotion} request={{ viewMode, installationKey, doorSelectionKey: '', resetRevision }} />}
+          <CarSimulationDriver controller={simulation} doors={doors}>{renderModel && <CarLiftAssembly model={renderModel} />}</CarSimulationDriver>
+          {frame && <AutoFitCamera frame={frame} motion={cameraMotion} request={{ viewMode, installationKey, doorSelectionKey: viewMode === 'doors' ? inspectionLevel ?? '' : '', resetRevision }} />}
         </Canvas>
       </div>
       {!renderModel?.assemblies.length && <p className="viewport-status">Für diesen Ansichtsmodus fehlen Planungsdaten.</p>}

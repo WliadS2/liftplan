@@ -13,7 +13,7 @@ export type CarSceneAssembly = CarSceneBox | CarSceneLine
 export interface CarRenderAppearance {
   readonly color: string
   readonly opacity: number
-  readonly presentation: 'outline' | 'surface' | 'line' | 'marker'
+  readonly presentation: 'outline' | 'surface' | 'solid' | 'line' | 'marker'
   readonly lineWidth?: number
   readonly dashed?: boolean
 }
@@ -26,14 +26,15 @@ export interface CarLiftRenderModel {
 
 /** Visual contact symbol only: not a tire radius or any engineering dimension. */
 export const CAR_CONTACT_SYMBOL_RADIUS_METRES = 0.12
-const platformKinds: readonly CarSceneAssembly['kind'][] = ['platform', 'platform-floor', 'platform-wall', 'door', 'loading-direction']
+const platformKinds: readonly CarSceneAssembly['kind'][] = ['platform', 'platform-floor', 'platform-wall', 'door', 'loading-direction',
+  'carrier-frame', 'floor-structure', 'guide-shoe']
 const vehicleKinds: readonly CarSceneAssembly['kind'][] = ['vehicle-body', 'wheel-contact', 'vehicle-centerline', 'vehicle-axle', 'vehicle-reference']
 const approachKinds: readonly CarSceneAssembly['kind'][] = ['approach-envelope', 'vehicle-swept-envelope', 'door-passage-envelope']
 
 function visible(assembly: CarSceneAssembly, mode: CarLiftViewMode): boolean {
   if (assembly.kind === 'vehicle-reference') return mode === 'vehicle'
   if (mode === 'overview') return assembly.kind !== 'moving-envelope' && !approachKinds.includes(assembly.kind)
-  if (mode === 'vehicle') return ['platform-floor', 'loading-direction'].includes(assembly.kind) || vehicleKinds.includes(assembly.kind)
+  if (mode === 'vehicle') return ['platform-floor', 'floor-structure', 'loading-direction'].includes(assembly.kind) || vehicleKinds.includes(assembly.kind)
   if (mode === 'platform') return platformKinds.includes(assembly.kind) || vehicleKinds.includes(assembly.kind)
   if (mode === 'doors') return ['shaft', 'platform', 'door', 'landing-door', 'level'].includes(assembly.kind)
   if (mode === 'approach') return platformKinds.includes(assembly.kind) || vehicleKinds.includes(assembly.kind) || approachKinds.includes(assembly.kind)
@@ -42,19 +43,23 @@ function visible(assembly: CarSceneAssembly, mode: CarLiftViewMode): boolean {
 }
 
 function appearance(assembly: CarSceneAssembly, mode: CarLiftViewMode): CarRenderAppearance {
+  if (assembly.kind === 'carrier-frame') return { color: '#5e707c', opacity: 1, presentation: 'solid', lineWidth: 1.2 }
+  if (assembly.kind === 'floor-structure') return { color: '#687d88', opacity: 1, presentation: 'solid', lineWidth: 1.2 }
+  if (assembly.kind === 'guide-shoe') return { color: '#364953', opacity: 1, presentation: 'solid', lineWidth: 1 }
+  if (assembly.kind === 'buffer') return { color: assembly.id.endsWith('contact') ? '#9caab2' : '#5f6e76', opacity: 1, presentation: 'solid', lineWidth: 1 }
   if (assembly.kind === 'wheel-contact') return { color: '#293b44', opacity: 1, presentation: 'marker' }
   if (assembly.kind === 'vehicle-axle') return { color: '#26343c', opacity: 1, presentation: 'line', lineWidth: 2.4 }
   if (assembly.kind === 'vehicle-reference') return { color: '#374650', opacity: 0.85, presentation: 'line', lineWidth: 1, dashed: true }
   if (assembly.kind === 'vehicle-centerline') return { color: '#526b77', opacity: 0.85, presentation: 'line', dashed: true }
   if (assembly.kind === 'loading-direction') return { color: '#7a6b4f', opacity: 0.6, presentation: 'line' }
-  if (assembly.kind === 'guide') return { color: '#334155', opacity: 1, presentation: 'line' }
+  if (assembly.kind === 'guide') return { color: '#75858e', opacity: 1, presentation: 'componentSource' in assembly && assembly.componentSource ? 'solid' : 'line', lineWidth: 1 }
   if (assembly.kind === 'platform-floor') return { color: '#849198', opacity: mode === 'platform' ? 0.9 : 0.22, presentation: 'surface', lineWidth: 2 }
   if (assembly.kind === 'platform-roof' || assembly.kind === 'platform-wall') return { color: '#a4b0b6', opacity: mode === 'vehicle' || mode === 'approach' ? 0.025 : 0.1, presentation: 'surface' }
   if (assembly.kind === 'door' || assembly.kind === 'landing-door') return {
     color: assembly.id.endsWith('rear') ? '#736c61' : '#526b77',
     opacity: mode === 'doors' ? 0.1 : mode === 'platform' ? 0.12 : 0.04, presentation: 'surface', lineWidth: mode === 'doors' ? 2 : 1.4,
   }
-  if (assembly.kind === 'vehicle-body') return { color: '#657680', opacity: mode === 'platform' ? 0.05 : 0.5, presentation: 'surface', lineWidth: mode === 'vehicle' ? 2 : 1.4 }
+  if (assembly.kind === 'vehicle-body') return { color: '#657680', opacity: mode === 'platform' ? 0.12 : mode === 'vehicle' ? 0.72 : 0.55, presentation: 'surface', lineWidth: mode === 'vehicle' ? 2 : 1.4 }
   if (assembly.kind === 'approach-envelope') return { color: assembly.id.includes('entry') ? '#536859' : '#796952', opacity: 0.9, presentation: 'outline', lineWidth: 1.8, dashed: assembly.id.includes('exit') }
   if (assembly.kind === 'vehicle-swept-envelope') return { color: '#67596a', opacity: 0.9, presentation: 'outline', lineWidth: 1.2, dashed: true }
   if (assembly.kind === 'door-passage-envelope') return { color: '#435f6d', opacity: 0.9, presentation: 'outline', lineWidth: 2.3 }
@@ -62,8 +67,14 @@ function appearance(assembly: CarSceneAssembly, mode: CarLiftViewMode): CarRende
 }
 
 /** Pure presentation policy; positions and dimensions are copied unchanged from the scene adapter. */
-export function createCarLiftRenderModel(scene: CarLiftSceneModel, viewMode: CarLiftViewMode): CarLiftRenderModel {
+export function createCarLiftRenderModel(scene: CarLiftSceneModel, viewMode: CarLiftViewMode, inspectionLevel?: string): CarLiftRenderModel {
+  const firstDoor = scene.assemblies.find((a)=>'doorAttachment' in a && a.doorAttachment?.role === 'landing')
+  const level = inspectionLevel ?? (firstDoor && 'doorAttachment' in firstDoor && firstDoor.doorAttachment?.role === 'landing' ? firstDoor.doorAttachment.levelId : undefined)
   return { family: 'car', viewMode, assemblies: scene.assemblies.filter((a) => visible(a, viewMode))
+    .filter((a)=>viewMode !== 'doors' || !level ||
+      (a.kind !== 'landing-door' || ('doorAttachment' in a && a.doorAttachment?.role === 'landing' && a.doorAttachment.levelId === level)) &&
+      (a.kind !== 'level' || a.id === `car-${level}`))
+    .filter((a)=>a.kind !== 'platform-floor' || !scene.assemblies.some((p)=>p.kind === 'floor-structure' && visible(p,viewMode)))
     .map((a) => ({ ...a, appearance: appearance(a, viewMode) })) }
 }
 
@@ -74,8 +85,10 @@ export function getCarLiftRenderLegend(model: CarLiftRenderModel): readonly stri
     'vehicle-axle': 'Vorder-/Hinterachse', 'vehicle-reference': 'Fahrzeugmaße',
     'loading-direction': 'Beladungsachse', level: 'Haltestellen', guide: 'Schienenachsen',
     'door-passage-envelope': 'Durchfahrtshülle', 'vehicle-swept-envelope': 'Explizite Bewegungshülle',
+    'carrier-frame': 'Tragrahmen', 'floor-structure': 'Plattformboden', 'guide-shoe': 'Führungsschuhe', buffer: 'Puffer',
   }
   return [...new Set(model.assemblies.map((a) => a.kind === 'approach-envelope'
     ? (a.id.includes('entry') ? 'Einfahrtshülle' : 'Ausfahrtshülle')
+    : a.kind === 'guide' && 'componentSource' in a && a.componentSource ? 'Führungsschienen (Hüllkörper)'
     : a.kind === 'door' || a.kind === 'landing-door' ? `Türen ${a.id.endsWith('rear') ? 'hinten' : 'vorne'}` : labels[a.kind]).filter(Boolean))] as string[]
 }

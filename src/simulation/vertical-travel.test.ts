@@ -157,12 +157,14 @@ describe('shared nominal-speed vertical kinematics', () => {
   }
 })
 
-describe('semantic moving camera and Auto attachments', () => {
-  it.each([2,6,10])('carrier focus is independent of %i-stop tower/approach extent', (count) => {
+describe('installation overview, local carrier camera and Auto attachments', () => {
+  it.each([2,6,10])('overview contains the full %i-stop installation while carrier detail stays local', (count) => {
     const p = passenger(count,1).inputs
     const pf = getPassengerCameraFrame('overview',p.installation,p.components,p.drive,p.safety,p.doors)
-    expect(pf.target[1]).toBeLessThan(3)
-    expect(pf.bounds.height).toBeLessThan(10)
+    expect(pf.bounds.min[1]).toBeLessThanOrEqual(p.installation.vertical.pitBottomY!)
+    expect(pf.bounds.max[1]).toBeGreaterThanOrEqual(p.installation.vertical.shaftTopY!)
+    expect(pf.target).toEqual(pf.bounds.center)
+    expect(getPassengerCameraFrame('mechanical',p.installation,p.components,p.drive,p.safety,p.doors).bounds.height).toBeLessThan(10)
     for (const family of ['goods','car'] as const) {
       const fixture = family === 'goods' ? createGoodsLiftQaFixture() : createCarLiftQaFixture()
       const update = { stopCount: count, storeyHeightsMm: Array(count-1).fill(mm(3000)) }
@@ -170,12 +172,18 @@ describe('semantic moving camera and Auto attachments', () => {
         const n = createGoodsLiftNormalizedModel({ ...fixture,...update })
         if (n.status === 'empty') throw Error('Missing')
         const scene = createGoodsLiftSceneModel(n.model), f = getGoodsLiftCameraFrame(scene,'overview',true)
-        expect(f.target[1]).toBeCloseTo(1.15); expect(f.bounds.height).toBeCloseTo(4.6)
+        expect(f.bounds.min[1]).toBeCloseTo(n.model.shaft!.minY/1000)
+        expect(f.bounds.max[1]).toBeCloseTo(n.model.shaft!.maxY/1000)
+        expect(f.target).toEqual(f.bounds.center)
+        expect(getGoodsLiftCameraFrame(scene,'platform').bounds.height).toBeCloseTo(2.66)
       } else {
         const n = createCarLiftNormalizedModel({ ...fixture,...update })
         if (n.status === 'empty') throw Error('Missing')
         const scene = createCarLiftSceneModel(n.model), f = getCarLiftCameraFrame(scene,'overview')
-        expect(f.target[1]).toBeCloseTo(1.2); expect(f.bounds.height).toBeCloseTo(4.8)
+        expect(f.bounds.min[1]).toBeCloseTo(n.model.shaft!.minY/1000)
+        expect(f.bounds.max[1]).toBeCloseTo(n.model.shaft!.maxY/1000)
+        expect(f.target).toEqual(f.bounds.center)
+        expect(getCarLiftCameraFrame(scene,'platform').bounds.height).toBeCloseTo(2.76)
         const moving = scene.assemblies.filter(isCarMovingAssembly)
         expect(moving.filter(a=>a.kind==='wheel-contact')).toHaveLength(4)
         expect(moving.some(a=>a.kind==='vehicle-body')).toBe(true)

@@ -1,7 +1,6 @@
 import type { CameraBounds, CameraFrame, CameraVector } from './camera-fit'
 
-/** Presentation-only context around the semantic carrier; never an engineering envelope.
- * Overview retains nearby shaft context, not an entire tower fit centred on static floors. */
+/** Presentation-only local carrier frame; never an installation-overview policy or engineering envelope. */
 export function getSemanticMovingFrame(bounds: CameraBounds, direction?: CameraVector,
   context?: CameraBounds): CameraFrame {
   if (!context) return { bounds, target: bounds.center, direction }

@@ -15,7 +15,7 @@ vi.mock('./CarSimulationDriver', () => ({ CarSimulationDriver: ({ children, cont
   return <>{children}</>
 } }))
 vi.mock('@react-three/drei', () => ({ PerspectiveCamera: () => null }))
-const camera = vi.hoisted(() => ({ props: undefined as undefined | { frame: unknown; request: { viewMode: string; resetRevision: number } } }))
+const camera = vi.hoisted(() => ({ props: undefined as undefined | { frame: unknown; request: { viewMode: string; resetRevision: number }; motion?:{getOffset:()=>readonly number[]} } }))
 vi.mock('../camera/AutoFitCamera', () => ({ AutoFitCamera: (props: NonNullable<typeof camera.props>) => { camera.props = props; return null } }))
 vi.mock('../geometry/car/CarLiftAssembly', () => ({ CarLiftAssembly: ({ model }: { readonly model: { readonly viewMode: string } }) => <div data-testid="car-assembly">{model.viewMode}</div> }))
 afterEach(cleanup)
@@ -26,6 +26,21 @@ function viewport(configuration: CarLiftPlanningConfiguration) {
   return render(<CarLiftViewport normalized={model.normalized} validation={model.validation} sceneModel={model.scene} />)
 }
 describe('Autoaufzug viewport states and controls', () => {
+  it('wires fixed installation motion separately from vehicle/platform following and resets the active view',()=>{
+    viewport(createCarLiftQaFixture())
+    const overview=camera.props!.frame
+    fireEvent.change(screen.getByRole('combobox',{name:'Zielhaltestelle'}),{target:{value:'level-6'}})
+    fireEvent.click(screen.getByRole('button',{name:'Fahrt starten'}))
+    act(()=>driver.controller!.advance(4))
+    expect(driver.controller!.getPose().platformOffsetMm).toBeGreaterThan(0)
+    expect(camera.props!.motion!.getOffset()).toEqual([0,0,0]);expect(camera.props!.frame).toEqual(overview)
+    fireEvent.click(screen.getByRole('button',{name:'Fahrzeug'}))
+    expect(camera.props!.motion!.getOffset()[1]).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole('button',{name:'Ansicht zurücksetzen'}))
+    expect(camera.props!.request.viewMode).toBe('vehicle');expect(camera.props!.motion!.getOffset()[1]).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole('button',{name:'Gesamtansicht'}))
+    expect(camera.props!.frame).toEqual(overview);expect(camera.props!.motion!.getOffset()).toEqual([0,0,0])
+  })
   it('preserves active motion on a speed-only edit and uses new speed on the next departure', () => {
     const props = (speed: number) => {
       const m = createLiftFamilyTechnicalModel({ ...createCarLiftQaFixture(), nominalSpeedMetresPerSecond: metresPerSecond(speed) })

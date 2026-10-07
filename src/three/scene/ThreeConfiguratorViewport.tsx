@@ -11,6 +11,8 @@ import type { ThreeViewMode } from './view-mode'
 import type { MechanicalPlanningIssueCode } from '../geometry/passenger/mechanical/passenger-mechanical-layout'
 import { createTractionDriveModel, type DriveIssueCode } from '../geometry/passenger/mechanical/traction-drive-model'
 import { getPassengerCameraFrame, getPassengerCameraInstallationKey } from '../camera/passenger-camera-bounds'
+import { PASSENGER_CAMERA_POLICIES } from '../camera/view-camera-policy'
+import { useCarrierInspectionLevel } from './use-carrier-inspection-level'
 import { createPassengerSafetyModel, type SafetyIssueCode } from '../geometry/passenger/mechanical/passenger-safety-model'
 import { createPassengerDoorSystem, getDoorInspection, type DoorIssueCode } from '../geometry/passenger/doors/passenger-door-model'
 import type { PassengerEntranceSide } from '../geometry/passenger/passenger-installation-model'
@@ -120,16 +122,9 @@ export function ThreeConfiguratorViewport({
     ? createPassengerSafetyModel(geometryInput?.mechanical.safety, model, mechanicalLayout, mechanicalComponents, drive?.machine)
     : undefined, [geometryInput, model, mechanicalLayout, mechanicalComponents, drive])
   const doors = useMemo(() => model ? createPassengerDoorSystem(geometryInput?.doors, model) : undefined, [model, geometryInput])
-  const doorInspection = useMemo(() => doors && model
-    ? getDoorInspection(doors, model.levels, selectedLevelId, selectedEntranceSide)
-    : undefined, [doors, model, selectedLevelId, selectedEntranceSide])
-  const cameraFrame = useMemo(() => model && mechanicalComponents && drive
-    ? getPassengerCameraFrame(viewMode, model, mechanicalComponents, drive, safety, doors, doorInspection)
-    : undefined, [viewMode, model, mechanicalComponents, drive, safety, doors, doorInspection])
   const cameraInstallationKey = useMemo(() => model && mechanicalComponents && drive
     ? getPassengerCameraInstallationKey(model, mechanicalComponents, drive, safety, doors)
     : 'unavailable', [model, mechanicalComponents, drive, safety, doors])
-  const doorSelectionKey = `${doorInspection?.level?.id ?? ''}:${doorInspection?.side ?? ''}`
   const simulationResult = useMemo((): SimulationModelResult | undefined => {
     return model && mechanicalLayout && mechanicalComponents && drive && safety && doors
       ? createPassengerSimulationModel({ planning: geometryInput!, installation: model, layout: mechanicalLayout, components: mechanicalComponents, drive, safety, doors }, visualizationData)
@@ -137,10 +132,18 @@ export function ThreeConfiguratorViewport({
   }, [geometryInput, model, mechanicalLayout, mechanicalComponents, drive, safety, doors, visualizationData])
   const simulation = useKinematicRuntime(simulationResult!, geometryInput?.nominalSpeedMetresPerSecond,
     withoutNominalSpeedKey([geometryInput, visualizationData]), createPassengerSimulationController)
+  const servedLevel = useCarrierInspectionLevel(simulation,model?.levels[0]?.id)
+  const doorInspection = useMemo(() => doors && model
+    ? getDoorInspection(doors, model.levels, selectedLevelId ?? servedLevel, selectedEntranceSide)
+    : undefined, [doors, model, selectedLevelId, servedLevel, selectedEntranceSide])
+  const cameraFrame = useMemo(() => model && mechanicalComponents && drive
+    ? getPassengerCameraFrame(viewMode, model, mechanicalComponents, drive, safety, doors, doorInspection)
+    : undefined, [viewMode, model, mechanicalComponents, drive, safety, doors, doorInspection])
+  const doorSelectionKey = `${doorInspection?.level?.id ?? ''}:${doorInspection?.side ?? ''}`
   const cameraMotion = useMemo(() => simulation ? {
     identity: simulation,
     getOffset: (): readonly [number, number, number] => [0,
-      ['overview', 'mechanical', 'cutaway'].includes(viewMode) ? simulation.getPose().cabinOffsetY : 0, 0],
+      PASSENGER_CAMERA_POLICIES[viewMode] === 'moving-detail' ? simulation.getPose().cabinOffsetY : 0, 0],
   } : undefined, [simulation, viewMode])
 
   return (

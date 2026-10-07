@@ -10,6 +10,7 @@ import {
 import type { LiftConfiguration } from '../models/lift-configuration'
 import { LIFT_FAMILIES } from '../types/lift-family'
 import { updateUniformLevelIntervals } from './uniform-level-update'
+import { carrierMechanicalPlanningSchema, type CarrierMechanicalPlanning } from './carrier-mechanical-planning'
 
 export const GOODS_PLANNING_SCHEMA_VERSION = 'goods-planning-v1' as const
 export const GOODS_LOAD_CATEGORIES = [
@@ -57,6 +58,7 @@ export interface GoodsLiftPlanningConfiguration
   readonly rollContainer?: GoodsLoadEnvelope
   readonly forkliftEnvelope?: GoodsLoadEnvelope
   readonly guideSystem?: GoodsGuidePlanning
+  readonly mechanical?: CarrierMechanicalPlanning
 }
 
 const finiteNumber = z.number().finite()
@@ -100,6 +102,7 @@ export const goodsLiftPlanningConfigurationSchema = z.object({
     orientation: z.enum(['x', 'z']).optional(),
     spacingMm: optionalMillimetres,
   }).strict().optional(),
+  mechanical: carrierMechanicalPlanningSchema.optional(),
 }).strict()
 
 export type GoodsLiftPlanningConfigurationUpdate = Partial<

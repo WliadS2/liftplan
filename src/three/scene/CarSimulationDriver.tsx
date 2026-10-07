@@ -1,17 +1,10 @@
-import { useFrame } from '@react-three/fiber'
-import { useRef, type ReactNode } from 'react'
-import type { Group } from 'three'
-import { millimetresToMetres } from '../../engineering'
+import type { ReactNode } from 'react'
 import type { PlatformSimulationController } from '../../simulation/platform-simulation'
+import type { CarrierDoorLayout } from '../geometry/carrier/carrier-door-model'
+import { CarrierSimulationDriver } from './CarrierSimulationDriver'
 
-export function CarSimulationDriver({ controller, children }: {
-  readonly controller?: PlatformSimulationController; readonly children: ReactNode
+export function CarSimulationDriver(props: {
+  readonly controller?: PlatformSimulationController; readonly doors: readonly CarrierDoorLayout[]; readonly children: ReactNode
 }) {
-  const root = useRef<Group>(null)
-  useFrame((_, delta) => {
-    controller?.advance(delta)
-    const moving = root.current?.getObjectByName('car-moving-assembly')
-    if (moving) moving.position.y = controller ? millimetresToMetres(controller.getPose().platformOffsetMm) : 0
-  }, -2)
-  return <group ref={root}>{children}</group>
+  return <CarrierSimulationDriver {...props} movingGroupName="car-moving-assembly" />
 }

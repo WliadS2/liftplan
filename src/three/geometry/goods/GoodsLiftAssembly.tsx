@@ -3,6 +3,7 @@ import { DoubleSide } from 'three'
 import type { GoodsLiftRenderModel, GoodsRenderableAssembly } from './goods-lift-render-model'
 import { TechnicalEnvelope, TechnicalSceneLabel } from '../TechnicalEnvelope'
 import { isGoodsMovingAssembly, type GoodsVisualDoorLayout } from './goods-motion-bindings'
+import { CarrierDoor } from '../carrier/CarrierDoor'
 
 function SurfaceAssembly({ assembly }: { readonly assembly: GoodsRenderableAssembly }) {
   const [width, height, depth] = assembly.size
@@ -16,7 +17,7 @@ function SurfaceAssembly({ assembly }: { readonly assembly: GoodsRenderableAssem
     <planeGeometry args={plane.args} />
     {assembly.appearance.presentation === 'outline'
       ? <meshBasicMaterial visible={false} />
-      : <meshStandardMaterial color={assembly.appearance.color} transparent={assembly.appearance.opacity < 1}
+      : <meshStandardMaterial color={assembly.appearance.color} metalness={0.4} roughness={0.48} transparent={assembly.appearance.opacity < 1}
         opacity={assembly.appearance.opacity} side={DoubleSide} depthWrite={assembly.appearance.opacity >= 1} />}
   </mesh>
 }
@@ -26,7 +27,7 @@ function BoxAssembly({ assembly }: { readonly assembly: GoodsRenderableAssembly 
     <boxGeometry args={assembly.size} />
     {assembly.appearance.presentation === 'outline'
       ? <meshBasicMaterial visible={false} />
-      : <meshStandardMaterial color={assembly.appearance.color} transparent={assembly.appearance.opacity < 1}
+      : <meshStandardMaterial color={assembly.appearance.color} metalness={0.4} roughness={0.48} transparent={assembly.appearance.opacity < 1}
         opacity={assembly.appearance.opacity} depthWrite={assembly.appearance.opacity >= 1} />}
   </mesh>
 }
@@ -56,32 +57,12 @@ function GoodsAssemblyPrimitive({ assembly, showLabels }: { readonly assembly: G
   </group>
 }
 
-function GoodsDoor({ door, assembly }: { readonly door: GoodsVisualDoorLayout; readonly assembly: GoodsRenderableAssembly }) {
-  return <group name={door.id} position={door.center} userData={{ role: door.role, levelId: door.levelId, source: door.source }}>
-    {/* Frame, sill and track are zero-thickness opening references, not fabricated sections. */}
-    <TechnicalEnvelope size={[door.width, door.height, 0]} color={assembly.appearance.color} lineWidth={2} />
-    <Line name={`${door.id}-sill-reference`} points={[[-door.width/2, -door.height/2, 0], [door.width/2, -door.height/2, 0]]}
-      color={assembly.appearance.color} lineWidth={2.6} />
-    <Line name={`${door.id}-track-reference`} points={[[-door.width/2, door.height/2, 0], [door.width/2, door.height/2, 0]]}
-      color={assembly.appearance.color} lineWidth={1.2} dashed dashSize={0.08} gapSize={0.04} />
-    {[-1, 1].map((sign, index) => <group key={index} name={`${door.id}-panel-motion-${index}`}>
-      <group position={[sign * door.width/4, 0, 0]}>
-        <mesh name={`${door.id}-visual-panel-${index}`}>
-          <planeGeometry args={[door.width/2, door.height]} />
-          <meshStandardMaterial color={assembly.appearance.color} opacity={0.2} transparent side={DoubleSide} depthWrite={false} />
-        </mesh>
-        <TechnicalEnvelope size={[door.width/2, door.height, 0]} color={assembly.appearance.color} lineWidth={1.2} />
-      </group>
-    </group>)}
-  </group>
-}
-
 export function GoodsLiftAssembly({ model, doors = [] }: {
   readonly model: GoodsLiftRenderModel; readonly doors?: readonly GoodsVisualDoorLayout[]
 }) {
   const primitive = (assembly: GoodsRenderableAssembly) => {
     const door = doors.find((entry) => entry.id === assembly.id)
-    return door ? <GoodsDoor key={assembly.id} assembly={assembly} door={door} />
+    return door ? <CarrierDoor key={assembly.id} door={door} cutaway={model.viewMode === 'cutaway'} inspection={model.viewMode === 'doors'} />
       : <GoodsAssemblyPrimitive key={assembly.id} assembly={assembly}
         showLabels={model.viewMode === 'platform' || model.viewMode === 'loads'} />
   }

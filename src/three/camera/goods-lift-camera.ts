@@ -55,18 +55,38 @@ const viewDirections: Readonly<Record<GoodsLiftViewMode, CameraVector>> = {
   cutaway: [0.65, 0.25, 1],
 }
 
-export function getGoodsLiftCameraFrame(scene: GoodsLiftSceneModel, viewMode: GoodsLiftViewMode, includeVisualDoorTravel = false): CameraFrame {
-  const visible = createGoodsLiftRenderModel(scene, viewMode).assemblies
+export function getGoodsLiftCameraFrame(scene: GoodsLiftSceneModel, viewMode: GoodsLiftViewMode, includeVisualDoorTravel = false, doorLevelId?: string): CameraFrame {
+  const visible = createGoodsLiftRenderModel(scene, viewMode,doorLevelId).assemblies
   // Reserve full schematic panel travel once, never re-fit on animation ticks.
   const cameraAssemblies = includeVisualDoorTravel ? visible.map((assembly) =>
     assembly.kind === 'door' || assembly.kind === 'landing-door'
       ? { ...assembly, size: [metres(assembly.size[0] * 2), assembly.size[1], assembly.size[2]] as GoodsSceneBox['size'] }
       : assembly) : visible
-  const bounds = boundsForAssemblies(cameraAssemblies.length ? cameraAssemblies : scene.assemblies)
-  if (viewMode === 'overview' || viewMode === 'platform' || viewMode === 'loads' || viewMode === 'cutaway') {
+  // Optional carried-load envelopes must not shrink the installation overview.
+  const framed = viewMode === 'overview' || viewMode === 'cutaway'
+    ? cameraAssemblies.filter((a)=>!['pallet','roll-container','forklift-envelope','moving-envelope'].includes(a.kind))
+    : cameraAssemblies
+  const bounds = boundsForAssemblies(framed)
+  if (viewMode === 'overview' || viewMode === 'cutaway') {
+    return { bounds,target:bounds.center,direction:viewDirections[viewMode] }
+  }
+  if (viewMode === 'doors') {
+    const selectedLevel = doorLevelId ?? scene.assemblies.find((a)=>a.doorAttachment?.role === 'landing')?.doorAttachment
+    const levelId = typeof selectedLevel === 'string' ? selectedLevel : selectedLevel?.role === 'landing' ? selectedLevel.levelId : undefined
+    const doors = cameraAssemblies.filter((a)=>a.doorAttachment?.role === 'landing' && a.doorAttachment.levelId === levelId)
+    if (doors.length) {
+      // Frame both door layers at the served floor, without changing scene/model coordinates.
+      const platformDoors = cameraAssemblies.filter((a)=>a.doorAttachment?.role === 'platform').map((a)=>({
+        ...a,center:[a.center[0],metres(doors[0].center[1]-doors[0].size[1]/2+a.size[1]/2),a.center[2]] as GoodsSceneBox['center'],
+      }))
+      const local = boundsForAssemblies([...doors,...platformDoors])
+      return {bounds:local,target:local.center,direction:viewDirections.doors}
+    }
+  }
+  if (viewMode === 'platform' || viewMode === 'loads' || viewMode === 'guides') {
     const moving = cameraAssemblies.filter(isGoodsMovingAssembly)
     if (moving.length) return getSemanticMovingFrame(boundsForAssemblies(moving), viewDirections[viewMode],
-      viewMode === 'overview' || viewMode === 'cutaway' ? bounds : undefined)
+      viewMode === 'guides' ? bounds : undefined)
   }
   return {
     bounds,

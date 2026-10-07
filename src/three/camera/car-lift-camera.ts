@@ -3,6 +3,7 @@ import { CAR_CONTACT_SYMBOL_RADIUS_METRES, createCarLiftRenderModel, type CarSce
 import type { CameraBounds, CameraFrame, CameraVector } from './camera-fit'
 import { getSemanticMovingFrame } from './semantic-moving-frame'
 import { isCarMovingAssembly } from '../geometry/car/car-motion-bindings'
+import { metres } from '../../engineering'
 
 /** Rotation-aware render-space bounds; engineering envelopes are not changed by camera fitting. */
 export function getCarAssemblyBounds(assemblies: readonly CarSceneAssembly[]): CameraBounds {
@@ -25,13 +26,32 @@ const directions: Readonly<Record<CarLiftViewMode, CameraVector>> = {
   overview: [1, 0.6, 1], platform: [1, 0.7, 1], vehicle: [0.6, 1.3, 1],
   doors: [0.35, 0.12, 1], approach: [0.7, 1.4, 1], cutaway: [0.65, 0.25, 1],
 }
-export function getCarLiftCameraFrame(scene: CarLiftSceneModel, viewMode: CarLiftViewMode): CameraFrame {
-  const visible = createCarLiftRenderModel(scene, viewMode).assemblies
-  const bounds = getCarAssemblyBounds(visible.length ? visible : scene.assemblies)
-  if (viewMode === 'overview' || viewMode === 'platform' || viewMode === 'vehicle' || viewMode === 'cutaway') {
+export function getCarLiftCameraFrame(scene: CarLiftSceneModel, viewMode: CarLiftViewMode, doorLevelId?: string): CameraFrame {
+  // Full schematic track/panel travel is render space only, reserved once, not per animation frame.
+  const visible = createCarLiftRenderModel(scene, viewMode,doorLevelId).assemblies.map((a)=>
+    'size' in a && (a.kind === 'door' || a.kind === 'landing-door')
+      ? { ...a, size: [metres(a.size[0]*2),a.size[1],a.size[2]] as typeof a.size } : a)
+  const framed = viewMode === 'overview' || viewMode === 'cutaway'
+    ? visible.filter((a)=>!['vehicle-body','wheel-contact','vehicle-centerline','vehicle-axle','vehicle-reference','moving-envelope'].includes(a.kind))
+    : visible
+  const bounds = getCarAssemblyBounds(framed)
+  if (viewMode === 'overview' || viewMode === 'cutaway') return {bounds,target:bounds.center,direction:directions[viewMode]}
+  if (viewMode === 'doors') {
+    const firstDoor = scene.assemblies.find((a)=>'doorAttachment' in a && a.doorAttachment?.role === 'landing')
+    const levelId = doorLevelId ?? (firstDoor && 'doorAttachment' in firstDoor && firstDoor.doorAttachment?.role === 'landing' ? firstDoor.doorAttachment.levelId : undefined)
+    const doors = visible.filter((a)=>'doorAttachment' in a && a.doorAttachment?.role === 'landing' && a.doorAttachment.levelId === levelId)
+    const landing = doors.find((a)=>'center' in a)
+    if (landing && 'center' in landing) {
+      const platformDoors = visible.flatMap((a)=>'center' in a && a.doorAttachment?.role === 'platform' ? [{
+        ...a,center:[a.center[0],metres(landing.center[1]-landing.size[1]/2+a.size[1]/2),a.center[2]] as typeof a.center,
+      }] : [])
+      const local = getCarAssemblyBounds([...doors,...platformDoors])
+      return {bounds:local,target:local.center,direction:directions.doors}
+    }
+  }
+  if (viewMode === 'platform' || viewMode === 'vehicle') {
     const moving = visible.filter(isCarMovingAssembly)
-    if (moving.length) return getSemanticMovingFrame(getCarAssemblyBounds(moving), directions[viewMode],
-      viewMode === 'overview' || viewMode === 'cutaway' ? bounds : undefined)
+    if (moving.length) return getSemanticMovingFrame(getCarAssemblyBounds(moving), directions[viewMode])
   }
   return { bounds, target: bounds.center, direction: directions[viewMode] }
 }

@@ -19,8 +19,8 @@ export function PlatformSimulationControls({ controller, availability, onReset }
     <p className="viewport-status">{availability === 'complete' ? 'Fahrdemo verfügbar.' : 'Fahrdemo teilweise verfügbar.'}
       {' '}Visualisierung ohne Nachweis des realen Fahrverhaltens.</p>
     <p className="panel-note">Vertikalfahrt mit Nenngeschwindigkeit, ohne Beschleunigungs- oder Bremsmodell. Geschwindigkeitsänderungen gelten ab der nächsten Fahrt.</p>
-    {controller.model.family === 'goods' ? <p className="panel-note">Türblätter schematisch; keine Darstellung eines bestimmten Türantriebs.</p>
-      : <p className="panel-note">Autoaufzug: vertikale Visualisierung; Türanimation und Fahrzeugdynamik nicht verfügbar.</p>}
+    <p className="panel-note">Türblätter, Türrahmen und Schwellen schematisch; keine Darstellung eines bestimmten Türantriebs.</p>
+    {controller.model.family === 'car' && <p className="panel-note">Autoaufzug: keine Fahrzeugfahr- oder Wendebewegung.</p>}
     <div className="viewport-mode-controls" role="group" aria-label="Fahrdemo">
       <label>Zielhaltestelle: <select aria-label="Zielhaltestelle" value={target} disabled={!resting}
         onChange={(event) => setSelection({ controller, target: event.target.value })}>

@@ -32,7 +32,7 @@ vi.mock('./GoodsSimulationDriver', () => ({
   },
 }))
 const camera = vi.hoisted(() => ({ props: undefined as undefined | {
-  frame: unknown; request: { viewMode: string; resetRevision: number }; motion?: { identity: object }
+  frame: unknown; request: { viewMode: string; resetRevision: number }; motion?: { identity: object;getOffset:()=>readonly number[] }
 } }))
 vi.mock('../camera/AutoFitCamera', () => ({ AutoFitCamera: (props: NonNullable<typeof camera.props>) => {
   camera.props = props
@@ -67,6 +67,23 @@ function renderConfiguration(configuration: GoodsLiftPlanningConfiguration) {
 }
 
 describe('goods-lift viewport', () => {
+  it('wires fixed installation motion separately from platform/load following and resets the active view',()=>{
+    renderConfiguration(createGoodsLiftQaFixture())
+    const overview=camera.props!.frame
+    fireEvent.change(screen.getByRole('combobox',{name:'Zielhaltestelle'}),{target:{value:'level-6'}})
+    fireEvent.click(screen.getByRole('button',{name:'Fahrt starten'}))
+    act(()=>driver.controller!.advance(4))
+    expect(driver.controller!.getPose().platformOffsetMm).toBeGreaterThan(0)
+    expect(camera.props!.motion!.getOffset()).toEqual([0,0,0]);expect(camera.props!.frame).toEqual(overview)
+    fireEvent.click(screen.getByRole('button',{name:'Plattform/Kabine'}))
+    expect(camera.props!.motion!.getOffset()[1]).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole('button',{name:'Ansicht zurücksetzen'}))
+    expect(camera.props!.request.viewMode).toBe('platform');expect(camera.props!.motion!.getOffset()[1]).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole('button',{name:'Führungssystem'}))
+    expect(camera.props!.motion!.getOffset()[1]).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole('button',{name:'Gesamtansicht'}))
+    expect(camera.props!.frame).toEqual(overview);expect(camera.props!.motion!.getOffset()).toEqual([0,0,0])
+  })
   it('keeps active pose and camera identity across speed-only edits, including paused travel', () => {
     const propsFor = (speed: number) => {
       const normalized = createGoodsLiftNormalizedModel(configured({ nominalSpeedMetresPerSecond: metresPerSecond(speed) }))

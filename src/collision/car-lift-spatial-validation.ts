@@ -1,4 +1,5 @@
 import type { Millimetres } from '../engineering'
+import { validateCarrierMechanics } from './carrier-mechanical-validation'
 import type {
   CarLiftNormalizationResult,
   CarLiftNormalizedModel,
@@ -63,6 +64,11 @@ function planMeasurements(container: CarPlanRectangleMm, subject: CarPlanRectang
 
 function evaluateModel(model: CarLiftNormalizedModel): readonly CarSpatialRuleResult[] {
   const rules: CarSpatialRuleResult[] = []
+  const mechanical = validateCarrierMechanics(model.mechanical,model.shaft,model.platform,model.levels)
+  if (mechanical.length) rules.push(result('car.carrier.explicit-components',
+    mechanical.some((c)=>c.code !== 'component-reference-missing') ? 'invalid' : 'unknown',
+    mechanical.map((c)=>issue('invalid-planning-geometry',c.code === 'component-reference-missing' ? 'info' : 'error',
+      c.involvedComponentIds.map((id)=>`car-${id}`)))))
   if (!model.platform || !model.shaft) {
     rules.push(result('car.platform.shaft-fit', 'unknown', [issue('geometry-unavailable', 'info', [])]))
   } else {

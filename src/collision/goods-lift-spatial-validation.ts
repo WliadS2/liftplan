@@ -1,4 +1,5 @@
 import type { Millimetres } from '../engineering'
+import { validateCarrierMechanics } from './carrier-mechanical-validation'
 import type { GoodsLoadBoxMm, GoodsLiftNormalizationResult, GoodsLiftNormalizedModel, GoodsPlanRectangleMm } from '../elevator/goods/goods-lift-model'
 
 export type GoodsSpatialValidationStatus = 'ok' | 'warning' | 'invalid' | 'unknown'
@@ -80,6 +81,11 @@ function loadRule(ruleId: string, unavailable: GoodsSpatialIssueCode, outside: G
 
 function evaluateModel(model: GoodsLiftNormalizedModel): readonly GoodsSpatialRuleResult[] {
   const rules: GoodsSpatialRuleResult[] = []
+  const mechanical = validateCarrierMechanics(model.mechanical,model.shaft,model.platform,model.levels)
+  if (mechanical.length) rules.push(result('goods.carrier.explicit-components',
+    mechanical.some((c)=>c.code !== 'component-reference-missing') ? 'invalid' : 'unknown',
+    mechanical.map((c)=>({ ...issue('invalid-planning-geometry',c.code === 'component-reference-missing' ? 'info' : 'error',
+      c.involvedComponentIds.map((id)=>`goods-${id}`)), blocksPlatformTravel: c.code !== 'component-reference-missing' }))))
   if (!model.platform || !model.shaft) {
     rules.push(result('goods.platform.shaft-fit', 'unknown', [issue('geometry-unavailable', 'info', [])]))
   } else {

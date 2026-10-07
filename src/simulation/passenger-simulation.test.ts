@@ -362,13 +362,13 @@ describe('deterministic passenger kinematic visualization', () => {
     expect(PASSENGER_VISUALIZATION_TIMING.source).toBe('visualization')
   })
 
-  it('samples semantic moving assembly frames while preserving fixed drive inspection', () => {
+  it('samples moving mechanical details while preserving installation and fixed drive frames', () => {
     const { inputs, controller: c } = setup(10)
     c.dispatch({ type: 'start', targetLevel: 'level-10' }); c.advance(6)
     for (const mode of ['overview', 'drive', 'mechanical', 'cutaway'] as const) {
       const original = getPassengerCameraFrame(mode, inputs.installation, inputs.components, inputs.drive, inputs.safety, inputs.doors)
       const framed = getPassengerSimulationCameraFrame(mode, original, inputs, c.getPose())
-      if (mode === 'drive') expect(framed).toBe(original)
+      if (mode !== 'mechanical') expect(framed).toBe(original)
       else {
         expect(framed.target[1]).toBeGreaterThan(original.target[1])
         expect(framed.bounds.height).toBeLessThan(inputs.installation.bounds.height)

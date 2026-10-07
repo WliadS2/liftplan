@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createPassengerMechanicalFixture } from '../../dev/fixtures/passenger-mechanical-fixture'
-import { metres } from '../../engineering'
+import { metres,millimetres } from '../../engineering'
 import { createLiftGeometryPlanningInput } from '../geometry/lift-geometry-planning-input'
 import { createPassengerDoorSystem, getDoorInspection } from '../geometry/passenger/doors/passenger-door-model'
 import { createPassengerMechanicalComponents } from '../geometry/passenger/mechanical/mechanical-component-model'
@@ -16,8 +16,8 @@ import {
 import { getCameraFrameTrigger, transitionCameraInteraction, type CameraFrameRequest } from './camera-interaction-policy'
 import { getPassengerCameraFrame, getPassengerCameraInstallationKey } from './passenger-camera-bounds'
 
-function setup(stopCount: number) {
-  const configuration = { ...createPassengerMechanicalFixture(), stopCount }
+function setup(stopCount: number,overrides:Partial<ReturnType<typeof createPassengerMechanicalFixture>> = {}) {
+  const configuration = { ...createPassengerMechanicalFixture(), stopCount,...overrides }
   const input = createLiftGeometryPlanningInput(configuration)!
   const result = createPassengerInstallationModel(input)
   if (!('model' in result) || !result.model) throw new Error('Expected installation')
@@ -36,6 +36,18 @@ const bounds = (width: number, height: number, depth: number) => createMechanica
 ])
 
 describe('CAD-like camera fit and interaction policy', () => {
+  it.each([2,6,10])('keeps Passenger full-installation framing independent of cabin floor at %i stops',count=>{
+    const bottom=setup(count,{cabinLevelIndex:0}),top=setup(count,{cabinLevelIndex:count-1})
+    const frame=(m:typeof bottom)=>getPassengerCameraFrame('overview',m.installation,m.components,m.drive,m.safety,m.doors)
+    expect(frame(top)).toEqual(frame(bottom))
+    expect(frame(top).bounds.min[1]).toBeLessThanOrEqual(top.installation.vertical.pitBottomY!)
+    expect(frame(top).bounds.max[1]).toBeGreaterThanOrEqual(top.installation.vertical.shaftTopY!)
+  })
+  it('invalidates Passenger camera keys for cabin dimensions, not only subsystem presence',()=>{
+    const original=setup(6),changed=setup(6,{cabinWidthMm:millimetres(1200)})
+    const key=(m:typeof original)=>getPassengerCameraInstallationKey(m.installation,m.components,m.drive,m.safety,m.doors)
+    expect(key(changed)).not.toBe(key(original))
+  })
   it('fits tall/narrow and short/wide bounds using the actual viewport aspect', () => {
     const tall = calculateCameraFit(bounds(2, 30, 2), [metres(0), metres(0), metres(0)], { width: 600, height: 420 })
     const wide = calculateCameraFit(bounds(12, 2, 2), [metres(0), metres(0), metres(0)], { width: 600, height: 420 })
@@ -54,7 +66,8 @@ describe('CAD-like camera fit and interaction policy', () => {
     const inspection = getDoorInspection(model.doors, model.installation.levels, 'level-6', 'front')
     const doors = getPassengerCameraFrame('doors', model.installation, model.components, model.drive, model.safety, model.doors, inspection)
     expect(overview.target[1]).toBeCloseTo((overview.bounds.min[1] + overview.bounds.max[1]) / 2)
-    expect(overview.target[1]).toBeLessThan(model.installation.cabin!.height)
+    expect(overview.bounds.min[1]).toBeLessThanOrEqual(model.installation.vertical.pitBottomY!)
+    expect(overview.bounds.max[1]).toBeGreaterThanOrEqual(model.installation.vertical.shaftTopY!)
     expect(drive.target[1]).toBeGreaterThan(model.installation.vertical.highestLandingY!)
     expect(safety.target[1]).toBeGreaterThan(model.installation.vertical.pitBottomY!)
     expect(safety.target[1]).toBeLessThan(model.installation.vertical.shaftTopY!)
@@ -67,8 +80,8 @@ describe('CAD-like camera fit and interaction policy', () => {
     const tallOverview = getPassengerCameraFrame('overview', tall.installation, tall.components, tall.drive, tall.safety, tall.doors)
     const shortFit = calculateCameraFit(shortOverview.bounds, shortOverview.target, { width: 600, height: 420 })
     const tallFit = calculateCameraFit(tallOverview.bounds, tallOverview.target, { width: 600, height: 420 })
-    expect(tallFit.maxDistance).toBeCloseTo(shortFit.maxDistance)
-    for (const mode of ['mechanical', 'drive', 'doors', 'cutaway'] as const) {
+    expect(tallFit.maxDistance).toBeGreaterThan(shortFit.maxDistance)
+    for (const mode of ['mechanical', 'drive', 'doors'] as const) {
       const inspection = mode === 'doors' ? getDoorInspection(tall.doors, tall.installation.levels, 'level-10') : undefined
       const frame = getPassengerCameraFrame(mode, tall.installation, tall.components, tall.drive, tall.safety, tall.doors, inspection)
       expect(frame.bounds.height).toBeLessThan(tall.installation.bounds.height)

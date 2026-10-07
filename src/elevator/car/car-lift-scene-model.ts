@@ -5,9 +5,14 @@ export interface CarSceneBox {
   readonly id: string
   readonly kind: 'shaft' | 'pit' | 'headroom' | 'level' | 'platform' | 'platform-floor' | 'platform-roof' | 'platform-wall' | 'door' | 'landing-door' | 'guide' | 'moving-envelope' |
     'vehicle-body' | 'wheel-contact' | 'approach-envelope' | 'vehicle-swept-envelope' | 'door-passage-envelope'
+    | 'carrier-frame' | 'floor-structure' | 'guide-shoe' | 'buffer'
   readonly center: readonly [Metres, Metres, Metres]
   readonly size: readonly [Metres, Metres, Metres]
   readonly headingDegrees?: number
+  readonly componentSource?: import('../configuration/carrier-mechanical-planning').CarrierComponentSource
+  readonly doorAttachment?:
+    | { readonly role: 'platform'; readonly side: 'front' | 'rear' }
+    | { readonly role: 'landing'; readonly side: 'front' | 'rear'; readonly levelId: string }
 }
 
 export interface CarSceneLine {
@@ -135,7 +140,7 @@ export function createCarLiftSceneModel(model: CarLiftNormalizedModel): CarLiftS
       })
     })
   }
-  if (model.guideSystem && model.shaft) {
+  if (model.guideSystem && model.shaft && !model.mechanical?.parts.some((part)=>part.kind === 'guide')) {
     const half = model.guideSystem.spacingMm / 2
     const height = millimetres(model.shaft.maxY - model.shaft.minY)
     const centerY = millimetres((model.shaft.minY + model.shaft.maxY) / 2)
@@ -153,12 +158,14 @@ export function createCarLiftSceneModel(model: CarLiftNormalizedModel): CarLiftS
       const z = entrance.side === 'front' ? model.platform!.maxZ : model.platform!.minZ
       assemblies.push({
         id: entrance.id, kind: 'door',
+        doorAttachment: { role: 'platform', side: entrance.side },
         center: [millimetresToMetres(millimetres(0)), millimetresToMetres(millimetres(model.platform!.minY + entrance.clearHeightMm / 2)),
           millimetresToMetres(z)],
         size: [millimetresToMetres(entrance.clearWidthMm), millimetresToMetres(entrance.clearHeightMm), millimetresToMetres(millimetres(0))],
       })
       if (model.shaft) model.levels.forEach((level) => assemblies.push({
         id: `car-landing-${level.id}-${entrance.side}`, kind: 'landing-door',
+        doorAttachment: { role: 'landing', side: entrance.side, levelId: level.id },
         center: [millimetresToMetres(millimetres(0)),
           millimetresToMetres(millimetres(level.elevationMm + entrance.clearHeightMm / 2)),
           millimetresToMetres(entrance.side === 'front' ? model.shaft!.maxZ : model.shaft!.minZ)],
@@ -201,6 +208,10 @@ export function createCarLiftSceneModel(model: CarLiftNormalizedModel): CarLiftS
         `Vorne · Überhang ${length(front, model.vehicle.centerline[1])} mm`)
       reference('car-track', contacts[0], contacts[1], `Spurbreite ${model.vehicle.trackWidthMm} mm`)
     }
+  }
+  for (const part of model.mechanical?.parts ?? []) {
+    const id = part.id === 'rail-0' ? 'car-guide-a' : part.id === 'rail-1' ? 'car-guide-b' : `car-${part.id}`
+    assemblies.push({ ...box(id,part.kind,part.bounds), componentSource: part.source })
   }
   return { family: 'car', assemblies }
 }
