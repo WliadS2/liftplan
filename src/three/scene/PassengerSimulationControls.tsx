@@ -41,6 +41,7 @@ const capabilityMessages: Record<Exclude<PassengerSimulationCapabilityName, 'cab
 
 function unavailableMessage(issues: readonly SimulationIssue[]): string {
   const paths = new Set(issues.map((issue) => issue.path))
+  if (paths.has('nominalSpeedMetresPerSecond')) return 'Für die Fahrdemo eine positive Nenngeschwindigkeit angeben.'
   if (paths.has('levels')) return 'Für die Fahrdemo werden mindestens zwei gültige Haltestellen benötigt.'
   if (paths.has('cabin')) return 'Für die Fahrdemo fehlen vollständige Kabinenmaße.'
   if (paths.has('cabin.travelEnvelope')) return 'Für die Fahrdemo fehlt ein gültiger Kabinenfahrbereich.'
@@ -62,6 +63,7 @@ export function PassengerSimulationControls({ controller }: { readonly controlle
   const pose = import.meta.env.DEV ? controller.getPose() : undefined
 
   return <div className="development-simulation-controls">
+    <p className="panel-note">Vertikalfahrt mit Nenngeschwindigkeit, ohne Beschleunigungs- oder Bremsmodell. Geschwindigkeitsänderungen gelten ab der nächsten Fahrt.</p>
     <p className="viewport-status">
       {missingCapabilities.length ? 'Fahrdemo teilweise verfügbar.' : 'Fahrdemo verfügbar.'}
       {' '}Visualisierung ohne Nachweis des realen Fahrverhaltens.
@@ -74,7 +76,7 @@ export function PassengerSimulationControls({ controller }: { readonly controlle
       <label>Zielhaltestelle: <select aria-label="Zielhaltestelle" value={targetLevel} disabled={state.phase !== 'idle'} onChange={(event) => setTargetLevel(event.target.value)}>
         {controller.model.levels.map((level) => <option key={level.id} value={level.id}>{level.index + 1}</option>)}
       </select></label>
-      <button type="button" disabled={state.phase !== 'idle' || targetLevel === state.currentLevel} onClick={() => controller.dispatch({ type: 'start', targetLevel })}>Fahrt starten</button>
+      <button type="button" disabled={state.phase !== 'idle' || targetLevel === state.currentLevel || controller.speedStatus !== 'available'} onClick={() => controller.dispatch({ type: 'start', targetLevel })}>Fahrt starten</button>
       <button type="button" disabled={state.phase === 'idle' || state.paused} onClick={() => controller.dispatch({ type: 'pause' })}>Pause</button>
       <button type="button" disabled={!state.paused} onClick={() => controller.dispatch({ type: 'resume' })}>Fortsetzen</button>
       <button type="button" onClick={() => controller.dispatch({ type: 'reset' })}>Zurücksetzen</button>

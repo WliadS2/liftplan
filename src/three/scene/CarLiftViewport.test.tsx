@@ -1,14 +1,19 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createLiftFamilyTechnicalModel } from '../../lift-families'
 import { createCarLiftQaFixture } from '../../dev/fixtures/car-lift-qa-fixture'
 import { createCarLiftPlanningConfiguration, type CarLiftPlanningConfiguration } from '../../elevator'
-import { millimetres as mm } from '../../engineering'
+import { millimetres as mm, metresPerSecond } from '../../engineering'
 import { CarLiftViewport } from './CarLiftViewport'
 
 vi.mock('@react-three/fiber', () => ({ Canvas: ({ children }: { readonly children: React.ReactNode }) => <div data-testid="car-canvas">{children}</div> }))
+const driver = vi.hoisted(() => ({ controller: undefined as import('../../simulation/platform-simulation').PlatformSimulationController | undefined }))
+vi.mock('./CarSimulationDriver', () => ({ CarSimulationDriver: ({ children, controller }: { children: React.ReactNode; controller?: typeof driver.controller }) => {
+  driver.controller = controller
+  return <>{children}</>
+} }))
 vi.mock('@react-three/drei', () => ({ PerspectiveCamera: () => null }))
 const camera = vi.hoisted(() => ({ props: undefined as undefined | { frame: unknown; request: { viewMode: string; resetRevision: number } } }))
 vi.mock('../camera/AutoFitCamera', () => ({ AutoFitCamera: (props: NonNullable<typeof camera.props>) => { camera.props = props; return null } }))
@@ -21,6 +26,29 @@ function viewport(configuration: CarLiftPlanningConfiguration) {
   return render(<CarLiftViewport normalized={model.normalized} validation={model.validation} sceneModel={model.scene} />)
 }
 describe('Autoaufzug viewport states and controls', () => {
+  it('preserves active motion on a speed-only edit and uses new speed on the next departure', () => {
+    const props = (speed: number) => {
+      const m = createLiftFamilyTechnicalModel({ ...createCarLiftQaFixture(), nominalSpeedMetresPerSecond: metresPerSecond(speed) })
+      if (m.status !== 'available' || m.family !== 'car') throw Error('Missing Auto model')
+      return { normalized: m.normalized, validation: m.validation, sceneModel: m.scene }
+    }
+    const view = render(<CarLiftViewport {...props(1)} />)
+    fireEvent.change(screen.getByRole('combobox', { name: 'Zielhaltestelle' }), { target: { value: 'level-6' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Fahrt starten' }))
+    act(() => { driver.controller!.advance(4); driver.controller!.dispatch({ type: 'pause' }) })
+    const controller = driver.controller!, pose = controller.getPose(), state = controller.getState()
+    view.rerender(<CarLiftViewport {...props(2)} />)
+    expect(driver.controller).toBe(controller)
+    expect(controller.getState()).toBe(state); expect(controller.getPose()).toBe(pose)
+    fireEvent.click(screen.getByRole('button', { name: 'Fortsetzen' }))
+    act(() => { controller.advance(20) })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Zielhaltestelle' }), { target: { value: 'level-1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Fahrt starten' }))
+    expect(controller.getState().travelDurationSeconds).toBe(7)
+    view.rerender(<CarLiftViewport {...props(2)} />)
+    expect(driver.controller).not.toBe(controller)
+    expect(driver.controller!.getState().phase).toBe('idle')
+  })
   it('distinguishes empty planning data from renderer unavailability', () => {
     viewport(createCarLiftPlanningConfiguration('Leer'))
     expect(screen.getByText('Planungsdaten eingeben, um die 3D-Ansicht zu starten.')).toBeInTheDocument()

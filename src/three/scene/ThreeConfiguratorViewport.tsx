@@ -16,6 +16,7 @@ import { createPassengerDoorSystem, getDoorInspection, type DoorIssueCode } from
 import type { PassengerEntranceSide } from '../geometry/passenger/passenger-installation-model'
 import { createPassengerSimulationModel, type PassengerVisualizationData, type SimulationModelResult } from '../../simulation/passenger-simulation-model'
 import { createPassengerSimulationController } from '../../simulation/passenger-simulation'
+import { useKinematicRuntime, withoutNominalSpeedKey } from './use-kinematic-runtime'
 import { PassengerSimulationDriver } from './PassengerSimulationDriver'
 import { PassengerSimulationControls, PassengerSimulationUnavailable } from './PassengerSimulationControls'
 
@@ -134,7 +135,13 @@ export function ThreeConfiguratorViewport({
       ? createPassengerSimulationModel({ planning: geometryInput!, installation: model, layout: mechanicalLayout, components: mechanicalComponents, drive, safety, doors }, visualizationData)
       : { status: 'unavailable', issues: [{ code: 'unavailable-data', path: 'installation' }] }
   }, [geometryInput, model, mechanicalLayout, mechanicalComponents, drive, safety, doors, visualizationData])
-  const simulation = useMemo(() => simulationResult?.status === 'available' ? createPassengerSimulationController(simulationResult.model) : undefined, [simulationResult])
+  const simulation = useKinematicRuntime(simulationResult!, geometryInput?.nominalSpeedMetresPerSecond,
+    withoutNominalSpeedKey([geometryInput, visualizationData]), createPassengerSimulationController)
+  const cameraMotion = useMemo(() => simulation ? {
+    identity: simulation,
+    getOffset: (): readonly [number, number, number] => [0,
+      ['overview', 'mechanical', 'cutaway'].includes(viewMode) ? simulation.getPose().cabinOffsetY : 0, 0],
+  } : undefined, [simulation, viewMode])
 
   return (
     <section
@@ -250,9 +257,7 @@ export function ThreeConfiguratorViewport({
                   viewMode={viewMode}
                 /></PassengerSimulationDriver>
               )}
-              {cameraFrame && <AutoFitCamera frame={cameraFrame} simulation={simulation} simulationInputs={model && mechanicalLayout && mechanicalComponents && drive && safety && doors ? {
-                planning: geometryInput!, installation: model, layout: mechanicalLayout, components: mechanicalComponents, drive, safety, doors,
-              } : undefined} request={{
+              {cameraFrame && <AutoFitCamera frame={cameraFrame} motion={cameraMotion} request={{
                 viewMode, installationKey: cameraInstallationKey, doorSelectionKey, resetRevision: cameraResetRevision,
               }} />}
             </Canvas>

@@ -23,6 +23,8 @@ export interface GoodsSpatialIssue {
   readonly messageKey: `goods.spatial.${GoodsSpatialIssueCode}`
   readonly involvedComponentIds: readonly string[]
   readonly measurementsMm?: Readonly<Record<string, Millimetres>>
+  /** Explicit travel guard, independent of aggregate planning status. */
+  readonly blocksPlatformTravel: boolean
 }
 
 export interface GoodsSpatialRuleResult {
@@ -40,6 +42,10 @@ export interface GoodsSpatialValidationResult {
 const issue = (code: GoodsSpatialIssueCode, severity: GoodsSpatialIssueSeverity,
   involvedComponentIds: readonly string[], measurementsMm?: Readonly<Record<string, Millimetres>>): GoodsSpatialIssue => ({
   code, severity, messageKey: `goods.spatial.${code}`, involvedComponentIds, measurementsMm,
+  blocksPlatformTravel: severity === 'error' && [
+    'platform-outside-shaft', 'moving-envelope-outside-shaft',
+    'guide-inside-moving-envelope', 'invalid-level-order', 'invalid-pit-headroom',
+  ].includes(code),
 })
 const result = (ruleId: string, status: GoodsSpatialValidationStatus,
   issues: readonly GoodsSpatialIssue[] = []): GoodsSpatialRuleResult => ({ ruleId, status, issues })

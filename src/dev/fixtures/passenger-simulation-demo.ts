@@ -8,7 +8,7 @@ export const PASSENGER_SIMULATION_DEMO_DATA: PassengerVisualizationData = {
   source: 'demo', initialLevelIndex: 0,
   counterweightInitialCenter: { anchor: 'highest-landing', offsetMm: millimetres(1100) },
   timing: { source: 'demo', doorOpeningSeconds: 2, doorClosingSeconds: 2, dwellSeconds: 3,
-    travelSeconds: 8, arrivalSeconds: 0.4 },
+    arrivalSeconds: 0.4 },
 }
 
 export function createPassengerSimulationFixture(arrangement: CounterweightPosition = 'rear', throughCar = false, stopCount = 2) {

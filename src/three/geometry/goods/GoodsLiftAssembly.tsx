@@ -2,6 +2,7 @@ import { Line } from '@react-three/drei'
 import { DoubleSide } from 'three'
 import type { GoodsLiftRenderModel, GoodsRenderableAssembly } from './goods-lift-render-model'
 import { TechnicalEnvelope, TechnicalSceneLabel } from '../TechnicalEnvelope'
+import { isGoodsMovingAssembly, type GoodsVisualDoorLayout } from './goods-motion-bindings'
 
 function SurfaceAssembly({ assembly }: { readonly assembly: GoodsRenderableAssembly }) {
   const [width, height, depth] = assembly.size
@@ -55,9 +56,37 @@ function GoodsAssemblyPrimitive({ assembly, showLabels }: { readonly assembly: G
   </group>
 }
 
-export function GoodsLiftAssembly({ model }: { readonly model: GoodsLiftRenderModel }) {
+function GoodsDoor({ door, assembly }: { readonly door: GoodsVisualDoorLayout; readonly assembly: GoodsRenderableAssembly }) {
+  return <group name={door.id} position={door.center} userData={{ role: door.role, levelId: door.levelId, source: door.source }}>
+    {/* Frame, sill and track are zero-thickness opening references, not fabricated sections. */}
+    <TechnicalEnvelope size={[door.width, door.height, 0]} color={assembly.appearance.color} lineWidth={2} />
+    <Line name={`${door.id}-sill-reference`} points={[[-door.width/2, -door.height/2, 0], [door.width/2, -door.height/2, 0]]}
+      color={assembly.appearance.color} lineWidth={2.6} />
+    <Line name={`${door.id}-track-reference`} points={[[-door.width/2, door.height/2, 0], [door.width/2, door.height/2, 0]]}
+      color={assembly.appearance.color} lineWidth={1.2} dashed dashSize={0.08} gapSize={0.04} />
+    {[-1, 1].map((sign, index) => <group key={index} name={`${door.id}-panel-motion-${index}`}>
+      <group position={[sign * door.width/4, 0, 0]}>
+        <mesh name={`${door.id}-visual-panel-${index}`}>
+          <planeGeometry args={[door.width/2, door.height]} />
+          <meshStandardMaterial color={assembly.appearance.color} opacity={0.2} transparent side={DoubleSide} depthWrite={false} />
+        </mesh>
+        <TechnicalEnvelope size={[door.width/2, door.height, 0]} color={assembly.appearance.color} lineWidth={1.2} />
+      </group>
+    </group>)}
+  </group>
+}
+
+export function GoodsLiftAssembly({ model, doors = [] }: {
+  readonly model: GoodsLiftRenderModel; readonly doors?: readonly GoodsVisualDoorLayout[]
+}) {
+  const primitive = (assembly: GoodsRenderableAssembly) => {
+    const door = doors.find((entry) => entry.id === assembly.id)
+    return door ? <GoodsDoor key={assembly.id} assembly={assembly} door={door} />
+      : <GoodsAssemblyPrimitive key={assembly.id} assembly={assembly}
+        showLabels={model.viewMode === 'platform' || model.viewMode === 'loads'} />
+  }
   return <group name="goods-lift-assembly">
-    {model.assemblies.map((assembly) => <GoodsAssemblyPrimitive key={assembly.id} assembly={assembly}
-      showLabels={model.viewMode === 'platform' || model.viewMode === 'loads'} />)}
+    <group name="goods-fixed-assembly">{model.assemblies.filter((a) => !isGoodsMovingAssembly(a)).map(primitive)}</group>
+    <group name="goods-moving-assembly">{model.assemblies.filter(isGoodsMovingAssembly).map(primitive)}</group>
   </group>
 }

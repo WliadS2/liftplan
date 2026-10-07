@@ -9,6 +9,9 @@ export interface GoodsSceneBox {
     'pallet' | 'roll-container' | 'forklift-envelope'
   readonly center: readonly [Metres, Metres, Metres]
   readonly size: readonly [Metres, Metres, Metres]
+  readonly doorAttachment?:
+    | { readonly role: 'platform'; readonly side: 'front' | 'rear' }
+    | { readonly role: 'landing'; readonly side: 'front' | 'rear'; readonly levelId: string }
 }
 
 export interface GoodsLiftSceneModel {
@@ -142,6 +145,7 @@ export function createGoodsLiftSceneModel(model: GoodsLiftNormalizedModel): Good
       assemblies.push({
         id: entrance.id,
         kind: 'door',
+        doorAttachment: { role: 'platform', side: entrance.side },
         center: [millimetresToMetres(millimetres(0)), millimetresToMetres(millimetres(model.platform!.minY + entrance.heightMm / 2)), millimetresToMetres(z)],
         size: [millimetresToMetres(entrance.widthMm), millimetresToMetres(entrance.heightMm), millimetresToMetres(millimetres(0))],
       })
@@ -151,6 +155,7 @@ export function createGoodsLiftSceneModel(model: GoodsLiftNormalizedModel): Good
           assemblies.push({
             id: `goods-landing-${level.id}-${entrance.side}`,
             kind: 'landing-door',
+            doorAttachment: { role: 'landing', side: entrance.side, levelId: level.id },
             center: [millimetresToMetres(millimetres(0)),
               millimetresToMetres(millimetres(level.elevationMm + entrance.heightMm / 2)),
               millimetresToMetres(landingZ)],

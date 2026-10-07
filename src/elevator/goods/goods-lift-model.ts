@@ -1,4 +1,4 @@
-import { millimetres, type Millimetres } from '../../engineering'
+import { millimetres, type Millimetres, type MetresPerSecond } from '../../engineering'
 import type {
   GoodsLiftPlanningConfiguration,
   GoodsLoadEnvelope,
@@ -42,6 +42,7 @@ export interface GoodsEntranceModel {
 }
 
 export interface GoodsLiftNormalizedModel {
+  readonly nominalSpeedMetresPerSecond?: MetresPerSecond
   readonly family: 'goods'
   readonly sourceSchemaVersion: string
   readonly projectName: string
@@ -195,6 +196,7 @@ export function createGoodsLiftNormalizedModel(
     family: 'goods',
     sourceSchemaVersion: configuration.schemaVersion,
     projectName: configuration.projectName,
+    nominalSpeedMetresPerSecond: configuration.nominalSpeedMetresPerSecond,
     platform,
     shaft,
     movingEnvelope,

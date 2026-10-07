@@ -162,11 +162,11 @@ describe('car-lift configuration and normalization', () => {
     ]))
   })
 
-  it('registers all technical capabilities except simulation', () => {
+  it('registers all technical capabilities including vertical simulation', () => {
     for (const capability of ['configuration', 'normalization', 'validation', 'geometry', 'three', 'drawings', 'pdf', 'dxf', 'persistence', 'migration'] as const) {
       expect(getLiftFamilyCapability('car', capability).status).toBe('available')
     }
-    expect(getLiftFamilyCapability('car', 'simulation').status).toBe('unavailable')
+    expect(getLiftFamilyCapability('car', 'simulation').status).toBe('available')
     expect(createLiftFamilyTechnicalModel(carConfiguration())).toMatchObject({
       status: 'available', family: 'car', validation: { status: 'ok' },
     })

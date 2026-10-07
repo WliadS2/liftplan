@@ -7,15 +7,10 @@ import type { PassengerCameraFrame } from './passenger-camera-bounds'
 
 const shifted = (bounds: MechanicalBounds, offsetY: number) => createMechanicalBounds([bounds.min, bounds.max].map((point) => [point[0], metres(point[1] + offsetY), point[2]]))
 
-/** Sample current runtime pose only on an explicit framing event; never follow the moving cabin every frame. */
+/** Pure explicit-frame sampling. Runtime tracking uses the same rigid offset in AutoFitCamera,
+ * not a changing fit or a combined car/counterweight centre. */
 export function getPassengerSimulationCameraFrame(mode: ThreeViewMode, fallback: PassengerCameraFrame, inputs: PassengerSimulationInputs, pose: SimulationPose): PassengerCameraFrame {
-  if (mode !== 'mechanical' && mode !== 'cutaway') return fallback
-  const car = inputs.components.carSling?.bounds, cw = inputs.components.counterweightFrame?.bounds
-  const bounds = createMechanicalBounds([
-    ...car ? [shifted(car, pose.cabinOffsetY)] : [],
-    ...(cw && pose.counterweightOffsetY !== undefined ? [shifted(cw, pose.counterweightOffsetY)] : []),
-    ...inputs.doors.cabin.map((entry) => shifted(entry.bounds, pose.cabinOffsetY)),
-    ...inputs.safety.linkage ? [shifted(inputs.safety.linkage.bounds, pose.cabinOffsetY)] : [],
-  ].flatMap((entry) => [entry.min, entry.max]))
-  return { bounds, target: mode === 'cutaway' ? [metres(0), metres(pose.cabinY + (inputs.installation.cabin?.height ?? 0) / 2), metres(0)] : bounds.center }
+  if (!inputs.installation.cabin || !['overview', 'mechanical', 'cutaway'].includes(mode)) return fallback
+  return { ...fallback, bounds: shifted(fallback.bounds, pose.cabinOffsetY),
+    target: [fallback.target[0], metres(fallback.target[1] + pose.cabinOffsetY), fallback.target[2]] }
 }

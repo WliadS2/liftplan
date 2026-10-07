@@ -1,4 +1,7 @@
 import type { GoodsLiftSceneModel, GoodsSceneBox } from '../../elevator/goods/goods-lift-scene-model'
+import { metres } from '../../engineering'
+import { getSemanticMovingFrame } from './semantic-moving-frame'
+import { isGoodsMovingAssembly } from '../geometry/goods/goods-motion-bindings'
 import type { CameraBounds, CameraFrame, CameraVector } from './camera-fit'
 import { createGoodsLiftRenderModel, type GoodsLiftViewMode } from '../geometry/goods/goods-lift-render-model'
 
@@ -52,9 +55,19 @@ const viewDirections: Readonly<Record<GoodsLiftViewMode, CameraVector>> = {
   cutaway: [0.65, 0.25, 1],
 }
 
-export function getGoodsLiftCameraFrame(scene: GoodsLiftSceneModel, viewMode: GoodsLiftViewMode): CameraFrame {
+export function getGoodsLiftCameraFrame(scene: GoodsLiftSceneModel, viewMode: GoodsLiftViewMode, includeVisualDoorTravel = false): CameraFrame {
   const visible = createGoodsLiftRenderModel(scene, viewMode).assemblies
-  const bounds = boundsForAssemblies(visible.length ? visible : scene.assemblies)
+  // Reserve full schematic panel travel once, never re-fit on animation ticks.
+  const cameraAssemblies = includeVisualDoorTravel ? visible.map((assembly) =>
+    assembly.kind === 'door' || assembly.kind === 'landing-door'
+      ? { ...assembly, size: [metres(assembly.size[0] * 2), assembly.size[1], assembly.size[2]] as GoodsSceneBox['size'] }
+      : assembly) : visible
+  const bounds = boundsForAssemblies(cameraAssemblies.length ? cameraAssemblies : scene.assemblies)
+  if (viewMode === 'overview' || viewMode === 'platform' || viewMode === 'loads' || viewMode === 'cutaway') {
+    const moving = cameraAssemblies.filter(isGoodsMovingAssembly)
+    if (moving.length) return getSemanticMovingFrame(boundsForAssemblies(moving), viewDirections[viewMode],
+      viewMode === 'overview' || viewMode === 'cutaway' ? bounds : undefined)
+  }
   return {
     bounds,
     target: targetForMode(scene, viewMode, bounds.center),

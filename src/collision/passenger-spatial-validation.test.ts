@@ -3,7 +3,7 @@ import {
   createPassengerPlanningConfiguration,
   type PassengerPlanningConfiguration,
 } from '../elevator'
-import { metres, millimetres } from '../engineering'
+import { metres, millimetres, metresPerSecond } from '../engineering'
 import { createPassengerDoorDemo } from '../dev/fixtures/passenger-door-demo'
 import { createPassengerMechanicalFixture } from '../dev/fixtures/passenger-mechanical-fixture'
 import { createPassengerSimulationFixture, PASSENGER_SIMULATION_DEMO_DATA } from '../dev/fixtures/passenger-simulation-demo'
@@ -34,7 +34,7 @@ import {
 function normalConfiguration(stopCount = 2): PassengerPlanningConfiguration {
   return {
     ...createPassengerPlanningConfiguration('Räumliche Prüfung'),
-    stopCount,
+    stopCount, ratedSpeedMetresPerSecond: metresPerSecond(1),
     floorHeightMm: millimetres(3000),
     cabinLevelIndex: 0,
     cabinWidthMm: millimetres(1100),

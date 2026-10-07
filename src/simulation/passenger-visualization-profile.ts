@@ -9,6 +9,5 @@ export const PASSENGER_VISUALIZATION_TIMING: VisualizationTiming = Object.freeze
   doorOpeningSeconds: 1.5,
   doorClosingSeconds: 1.5,
   dwellSeconds: 2,
-  travelSeconds: 6,
   arrivalSeconds: 0.3,
 })

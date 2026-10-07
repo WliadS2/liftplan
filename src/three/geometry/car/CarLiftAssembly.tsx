@@ -2,6 +2,7 @@ import { Line } from '@react-three/drei'
 import { DoubleSide } from 'three'
 import { CAR_CONTACT_SYMBOL_RADIUS_METRES, type CarLiftRenderModel, type CarRenderableAssembly } from './car-lift-render-model'
 import { TechnicalEnvelope, TechnicalSceneLabel } from '../TechnicalEnvelope'
+import { isCarMovingAssembly } from './car-motion-bindings'
 
 function CarPrimitive({ assembly: a }: { readonly assembly: CarRenderableAssembly }) {
   const { color, opacity, presentation } = a.appearance
@@ -48,5 +49,8 @@ function CarPrimitive({ assembly: a }: { readonly assembly: CarRenderableAssembl
 
 /** Dedicated Autoaufzug materialization; no goods assembly, store, or vehicle calculation. */
 export function CarLiftAssembly({ model }: { readonly model: CarLiftRenderModel }) {
-  return <group name="car-lift-assembly">{model.assemblies.map((a) => <CarPrimitive key={a.id} assembly={a} />)}</group>
+  return <group name="car-lift-assembly">
+    <group name="car-fixed-assembly">{model.assemblies.filter((a) => !isCarMovingAssembly(a)).map((a) => <CarPrimitive key={a.id} assembly={a} />)}</group>
+    <group name="car-moving-assembly">{model.assemblies.filter(isCarMovingAssembly).map((a) => <CarPrimitive key={a.id} assembly={a} />)}</group>
+  </group>
 }

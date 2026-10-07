@@ -1,4 +1,5 @@
-import { metres, type Metres } from '../engineering'
+import { metres, type Metres, type MetresPerSecond } from '../engineering'
+import { calculateVerticalTravelDuration } from './vertical-travel'
 import type { PassengerLandingLevelModel } from '../three/geometry/passenger/passenger-installation-model'
 import type { CableSegment } from '../three/geometry/passenger/mechanical/cable-segment'
 import type { MechanicalPoint } from '../three/geometry/passenger/mechanical/passenger-mechanical-layout'
@@ -14,7 +15,6 @@ export interface VisualizationTiming {
   readonly doorOpeningSeconds: number
   readonly doorClosingSeconds: number
   readonly dwellSeconds: number
-  readonly travelSeconds: number
   readonly arrivalSeconds: number
 }
 export interface SimulationEnvelope { readonly minY: Metres; readonly maxY: Metres }
@@ -27,6 +27,7 @@ export interface PassengerSimulationCapability {
 }
 export type PassengerSimulationCapabilities = Readonly<Record<PassengerSimulationCapabilityName, PassengerSimulationCapability>>
 export interface PassengerSimulationModel {
+  readonly nominalSpeedMetresPerSecond?: MetresPerSecond
   readonly levels: readonly PassengerLandingLevelModel[]
   readonly initialLevelId: string
   readonly referenceCabinY: Metres
@@ -56,6 +57,7 @@ export interface PassengerSimulationState {
   readonly sourceLevel: string
   readonly closingPurpose: 'departure' | 'completion'
   readonly phaseElapsedSeconds: number
+  readonly travelDurationSeconds: number
   readonly travelProgress: number
   readonly doorProgress: number
   readonly travelDirection: TravelDirection
@@ -87,7 +89,7 @@ export function smoothVisualizationProgress(progress: number): number {
 }
 export function createInitialSimulationState(model: PassengerSimulationModel): PassengerSimulationState {
   return { phase: 'idle', paused: false, currentLevel: model.initialLevelId, targetLevel: model.initialLevelId,
-    sourceLevel: model.initialLevelId, closingPurpose: 'departure', phaseElapsedSeconds: 0,
+    sourceLevel: model.initialLevelId, closingPurpose: 'departure', phaseElapsedSeconds: 0, travelDurationSeconds: 0,
     travelProgress: 0, doorProgress: 0, travelDirection: 'none' }
 }
 const inside = (y: number, envelope: SimulationEnvelope) => Number.isFinite(y) && y >= envelope.minY && y <= envelope.maxY
@@ -104,6 +106,8 @@ export function dispatchSimulationCommand(model: PassengerSimulationModel, state
   const target = level(model, command.targetLevel), source = level(model, state.currentLevel)
   if (!target || !source || !Number.isFinite(target.elevationY) || !Number.isFinite(source.elevationY)) return reject('invalid-level', 'targetLevel')
   if (target.id === source.id) return reject('same-level', 'targetLevel')
+  const duration = calculateVerticalTravelDuration(source.elevationY, target.elevationY, model.nominalSpeedMetresPerSecond)
+  if (duration.status !== 'available') return reject(duration.status === 'unknown' ? 'unavailable-data' : 'invalid-timing', duration.path)
   const initial = level(model, model.initialLevelId)!
   const counterweightY = model.counterweight
     ? model.counterweight.initialY + model.counterweight.travelFactor * (target.elevationY - initial.elevationY)
@@ -111,7 +115,7 @@ export function dispatchSimulationCommand(model: PassengerSimulationModel, state
   if (!inside(target.elevationY, model.cabinEnvelope) ||
     (counterweightY !== undefined && !inside(counterweightY, model.counterweight!.envelope))) return reject('outside-envelope', 'targetLevel')
   return { ok: true, state: { ...state, phase: model.capabilities.doorMovement.available ? 'door-closing' : 'moving', sourceLevel: source.id, targetLevel: target.id,
-    closingPurpose: 'departure', phaseElapsedSeconds: 0, travelProgress: 0,
+    closingPurpose: 'departure', phaseElapsedSeconds: 0, travelProgress: 0, travelDurationSeconds: duration.seconds,
     travelDirection: target.elevationY > source.elevationY ? 'up' : 'down' } }
 }
 
@@ -132,7 +136,7 @@ function nextPhase(model: PassengerSimulationModel, state: PassengerSimulationSt
 }
 function phaseDuration(model: PassengerSimulationModel, state: PassengerSimulationState): number {
   const timing = model.timing
-  return { idle: 0, 'door-closing': timing.doorClosingSeconds, moving: timing.travelSeconds,
+  return { idle: 0, 'door-closing': timing.doorClosingSeconds, moving: state.travelDurationSeconds,
     arriving: timing.arrivalSeconds, 'door-opening': timing.doorOpeningSeconds, 'door-open': timing.dwellSeconds }[state.phase]
 }
 /** Consume all elapsed time across boundaries; subdividing a tick cannot change the resulting phase/pose. */
@@ -152,7 +156,7 @@ export function advanceSimulation(model: PassengerSimulationModel, state: Passen
     // Round only floating-point accumulation at a phase boundary, never physical timing or clearances.
     if (duration - next.phaseElapsedSeconds <= Number.EPSILON * 16 * Math.max(1, duration)) next = { ...next, phaseElapsedSeconds: duration }
     const progress = smoothVisualizationProgress(next.phaseElapsedSeconds / duration)
-    if (next.phase === 'moving') next = { ...next, travelProgress: progress }
+    if (next.phase === 'moving') next = { ...next, travelProgress: next.phaseElapsedSeconds / duration }
     if (next.phase === 'door-opening') next = { ...next, doorProgress: progress }
     if (next.phase === 'door-closing') next = { ...next, doorProgress: next.closingPurpose === 'completion' ? 1 - progress : 0 }
     if (next.phaseElapsedSeconds >= duration) next = nextPhase(model, next)
@@ -222,7 +226,10 @@ export function createPassengerSimulationController(model: PassengerSimulationMo
     return result
   }
   return {
-    model,
+    get model() { return model },
+    get speedStatus() { return calculateVerticalTravelDuration(metres(0), metres(0), model.nominalSpeedMetresPerSecond).status },
+    // Active journeys retain their captured duration; the next departure uses the new speed.
+    setNominalSpeed: (speed: MetresPerSecond | undefined) => { model = { ...model, nominalSpeedMetresPerSecond: speed } },
     getPose: () => pose,
     getState: () => state,
     getSnapshot: () => snapshot,

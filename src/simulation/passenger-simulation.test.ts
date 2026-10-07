@@ -10,7 +10,7 @@ import { createTractionDriveModel } from '../three/geometry/passenger/mechanical
 import { createPassengerSafetyModel } from '../three/geometry/passenger/mechanical/passenger-safety-model'
 import { createPassengerDoorSystem, getDoorPanelParts } from '../three/geometry/passenger/doors/passenger-door-model'
 import { createProjectStore } from '../projects/project-store'
-import { metres, millimetres } from '../engineering'
+import { metres, millimetres, metresPerSecond } from '../engineering'
 import { createPassengerPlanningConfiguration, type PassengerPlanningConfiguration } from '../elevator'
 import { createPassengerSimulationModel, type PassengerVisualizationData } from './passenger-simulation-model'
 import { PASSENGER_VISUALIZATION_TIMING } from './passenger-visualization-profile'
@@ -35,6 +35,7 @@ function normalConfiguration(stopCount = 6): PassengerPlanningConfiguration {
   return {
     ...createPassengerPlanningConfiguration('Normales Planungsprojekt'),
     stopCount,
+    ratedSpeedMetresPerSecond: metresPerSecond(1),
     floorHeightMm: millimetres(3000),
     cabinLevelIndex: 0,
     cabinWidthMm: millimetres(1100),
@@ -68,7 +69,7 @@ describe('deterministic passenger kinematic visualization', () => {
     expect(c.getState().phase).toBe('door-closing')
     c.advance(model.timing.doorClosingSeconds)
     expect(c.getState().phase).toBe('moving')
-    c.advance(model.timing.travelSeconds)
+    c.advance(c.getState().travelDurationSeconds)
     expect(c.getState()).toMatchObject({ phase: 'arriving', currentLevel: 'level-6', targetLevel: 'level-6', travelProgress: 1 })
     expect(c.getPose().cabinY).toBe(15)
     c.advance(model.timing.arrivalSeconds)
@@ -87,7 +88,7 @@ describe('deterministic passenger kinematic visualization', () => {
     c.dispatch({ type: 'start', targetLevel: target.id }); c.advance(model.timing.doorClosingSeconds)
     const cabinStart = c.getPose().cabinY, cwStart = c.getPose().counterweightY
     for (let tick = 0; tick < 80; tick++) {
-      c.advance(0.1)
+      c.advance(c.getState().travelDurationSeconds / 80)
       const pose = c.getPose()
       expect(validateSimulationPose(model, pose)).toEqual([])
       expect(pose.travelProgress).toBeGreaterThanOrEqual(0); expect(pose.travelProgress).toBeLessThanOrEqual(1)
@@ -99,7 +100,7 @@ describe('deterministic passenger kinematic visualization', () => {
     c.advance(20)
     c.dispatch({ type: 'start', targetLevel: 'level-1' }); c.advance(model.timing.doorClosingSeconds)
     expect(c.getPose().travelDirection).toBe('down')
-    c.advance(model.timing.travelSeconds)
+    c.advance(c.getState().travelDurationSeconds)
     expect(c.getPose().cabinY).toBe(model.levels[0].elevationY)
     expect(c.getPose().counterweightY).toBe(model.counterweight!.initialY)
     expect(c.getPose().tractionSheaveRotation).toBe(0)
@@ -128,8 +129,8 @@ describe('deterministic passenger kinematic visualization', () => {
   })
 
   it('opens cabin and served landing panels together; all other landings remain closed', () => {
-    const { controller: c, inputs } = setup(6, 'rear', true)
-    c.dispatch({ type: 'start', targetLevel: 'level-6' }); c.advance(11.4)
+    const { controller: c, inputs, model } = setup(6, 'rear', true)
+    c.dispatch({ type: 'start', targetLevel: 'level-6' }); c.advance(model.timing.doorClosingSeconds + c.getState().travelDurationSeconds + model.timing.arrivalSeconds + model.timing.doorOpeningSeconds / 2)
     const pose = c.getPose()
     expect(pose.simulationState).toBe('door-opening')
     expect(pose.cabinDoorProgress).toBeCloseTo(0.5)
@@ -237,7 +238,7 @@ describe('deterministic passenger kinematic visualization', () => {
   it('uses built-in visual timing and degrades unsupported or stale optional suspension routes', () => {
     const { inputs } = setup()
     expect(createPassengerSimulationModel(inputs)).toMatchObject({ status: 'available', model: { timing: { source: 'visualization' } } })
-    const invalid: PassengerVisualizationData = { ...PASSENGER_SIMULATION_DEMO_DATA, timing: { ...PASSENGER_SIMULATION_DEMO_DATA.timing!, travelSeconds: 0 } }
+    const invalid: PassengerVisualizationData = { ...PASSENGER_SIMULATION_DEMO_DATA, timing: { ...PASSENGER_SIMULATION_DEMO_DATA.timing!, doorClosingSeconds: 0 } }
     expect(createPassengerSimulationModel(inputs, invalid)).toMatchObject({ status: 'invalid', issues: [{ code: 'invalid-timing', path: 'visualization.timing' }] })
     expect(createPassengerSimulationModel({ ...inputs, drive: { ...inputs.drive, suspension: { ...inputs.drive.suspension!, ratio: '2:1' } } }, PASSENGER_SIMULATION_DEMO_DATA)).toMatchObject({
       status: 'available', availability: 'partial', model: { capabilities: { cabinMovement: { available: true }, suspensionUpdate: { available: false } } },
@@ -264,7 +265,7 @@ describe('deterministic passenger kinematic visualization', () => {
     expect(configuration.mechanical).toBeUndefined()
     const controller = createPassengerSimulationController(result.model)
     expect(controller.dispatch({ type: 'start', targetLevel: 'level-6' }).ok).toBe(true)
-    controller.advance(result.model.timing.travelSeconds + result.model.timing.arrivalSeconds)
+    controller.advance(controller.getState().travelDurationSeconds + result.model.timing.arrivalSeconds)
     expect(controller.getState()).toMatchObject({ phase: 'idle', currentLevel: 'level-6' })
     expect(controller.getPose().cabinY).toBe(result.model.levels[5].elevationY)
     expect(controller.getPose().counterweightY).toBeUndefined()
@@ -295,7 +296,7 @@ describe('deterministic passenger kinematic visualization', () => {
     expect(result.model.capabilities).toMatchObject({ cabinMovement: { available: true }, doorMovement: { available: true } })
     const controller = createPassengerSimulationController(result.model)
     controller.dispatch({ type: 'start', targetLevel: 'level-6' })
-    controller.advance(result.model.timing.doorClosingSeconds + result.model.timing.travelSeconds +
+    controller.advance(result.model.timing.doorClosingSeconds + controller.getState().travelDurationSeconds +
       result.model.timing.arrivalSeconds + result.model.timing.doorOpeningSeconds / 2)
     expect(controller.getPose()).toMatchObject({ simulationState: 'door-opening', activeLandingLevel: 'level-6' })
     expect(controller.getPose().cabinDoorProgress).toBeGreaterThan(0)
@@ -344,10 +345,10 @@ describe('deterministic passenger kinematic visualization', () => {
     const controller = createPassengerSimulationController(result.model)
     const top = result.model.levels.at(-1)!
     controller.dispatch({ type: 'start', targetLevel: top.id })
-    controller.advance(result.model.timing.travelSeconds + result.model.timing.arrivalSeconds)
+    controller.advance(controller.getState().travelDurationSeconds + result.model.timing.arrivalSeconds)
     expect(controller.getPose().cabinY).toBe(top.elevationY)
     controller.dispatch({ type: 'start', targetLevel: 'level-1' })
-    controller.advance(result.model.timing.travelSeconds + result.model.timing.arrivalSeconds)
+    controller.advance(controller.getState().travelDurationSeconds + result.model.timing.arrivalSeconds)
     expect(controller.getPose().cabinY).toBe(result.model.levels[0].elevationY)
   })
 
@@ -361,16 +362,16 @@ describe('deterministic passenger kinematic visualization', () => {
     expect(PASSENGER_VISUALIZATION_TIMING.source).toBe('visualization')
   })
 
-  it('samples moving local assemblies for explicit framing while preserving fixed overview and drive frames', () => {
+  it('samples semantic moving assembly frames while preserving fixed drive inspection', () => {
     const { inputs, controller: c } = setup(10)
     c.dispatch({ type: 'start', targetLevel: 'level-10' }); c.advance(6)
     for (const mode of ['overview', 'drive', 'mechanical', 'cutaway'] as const) {
       const original = getPassengerCameraFrame(mode, inputs.installation, inputs.components, inputs.drive, inputs.safety, inputs.doors)
       const framed = getPassengerSimulationCameraFrame(mode, original, inputs, c.getPose())
-      if (mode === 'overview' || mode === 'drive') expect(framed).toBe(original)
+      if (mode === 'drive') expect(framed).toBe(original)
       else {
-        expect(framed.bounds.min[1]).toBeGreaterThan(10)
-        expect(framed.bounds.max[1]).toBeLessThan(18)
+        expect(framed.target[1]).toBeGreaterThan(original.target[1])
+        expect(framed.bounds.height).toBeLessThan(inputs.installation.bounds.height)
       }
     }
   })

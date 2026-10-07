@@ -1,6 +1,8 @@
 import type { CarLiftSceneModel } from '../../elevator/car/car-lift-scene-model'
 import { CAR_CONTACT_SYMBOL_RADIUS_METRES, createCarLiftRenderModel, type CarSceneAssembly, type CarLiftViewMode } from '../geometry/car/car-lift-render-model'
 import type { CameraBounds, CameraFrame, CameraVector } from './camera-fit'
+import { getSemanticMovingFrame } from './semantic-moving-frame'
+import { isCarMovingAssembly } from '../geometry/car/car-motion-bindings'
 
 /** Rotation-aware render-space bounds; engineering envelopes are not changed by camera fitting. */
 export function getCarAssemblyBounds(assemblies: readonly CarSceneAssembly[]): CameraBounds {
@@ -26,6 +28,11 @@ const directions: Readonly<Record<CarLiftViewMode, CameraVector>> = {
 export function getCarLiftCameraFrame(scene: CarLiftSceneModel, viewMode: CarLiftViewMode): CameraFrame {
   const visible = createCarLiftRenderModel(scene, viewMode).assemblies
   const bounds = getCarAssemblyBounds(visible.length ? visible : scene.assemblies)
+  if (viewMode === 'overview' || viewMode === 'platform' || viewMode === 'vehicle' || viewMode === 'cutaway') {
+    const moving = visible.filter(isCarMovingAssembly)
+    if (moving.length) return getSemanticMovingFrame(getCarAssemblyBounds(moving), directions[viewMode],
+      viewMode === 'overview' || viewMode === 'cutaway' ? bounds : undefined)
+  }
   return { bounds, target: bounds.center, direction: directions[viewMode] }
 }
 export function getCarLiftCameraInstallationKey(scene: CarLiftSceneModel): string {

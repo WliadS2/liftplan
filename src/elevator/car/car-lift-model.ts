@@ -1,4 +1,4 @@
-import { millimetres, type Millimetres } from '../../engineering'
+import { millimetres, type Millimetres, type MetresPerSecond } from '../../engineering'
 import type {
   CarLiftApproachEnvelope,
   CarLiftPlanningConfiguration,
@@ -71,6 +71,7 @@ export interface NormalizedCarApproachEnvelope {
 }
 
 export interface CarLiftNormalizedModel {
+  readonly nominalSpeedMetresPerSecond?: MetresPerSecond
   readonly family: 'car'
   readonly sourceSchemaVersion: string
   readonly projectName: string
@@ -323,6 +324,7 @@ export function createCarLiftNormalizedModel(configuration: CarLiftPlanningConfi
   }
   const model: CarLiftNormalizedModel = {
     family: 'car', sourceSchemaVersion: configuration.schemaVersion, projectName: configuration.projectName,
+    nominalSpeedMetresPerSecond: configuration.nominalSpeedMetresPerSecond,
     platform, shaft, movingEnvelope, entrances, levels: levels.levels,
     vehicle: normalizeVehicle(configuration, baseY),
     entryApproachEnvelope: normalizeApproach('car-entry-approach', configuration.entryApproachEnvelope, baseY),

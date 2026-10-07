@@ -148,7 +148,7 @@ describe('goods geometry and camera QA', () => {
     expect(getGoodsLiftCameraFrame(small, 'platform')).toEqual(getGoodsLiftCameraFrame(tall, 'platform'))
     expect(getGoodsLiftCameraFrame(tall, 'platform').bounds.height).toBe(2.3)
     expect(getGoodsLiftCameraFrame(tall, 'loads').bounds.height).toBe(2.3)
-    expect(getGoodsLiftCameraFrame(tall, 'overview').target).toEqual(tall.assemblies.find((a) => a.kind === 'shaft')?.center)
+    expect(getGoodsLiftCameraFrame(tall, 'overview').target).toEqual(getGoodsLiftCameraFrame(tall, 'platform').target)
   })
   it.each(['pallet', 'rollContainer', 'forkliftEnvelope'] as const)('renders only the explicit %s envelope', (key) => {
     const scene = createGoodsLiftSceneModel(model({ ...fixture, pallet: undefined, rollContainer: undefined,

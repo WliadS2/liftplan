@@ -8,6 +8,7 @@ import type { DoorInspection, PassengerDoorSystemModel } from '../geometry/passe
 import type { PassengerInstallationModel } from '../geometry/passenger/passenger-installation-model'
 import { metres } from '../../engineering'
 import type { CameraFrame } from './camera-fit'
+import { getSemanticMovingFrame } from './semantic-moving-frame'
 
 export interface PassengerCameraFrame extends CameraFrame {
   readonly bounds: MechanicalBounds
@@ -53,6 +54,21 @@ export function getPassengerCameraFrame(mode: ThreeViewMode, installation: Passe
   doors?: PassengerDoorSystemModel, inspection?: DoorInspection): PassengerCameraFrame {
   const subsystemBounds = getPassengerCameraBounds(mode, components, drive, safety, doors, inspection)
   const completeBounds = combine([installationBounds(installation), components.bounds, drive.bounds, safety?.bounds, doors?.bounds])
+  const cabin = installation.cabin
+  if (cabin && (mode === 'overview' || mode === 'mechanical' || mode === 'cutaway')) {
+    const cabinBounds = createMechanicalBounds([
+      [metres(-cabin.width/2), cabin.bottomY, metres(-cabin.depth/2)],
+      [metres(cabin.width/2), metres(cabin.bottomY + cabin.height), metres(cabin.depth/2)],
+    ])
+    const carBounds = combine([cabinBounds, components.carSling?.bounds,
+      ...components.carGuideShoes.flatMap((shoe) => shoe.boxes.map(componentBoxBounds)),
+      ...doors?.cabin.map((door) => door.bounds) ?? [], safety?.linkage?.bounds])
+    const semantic = getSemanticMovingFrame(carBounds, undefined, mode === 'overview' ? completeBounds : undefined)
+    return { ...semantic, bounds: createMechanicalBounds([
+      semantic.bounds.min.map(metres) as unknown as MechanicalBounds['min'],
+      semantic.bounds.max.map(metres) as unknown as MechanicalBounds['max'],
+    ]), target: carBounds.center }
+  }
   if (mode === 'overview') {
     const region = installation.vertical.travelRegion
     const targetY = region ? (region.bottomY + region.topY) / 2 : installation.cabin?.centerY ?? installation.bounds.centerY

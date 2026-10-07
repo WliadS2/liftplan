@@ -5,7 +5,7 @@ import {
   type RegisteredLiftConfiguration,
   type RegisteredLiftFamily,
 } from '../../elevator'
-import type { Millimetres } from '../../engineering'
+import type { Millimetres, MetresPerSecond } from '../../engineering'
 import type { PassengerMechanicalPlanningInput } from './passenger/mechanical/passenger-mechanical-planning-input'
 import type { PassengerDoorSystemData } from '../../elevator/configuration/passenger-door-data'
 
@@ -25,6 +25,7 @@ export type LevelPlanningInput =
   | ExplicitLevelPlanningInput
 
 export interface PassengerGeometryPlanningInput {
+  readonly nominalSpeedMetresPerSecond?: MetresPerSecond
   readonly liftFamily: typeof LIFT_FAMILIES.passenger
   readonly sourceSchemaVersion: string
   readonly cabin: {
@@ -74,6 +75,7 @@ function createPassengerGeometryPlanningInput(
   const planning = result.data
 
   return {
+    nominalSpeedMetresPerSecond: planning.ratedSpeedMetresPerSecond,
     liftFamily: planning.family,
     sourceSchemaVersion: planning.schemaVersion,
     doors: planning.doors,

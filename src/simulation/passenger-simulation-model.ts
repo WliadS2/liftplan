@@ -18,6 +18,7 @@ import {
   type VisualizationTiming,
 } from './passenger-simulation'
 import { PASSENGER_VISUALIZATION_TIMING } from './passenger-visualization-profile'
+import { calculateVerticalTravelDuration } from './vertical-travel'
 import { validatePassengerSpatialGeometry } from '../collision/passenger-spatial-validation'
 
 /** Optional visualization setup, supplied separately from technical project data. */
@@ -58,7 +59,7 @@ const capability = (available: boolean, path: string): PassengerSimulationCapabi
 
 function validTiming(timing: VisualizationTiming): boolean {
   return [timing.doorOpeningSeconds, timing.doorClosingSeconds, timing.dwellSeconds,
-    timing.travelSeconds, timing.arrivalSeconds].every((value) => Number.isFinite(value) && value > 0)
+    timing.arrivalSeconds].every((value) => Number.isFinite(value) && value > 0)
 }
 
 function boundsOffsets(bounds: readonly MechanicalBounds[], referenceY: number) {
@@ -105,6 +106,9 @@ export function createPassengerSimulationModel(
   const { installation, layout, components, drive, safety } = inputs
   const timing = data?.timing ?? PASSENGER_VISUALIZATION_TIMING
   if (!validTiming(timing)) return { status: 'invalid', issues: [{ code: 'invalid-timing', path: 'visualization.timing' }] }
+  const speed = calculateVerticalTravelDuration(metres(0), metres(0), inputs.planning.nominalSpeedMetresPerSecond)
+  if (speed.status !== 'available') return { status: speed.status === 'unknown' ? 'unavailable' : 'invalid',
+    issues: [{ code: speed.status === 'unknown' ? 'unavailable-data' : 'invalid-timing', path: speed.path }] }
 
   const initialIndex = data?.initialLevelIndex ?? installation.vertical.cabinLevelIndex ?? 0
   const initial = installation.levels[initialIndex]
@@ -177,6 +181,7 @@ export function createPassengerSimulationModel(
   } : undefined
 
   const buildModel = (): PassengerSimulationModel => ({
+    nominalSpeedMetresPerSecond: inputs.planning.nominalSpeedMetresPerSecond,
     levels: installation.levels,
     initialLevelId: initial!.id,
     referenceCabinY: cabin.bottomY,

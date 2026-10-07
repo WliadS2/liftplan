@@ -1,6 +1,12 @@
 import { PerspectiveCamera } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { useMemo, useState } from 'react'
+import { millimetresToMetres } from '../../engineering'
+import { createCarSimulationModel } from '../../simulation/car-simulation'
+import { createPlatformSimulationController } from '../../simulation/platform-simulation'
+import { useKinematicRuntime, withoutNominalSpeedKey } from './use-kinematic-runtime'
+import { PlatformSimulationControls, PlatformSimulationUnavailable } from './PlatformSimulationControls'
+import { CarSimulationDriver } from './CarSimulationDriver'
 import type { CarLiftNormalizationResult } from '../../elevator/car/car-lift-model'
 import type { CarLiftSceneModel } from '../../elevator/car/car-lift-scene-model'
 import type { CarSpatialValidationResult } from '../../collision/car-lift-spatial-validation'
@@ -25,6 +31,13 @@ export function CarLiftViewport({ normalized, sceneModel, validation, initialVie
   const renderModel = useMemo(() => sceneModel ? createCarLiftRenderModel(sceneModel, viewMode) : undefined, [sceneModel, viewMode])
   const frame = useMemo(() => sceneModel ? getCarLiftCameraFrame(sceneModel, viewMode) : undefined, [sceneModel, viewMode])
   const installationKey = useMemo(() => sceneModel ? getCarLiftCameraInstallationKey(sceneModel) : 'empty', [sceneModel])
+  const simulationResult = useMemo(() => createCarSimulationModel(normalized, validation), [normalized, validation])
+  const simulation = useKinematicRuntime(simulationResult, 'model' in normalized ? normalized.model.nominalSpeedMetresPerSecond : undefined,
+    withoutNominalSpeedKey(normalized), createPlatformSimulationController)
+  const cameraMotion = useMemo(() => simulation ? { identity: simulation,
+    getOffset: (): readonly [number, number, number] => [0,
+      ['overview', 'platform', 'vehicle', 'cutaway'].includes(viewMode) ? millimetresToMetres(simulation.getPose().platformOffsetMm) : 0, 0],
+  } : undefined, [simulation, viewMode])
   const renderable = Boolean(sceneModel?.assemblies.length)
   return <section className="workspace-panel viewport-panel" aria-labelledby="car-viewport-heading">
     <div className="viewport-heading-row">
@@ -35,6 +48,11 @@ export function CarLiftViewport({ normalized, sceneModel, validation, initialVie
         <button type="button" onClick={() => setResetRevision((v) => v + 1)}>Ansicht zurücksetzen</button>
       </div>}
     </div>
+    {simulation
+      ? <PlatformSimulationControls controller={simulation} availability={simulationResult.status === 'available' ? simulationResult.availability : 'partial'}
+          onReset={() => setResetRevision((v) => v + 1)} />
+      : simulationResult.status !== 'available' && <PlatformSimulationUnavailable result={simulationResult} />}
+    {simulation && simulationResult.status !== 'available' && <PlatformSimulationUnavailable result={simulationResult} />}
     {!sceneModel || !sceneModel.assemblies.length ? <Fallback>Planungsdaten eingeben, um die 3D-Ansicht zu starten.</Fallback> : <>
       <div className="viewport-canvas">
         <Canvas dpr={[1, 1.5]} gl={{ alpha: false, antialias: true, powerPreference: 'high-performance' }}
@@ -44,8 +62,8 @@ export function CarLiftViewport({ normalized, sceneModel, validation, initialVie
           <hemisphereLight color="#ffffff" groundColor="#94a3b8" intensity={1.35} />
           <directionalLight intensity={1.8} position={[5, 8, 6]} />
           <directionalLight intensity={0.55} position={[-4, 3, -5]} />
-          {renderModel && <CarLiftAssembly model={renderModel} />}
-          {frame && <AutoFitCamera frame={frame} request={{ viewMode, installationKey, doorSelectionKey: '', resetRevision }} />}
+          <CarSimulationDriver controller={simulation}>{renderModel && <CarLiftAssembly model={renderModel} />}</CarSimulationDriver>
+          {frame && <AutoFitCamera frame={frame} motion={cameraMotion} request={{ viewMode, installationKey, doorSelectionKey: '', resetRevision }} />}
         </Canvas>
       </div>
       {!renderModel?.assemblies.length && <p className="viewport-status">Für diesen Ansichtsmodus fehlen Planungsdaten.</p>}

@@ -6,44 +6,52 @@ import {
   getCameraFrameTrigger, transitionCameraInteraction,
   type CameraFrameRequest, type CameraInteractionState,
 } from './camera-interaction-policy'
-import type { PassengerSimulationController } from '../../simulation/passenger-simulation'
-import type { PassengerSimulationInputs } from '../../simulation/passenger-simulation-model'
-import { getPassengerSimulationCameraFrame } from './passenger-simulation-camera-frame'
-import type { ThreeViewMode } from '../scene/view-mode'
-import type { PassengerCameraFrame } from './passenger-camera-bounds'
 
 export interface AutoFitCameraProps {
   readonly frame: CameraFrame
   readonly request: Omit<CameraFrameRequest, 'viewportKey'>
-  readonly simulation?: PassengerSimulationController
-  readonly simulationInputs?: PassengerSimulationInputs
+  /** Render-neutral rigid camera translation; never re-fit on animation ticks. */
+  readonly motion?: { readonly identity: object; readonly getOffset: () => readonly [number, number, number] }
 }
 
 /** Owns camera framing and OrbitControls locally; it never mutates scene/model transforms. */
-export function AutoFitCamera({ frame, request, simulation, simulationInputs }: AutoFitCameraProps) {
+export function AutoFitCamera({ frame, request, motion }: AutoFitCameraProps) {
   const controlsRef = useRef<ElementRef<typeof OrbitControls>>(null)
   const previousRequest = useRef<CameraFrameRequest | undefined>(undefined)
   const interactionState = useRef<CameraInteractionState>('auto')
+  const previousMotion = useRef<object | undefined>(undefined)
+  const previousOffset = useRef<readonly [number, number, number]>([0, 0, 0])
 
   useFrame(({ camera, size }) => {
     const nextRequest: CameraFrameRequest = { ...request, viewportKey: `${size.width}:${size.height}` }
-    const trigger = getCameraFrameTrigger(previousRequest.current, nextRequest)
+    const runtimeChanged = previousMotion.current !== motion?.identity
+    previousMotion.current = motion?.identity
+    const trigger = getCameraFrameTrigger(runtimeChanged ? undefined : previousRequest.current, nextRequest)
     const decision = transitionCameraInteraction(interactionState.current, trigger)
     previousRequest.current = nextRequest
     interactionState.current = decision.state
-    if (!decision.reframe || !controlsRef.current) return
+    if (!controlsRef.current) return
+    const offset = motion?.getOffset() ?? [0, 0, 0]
+    if (!decision.reframe) {
+      const delta = offset.map((value, axis) => value - previousOffset.current[axis])
+      if (delta.some((value) => value !== 0)) {
+        camera.position.set(camera.position.x + delta[0], camera.position.y + delta[1], camera.position.z + delta[2])
+        controlsRef.current.target.set(controlsRef.current.target.x + delta[0], controlsRef.current.target.y + delta[1], controlsRef.current.target.z + delta[2])
+      }
+      previousOffset.current = offset
+      return
+    }
+    previousOffset.current = offset
 
-    const effectiveFrame = simulation && simulationInputs
-      ? getPassengerSimulationCameraFrame(request.viewMode as ThreeViewMode, frame as PassengerCameraFrame,
-          simulationInputs, simulation.getPose()) : frame
-    const fit = calculateCameraFit(effectiveFrame.bounds, effectiveFrame.target, size, undefined, undefined, effectiveFrame.direction)
+    const fit = calculateCameraFit(frame.bounds, frame.target, size, undefined, undefined, frame.direction)
     camera.up.set(...fit.up)
     camera.position.set(...fit.position)
+    camera.position.x += offset[0]; camera.position.y += offset[1]; camera.position.z += offset[2]
     camera.near = fit.near
     camera.far = fit.far
-    camera.lookAt(...fit.target)
+    camera.lookAt(fit.target[0] + offset[0], fit.target[1] + offset[1], fit.target[2] + offset[2])
     camera.updateProjectionMatrix()
-    controlsRef.current.target.set(...fit.target)
+    controlsRef.current.target.set(fit.target[0] + offset[0], fit.target[1] + offset[1], fit.target[2] + offset[2])
     controlsRef.current.minDistance = fit.minDistance
     controlsRef.current.maxDistance = fit.maxDistance
     controlsRef.current.update()

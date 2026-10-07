@@ -171,7 +171,7 @@ describe('Auto camera and export regressions', () => {
     const section = createCarLiftRenderModel(scene, 'cutaway')
     expect(section.assemblies.some((a) => a.kind === 'approach-envelope')).toBe(false)
     expect(section.assemblies.some((a) => a.kind === 'vehicle-swept-envelope')).toBe(false)
-    expect(getCarLiftCameraFrame(scene,'cutaway').bounds.height).toBeCloseTo(18.8)
+    expect(getCarLiftCameraFrame(scene,'cutaway').bounds.height).toBeCloseTo(4.8)
   })
   it.each([2, 6, 10])('fits finite deterministic semantic bounds in all views for %i stops', (stopCount) => {
     const { scene } = data({ stopCount, storeyHeightsMm: Array.from({ length: stopCount - 1 }, () => mm(2800)) })

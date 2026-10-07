@@ -53,7 +53,8 @@ describe('CAD-like camera fit and interaction policy', () => {
     const safety = getPassengerCameraFrame('safety', model.installation, model.components, model.drive, model.safety, model.doors)
     const inspection = getDoorInspection(model.doors, model.installation.levels, 'level-6', 'front')
     const doors = getPassengerCameraFrame('doors', model.installation, model.components, model.drive, model.safety, model.doors, inspection)
-    expect(overview.target).toEqual([0, 7.5, 0])
+    expect(overview.target[1]).toBeCloseTo((overview.bounds.min[1] + overview.bounds.max[1]) / 2)
+    expect(overview.target[1]).toBeLessThan(model.installation.cabin!.height)
     expect(drive.target[1]).toBeGreaterThan(model.installation.vertical.highestLandingY!)
     expect(safety.target[1]).toBeGreaterThan(model.installation.vertical.pitBottomY!)
     expect(safety.target[1]).toBeLessThan(model.installation.vertical.shaftTopY!)
@@ -66,11 +67,11 @@ describe('CAD-like camera fit and interaction policy', () => {
     const tallOverview = getPassengerCameraFrame('overview', tall.installation, tall.components, tall.drive, tall.safety, tall.doors)
     const shortFit = calculateCameraFit(shortOverview.bounds, shortOverview.target, { width: 600, height: 420 })
     const tallFit = calculateCameraFit(tallOverview.bounds, tallOverview.target, { width: 600, height: 420 })
-    expect(tallFit.maxDistance).toBeGreaterThan(shortFit.maxDistance)
+    expect(tallFit.maxDistance).toBeCloseTo(shortFit.maxDistance)
     for (const mode of ['mechanical', 'drive', 'doors', 'cutaway'] as const) {
       const inspection = mode === 'doors' ? getDoorInspection(tall.doors, tall.installation.levels, 'level-10') : undefined
       const frame = getPassengerCameraFrame(mode, tall.installation, tall.components, tall.drive, tall.safety, tall.doors, inspection)
-      expect(frame.bounds.height).toBeLessThan(tallOverview.bounds.height / 2)
+      expect(frame.bounds.height).toBeLessThan(tall.installation.bounds.height)
     }
   })
 

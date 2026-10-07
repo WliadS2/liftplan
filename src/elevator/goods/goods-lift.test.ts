@@ -113,7 +113,7 @@ describe('lift-family registry', () => {
       'passenger', 'goods', 'car', 'small-goods', 'hospital-bed', 'home', 'platform', 'heavy-duty',
     ])
     expect(getLiftFamilyCapability('goods', 'validation').status).toBe('available')
-    expect(getLiftFamilyCapability('goods', 'simulation').status).toBe('unavailable')
+    expect(getLiftFamilyCapability('goods', 'simulation').status).toBe('available')
     expect(getLiftFamilyCapability('car', 'drawings').status).toBe('available')
   })
 
