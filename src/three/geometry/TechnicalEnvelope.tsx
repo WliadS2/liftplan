@@ -26,7 +26,11 @@ export function TechnicalEnvelope({ size, color, opacity = 1, lineWidth = 1, das
 }
 
 /** DOM labels avoid downloading fonts or introducing external 3D assets. */
-export function TechnicalSceneLabel({ position, children }: { readonly position: Vector; readonly children: string }) {
+export function TechnicalSceneLabel({ position, children, screenOffset = [0, 0] }: {
+  readonly position: Vector; readonly children: string
+  /** Pixel-space annotation spacing only; the normalized anchor stays unchanged. */
+  readonly screenOffset?: readonly [number, number]
+}) {
   const { gl } = useThree()
   const anchor = useRef<Group>(null)
   const element = useRef<HTMLSpanElement | undefined>(undefined)
@@ -43,7 +47,7 @@ export function TechnicalSceneLabel({ position, children }: { readonly position:
     anchor.current.getWorldPosition(projected.current).project(camera)
     const p = projected.current
     element.current.style.display = p.z < -1 || p.z > 1 || Math.abs(p.x) > 1 || Math.abs(p.y) > 1 ? 'none' : 'block'
-    element.current.style.transform = `translate(${(p.x+1)*size.width/2}px,${(1-p.y)*size.height/2}px) translate(-50%,-50%)`
+    element.current.style.transform = `translate(${(p.x+1)*size.width/2+screenOffset[0]}px,${(1-p.y)*size.height/2+screenOffset[1]}px) translate(-50%,-50%)`
   })
   return <group ref={anchor} position={position} />
 }

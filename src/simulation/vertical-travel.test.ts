@@ -164,7 +164,7 @@ describe('installation overview, local carrier camera and Auto attachments', () 
     expect(pf.bounds.min[1]).toBeLessThanOrEqual(p.installation.vertical.pitBottomY!)
     expect(pf.bounds.max[1]).toBeGreaterThanOrEqual(p.installation.vertical.shaftTopY!)
     expect(pf.target).toEqual(pf.bounds.center)
-    expect(getPassengerCameraFrame('mechanical',p.installation,p.components,p.drive,p.safety,p.doors).bounds.height).toBeLessThan(10)
+    expect(getPassengerCameraFrame('cabin',p.installation,p.components,p.drive,p.safety,p.doors).bounds.height).toBeLessThan(10)
     for (const family of ['goods','car'] as const) {
       const fixture = family === 'goods' ? createGoodsLiftQaFixture() : createCarLiftQaFixture()
       const update = { stopCount: count, storeyHeightsMm: Array(count-1).fill(mm(3000)) }

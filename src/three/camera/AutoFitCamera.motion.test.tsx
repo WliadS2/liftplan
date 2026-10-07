@@ -22,13 +22,14 @@ vi.mock('@react-three/drei', async () => {
 })
 afterEach(cleanup)
 describe('rigid simulation camera following', () => {
-  it.each([PASSENGER_CAMERA_POLICIES,GOODS_CAMERA_POLICIES,CAR_CAMERA_POLICIES])('keeps installation position, pivot and zoom fixed throughout travel and manual orbit', (policies)=>{
+  it.each([PASSENGER_CAMERA_POLICIES,GOODS_CAMERA_POLICIES,CAR_CAMERA_POLICIES].flatMap((policies) =>
+    (['overview', 'cutaway'] as const).map((viewMode) => ({ policies, viewMode }))))('$viewMode: keeps installation position, pivot and zoom fixed throughout travel and manual orbit', ({policies,viewMode})=>{
     const frame = {bounds:{min:[-2,-1,-2] as const,max:[2,32,2] as const,center:[0,15.5,0] as const,
       width:4,height:33,depth:4},target:[0,15.5,0] as const}
     const camera = new PerspectiveCamera(38,1280/720)
     let travel = 0
-    const motion = {identity:{},getOffset:()=>[0,policies.overview === 'moving-detail' ? travel : 0,0] as const}
-    const request = {viewMode:'overview',installationKey:'10-stops',doorSelectionKey:'level-1',resetRevision:0}
+    const motion = {identity:{},getOffset:()=>[0,policies[viewMode] === 'moving-detail' ? travel : 0,0] as const}
+    const request = {viewMode,installationKey:'10-stops',doorSelectionKey:'level-1',resetRevision:0}
     const view = render(<AutoFitCamera frame={frame} request={request} motion={motion}/> )
     const tick = ()=>act(()=>runtime.tick!({camera,size:{width:1280,height:720}}))
     tick()
@@ -45,13 +46,13 @@ describe('rigid simulation camera following', () => {
     view.rerender(<AutoFitCamera frame={frame} request={{...request,resetRevision:1}} motion={motion}/>)
     tick();expect(camera.position.equals(position)).toBe(true);expect(runtime.controls!.target.equals(target)).toBe(true)
   })
-  it('translates camera and pivot without per-frame fits, preserves interaction, and resets at the current pose', () => {
+  it.each(['cabin', 'platform', 'vehicle', 'loads', 'guides'])('%s: translates camera and pivot without per-frame fits, preserves interaction, and resets at the current pose', (viewMode) => {
     const frame = { bounds: { min: [-1, 0, -1] as const, max: [1, 2, 1] as const,
       center: [0, 1, 0] as const, width: 2, height: 2, depth: 2 }, target: [0, 1, 0] as const, direction: [1, 1, 1] as const }
     const camera = new PerspectiveCamera(38, 1280/720)
     let offset = 0
     const motion = { identity: {}, getOffset: () => [0, offset, 0] as const }
-    const request = { viewMode: 'platform', installationKey: 'fixture', doorSelectionKey: '', resetRevision: 0 }
+    const request = { viewMode, installationKey: 'fixture', doorSelectionKey: '', resetRevision: 0 }
     const view = render(<AutoFitCamera frame={frame} request={request} motion={motion} />)
     const tick = () => act(() => runtime.tick!({ camera, size: { width: 1280, height: 720 } }))
     tick()
@@ -64,10 +65,14 @@ describe('rigid simulation camera following', () => {
     runtime.onStart!()
     camera.position.x += 2; runtime.controls!.target.x += 2
     camera.rotation.y += 0.3
+    camera.zoom = 1.4
+    const manualDistance = camera.position.distanceTo(runtime.controls!.target)
     const manualOrientation = camera.quaternion.clone()
     offset = 16; tick()
     expect(camera.position.x).toBe(initial.x + 2)
     expect(camera.quaternion.equals(manualOrientation)).toBe(true)
+    expect(camera.zoom).toBe(1.4)
+    expect(camera.position.distanceTo(runtime.controls!.target)).toBeCloseTo(manualDistance)
     view.rerender(<AutoFitCamera frame={frame} request={{ ...request, resetRevision: 1 }} motion={motion} />)
     tick()
     expect(camera.position.x).toBe(initial.x)

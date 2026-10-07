@@ -13,7 +13,7 @@ export type CarSceneAssembly = CarSceneBox | CarSceneLine
 export interface CarRenderAppearance {
   readonly color: string
   readonly opacity: number
-  readonly presentation: 'outline' | 'surface' | 'solid' | 'line' | 'marker'
+  readonly presentation: 'outline' | 'surface' | 'solid' | 'line' | 'marker' | 'section'
   readonly lineWidth?: number
   readonly dashed?: boolean
 }
@@ -37,12 +37,13 @@ function visible(assembly: CarSceneAssembly, mode: CarLiftViewMode): boolean {
   if (mode === 'vehicle') return ['platform-floor', 'floor-structure', 'loading-direction'].includes(assembly.kind) || vehicleKinds.includes(assembly.kind)
   if (mode === 'platform') return platformKinds.includes(assembly.kind) || vehicleKinds.includes(assembly.kind)
   if (mode === 'doors') return ['shaft', 'platform', 'door', 'landing-door', 'level'].includes(assembly.kind)
-  if (mode === 'approach') return platformKinds.includes(assembly.kind) || vehicleKinds.includes(assembly.kind) || approachKinds.includes(assembly.kind)
+  if (mode === 'approach') return approachKinds.includes(assembly.kind)
   return !approachKinds.includes(assembly.kind) && assembly.kind !== 'platform-roof' && !(assembly.kind === 'platform-wall' &&
     (assembly.id.includes('-front') || assembly.id.endsWith('-right')))
 }
 
 function appearance(assembly: CarSceneAssembly, mode: CarLiftViewMode): CarRenderAppearance {
+  if (assembly.kind === 'shaft' && mode === 'cutaway') return { color: '#64748b', opacity: 0.22, presentation: 'section' }
   if (assembly.kind === 'carrier-frame') return { color: '#5e707c', opacity: 1, presentation: 'solid', lineWidth: 1.2 }
   if (assembly.kind === 'floor-structure') return { color: '#687d88', opacity: 1, presentation: 'solid', lineWidth: 1.2 }
   if (assembly.kind === 'guide-shoe') return { color: '#364953', opacity: 1, presentation: 'solid', lineWidth: 1 }

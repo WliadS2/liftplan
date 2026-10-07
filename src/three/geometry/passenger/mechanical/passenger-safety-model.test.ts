@@ -267,7 +267,7 @@ describe('explicit generic passenger safety geometry', () => {
         expect(bounds.max[i]).toBeGreaterThanOrEqual(part.bounds.max[i])
       }
     }
-    for (const mode of THREE_VIEW_MODES.filter((m) => m !== 'drive' && m !== 'mechanical')) {
+    for (const mode of THREE_VIEW_MODES.filter((m) => m !== 'drive' && m !== 'cabin')) {
       const frame = getPassengerCameraBounds(mode, components, drive, model)
       expect(frame.min[1]).toBeLessThanOrEqual(model.bounds!.min[1])
       expect(frame.max[1]).toBeGreaterThanOrEqual(model.bounds!.max[1])

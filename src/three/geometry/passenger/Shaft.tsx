@@ -1,4 +1,5 @@
 import { Edges, Line } from '@react-three/drei'
+import { ShaftSection } from '../ShaftSection'
 import { TECHNICAL_MATERIALS } from '../../materials/technical-materials'
 import {
   getPassengerViewVisibility,
@@ -34,18 +35,23 @@ export function Shaft({ shaft, viewMode }: ShaftProps) {
     )
   }
 
+  if (visibility.showShaftSection) return <ShaftSection center={[0, extent.centerY, 0]}
+    size={[shaft.width, extent.height, shaft.depth]} color={TECHNICAL_MATERIALS.shaft} />
+
   return (
-    <mesh position={[0, extent.centerY, 0]}>
-      <boxGeometry args={[shaft.width, extent.height, shaft.depth]} />
-      <meshStandardMaterial
-        color={TECHNICAL_MATERIALS.shaft}
-        depthWrite={false}
-        opacity={visibility.shaftEnvelopeOpacity}
-        roughness={0.9}
-        transparent
-      />
-      <Edges color={TECHNICAL_MATERIALS.shaft} />
-    </mesh>
+    <group>
+      <mesh position={[0, extent.centerY, 0]}>
+        <boxGeometry args={[shaft.width, extent.height, shaft.depth]} />
+        <meshStandardMaterial
+          color={TECHNICAL_MATERIALS.shaft}
+          depthWrite={false}
+          opacity={visibility.shaftEnvelopeOpacity}
+          roughness={0.9}
+          transparent
+        />
+        <Edges color={TECHNICAL_MATERIALS.shaft} />
+      </mesh>
+    </group>
   )
 }
 

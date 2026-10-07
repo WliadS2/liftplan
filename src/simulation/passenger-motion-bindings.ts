@@ -3,7 +3,7 @@ import type { SimulationPose } from './passenger-simulation'
 import type { DoorEntranceModel, DoorPanelModel, PassengerDoorSystemModel } from '../three/geometry/passenger/doors/passenger-door-model'
 import type { MechanicalPoint } from '../three/geometry/passenger/mechanical/passenger-mechanical-layout'
 
-export const CAR_MOTION_GROUPS = ['simulation-car-shell', 'simulation-car-mechanics', 'simulation-car-safety', 'simulation-car-hitches'] as const
+export const CAR_MOTION_GROUPS = ['simulation-car-shell', 'simulation-car-mechanics', 'simulation-car-frame-reference', 'simulation-car-safety', 'simulation-car-hitches'] as const
 export const COUNTERWEIGHT_MOTION_GROUPS = ['simulation-counterweight-mechanics', 'simulation-counterweight-hitches'] as const
 export const cableLineName = (id: string, index: number) => `simulation-cable-${id}-${index}`
 export const doorPanelGroupName = (panelId: string) => `simulation-panel-${panelId}`

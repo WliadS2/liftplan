@@ -5,24 +5,32 @@ import { TechnicalEnvelope, TechnicalSceneLabel } from '../TechnicalEnvelope'
 import { isCarMovingAssembly } from './car-motion-bindings'
 import { CarrierDoor } from '../carrier/CarrierDoor'
 import { createCarrierDoorLayouts } from '../carrier/carrier-door-model'
+import { ShaftSection } from '../ShaftSection'
+
+/** Screen-space annotation spacing, never vehicle dimensions or contact offsets. */
+const referenceLabelOffsets: Readonly<Record<string, readonly [number, number]>> = {
+  'car-wheelbase': [65, 0], 'car-track': [-80, 0],
+  'car-rear-overhang': [0, -28], 'car-front-overhang': [0, 28],
+}
 
 function CarPrimitive({ assembly: a }: { readonly assembly: CarRenderableAssembly }) {
   const { color, opacity, presentation } = a.appearance
-  if ('start' in a) return <group name={a.id}>
+  if ('start' in a) return <group name={a.id} renderOrder={20}>
     <Line points={[a.start, a.end]} color={color} transparent opacity={opacity}
       dashed={a.appearance.dashed} dashSize={0.12} gapSize={0.06} lineWidth={a.appearance.lineWidth ?? 1.4} depthTest={false} />
-    {a.label && <TechnicalSceneLabel position={[(a.start[0]+a.end[0])/2, (a.start[1]+a.end[1])/2,
+    {a.label && <TechnicalSceneLabel screenOffset={referenceLabelOffsets[a.id]} position={[(a.start[0]+a.end[0])/2, (a.start[1]+a.end[1])/2,
       (a.start[2]+a.end[2])/2]}>{a.label}</TechnicalSceneLabel>}
   </group>
+  if (presentation === 'section') return <ShaftSection center={a.center} size={a.size} color={color} />
   if (presentation === 'marker') {
     const r = CAR_CONTACT_SYMBOL_RADIUS_METRES
-    return <group name={a.id} position={a.center}>
+    return <group name={a.id} position={a.center} renderOrder={20}>
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[r, 12]} />
-        <meshBasicMaterial color={color} side={DoubleSide} depthTest={false} depthWrite={false} />
+        <meshBasicMaterial color={color} side={DoubleSide} depthTest={false} depthWrite={false} transparent />
       </mesh>
-      <Line points={[[-r, 0, 0], [r, 0, 0]]} color={color} lineWidth={3} depthTest={false} />
-      <Line points={[[0, 0, -r], [0, 0, r]]} color={color} lineWidth={3} depthTest={false} />
+      <Line points={[[-r, 0, 0], [r, 0, 0]]} color={color} lineWidth={3} depthTest={false} transparent />
+      <Line points={[[0, 0, -r], [0, 0, r]]} color={color} lineWidth={3} depthTest={false} transparent />
     </group>
   }
   if (presentation === 'line') return <Line name={a.id} points={[

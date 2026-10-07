@@ -1,5 +1,7 @@
 # Installation versus detail camera QA — 2026-10-07
 
+Historical acceptance record. The later [view-mode runtime QA](view-mode-runtime-qa.md) supersedes Passenger Mechanik tracking with the dedicated Kabine mode and formalizes distinct section presentation across all three families.
+
 ## Root cause and scoped fix
 
 All three camera adapters classified Gesamtansicht as a moving-assembly frame. The semantic helper limited vertical context to a carrier-sized region, and all three viewports included overview in their follow-offset lists. This was an ownership/framing bug, not a geometry, simulation-timing or scale defect.

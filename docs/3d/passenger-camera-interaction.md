@@ -19,7 +19,8 @@ Orbit tuning is intentionally restrained: damping `0.075`, rotation `0.72`, zoom
 | Mode | Orbit target | Fit bounds |
 | --- | --- | --- |
 | Gesamtansicht | Full installation bounds centre, fixed during travel | Complete normalized installation and represented systems, including pit and headroom |
-| Mechanik | Moving cabin/car-sling/shoe/door assembly centre | Local car assembly; long fixed rails and pit parts do not force a tower fit |
+| Kabine | Moving cabin/car-sling/shoe/door/safety/hitch assembly centre | Local carried assembly only; no fixed rails, landing doors, counterweight, buffers or machine |
+| Mechanik | Fixed mechanical-system bounds centre | Frame, both rail systems, counterweight, buffers and represented mechanical systems; translucent cabin shell |
 | Antrieb | Mean of machine, traction/deflection wheels, supports and brake | Same upper drive subsystem |
 | Sicherheit | Midpoint of governor and pit tension assemblies | Explicit governor/safety route and car sling context |
 | Türen | Explicitly selected landing, otherwise the served landing; cabin fallback | Selected landing plus cabin-door inspection extents aligned to that floor for framing only |
@@ -27,7 +28,9 @@ Orbit tuning is intentionally restrained: damping `0.075`, rotation `0.72`, zoom
 
 No target contains fixture coordinates. Missing optional systems fall back to the available normalized bounds.
 
-Only Mechanik uses rigid runtime camera/target translation. User orbit, zoom and pan relationships survive that translation; no frame-by-frame fitting occurs. Gesamtansicht and Schnittansicht have zero follow offset. The shared family-specific policy and Chrome acceptance checks are documented in [installation/detail camera QA](../qa/installation-camera-qa.md).
+Only Kabine uses rigid runtime camera/target translation. User orbit, zoom and pan relationships survive that translation; no frame-by-frame fitting occurs. Mechanik, Gesamtansicht and Schnittansicht have zero follow offset. The implemented catalog drives the actual toolbar in the required order; there is no separate hard-coded button list.
+
+Schnittansicht has explicit `section` ownership rather than being an alias of overview. The shared `ShaftSection` presents only the existing shaft envelope's far faces and edges, omitting the obstructing +X/+Z faces. It adds no wall thickness or domain part. The cabin's front/right sections are omitted and roof/door surfaces reduced. Semantic full-height bounds remain unchanged, with a lateral, Y-up section direction. Goods/Auto reuse this envelope presentation while retaining their independent visibility models. See the current [view-mode runtime QA](../qa/view-mode-runtime-qa.md); the earlier [installation/detail camera QA](../qa/installation-camera-qa.md) records the preceding implementation.
 
 ## Responsive fit and clipping
 

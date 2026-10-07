@@ -52,7 +52,7 @@ const viewDirections: Readonly<Record<GoodsLiftViewMode, CameraVector>> = {
   doors: [0.35, 0.12, 1],
   loads: [0.6, 1.1, 1],
   guides: [1, 0.35, 1],
-  cutaway: [0.65, 0.25, 1],
+  cutaway: [1, 0.12, 0.38],
 }
 
 export function getGoodsLiftCameraFrame(scene: GoodsLiftSceneModel, viewMode: GoodsLiftViewMode, includeVisualDoorTravel = false, doorLevelId?: string): CameraFrame {

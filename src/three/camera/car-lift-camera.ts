@@ -24,7 +24,7 @@ export function getCarAssemblyBounds(assemblies: readonly CarSceneAssembly[]): C
 }
 const directions: Readonly<Record<CarLiftViewMode, CameraVector>> = {
   overview: [1, 0.6, 1], platform: [1, 0.7, 1], vehicle: [0.6, 1.3, 1],
-  doors: [0.35, 0.12, 1], approach: [0.7, 1.4, 1], cutaway: [0.65, 0.25, 1],
+  doors: [0.35, 0.12, 1], approach: [0.7, 1.4, 1], cutaway: [1, 0.12, 0.38],
 }
 export function getCarLiftCameraFrame(scene: CarLiftSceneModel, viewMode: CarLiftViewMode, doorLevelId?: string): CameraFrame {
   // Full schematic track/panel travel is render space only, reserved once, not per animation frame.

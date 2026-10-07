@@ -81,11 +81,28 @@ describe('CAD-like camera fit and interaction policy', () => {
     const shortFit = calculateCameraFit(shortOverview.bounds, shortOverview.target, { width: 600, height: 420 })
     const tallFit = calculateCameraFit(tallOverview.bounds, tallOverview.target, { width: 600, height: 420 })
     expect(tallFit.maxDistance).toBeGreaterThan(shortFit.maxDistance)
-    for (const mode of ['mechanical', 'drive', 'doors'] as const) {
+    const mechanics = getPassengerCameraFrame('mechanical', tall.installation, tall.components, tall.drive, tall.safety, tall.doors)
+    expect(mechanics.bounds.min[1]).toBeLessThanOrEqual(tall.components.bounds!.min[1])
+    expect(mechanics.bounds.max[1]).toBeGreaterThanOrEqual(tall.components.bounds!.max[1])
+    for (const mode of ['cabin', 'drive', 'doors'] as const) {
       const inspection = mode === 'doors' ? getDoorInspection(tall.doors, tall.installation.levels, 'level-10') : undefined
       const frame = getPassengerCameraFrame(mode, tall.installation, tall.components, tall.drive, tall.safety, tall.doors, inspection)
       expect(frame.bounds.height).toBeLessThan(tall.installation.bounds.height)
     }
+  })
+
+  it.each([2, 6, 10])('has deterministic local cabin and full-height section semantics at %i stops', (count) => {
+    const model = setup(count)
+    const frame = (mode: 'cabin' | 'cutaway' | 'overview') => getPassengerCameraFrame(mode,
+      model.installation, model.components, model.drive, model.safety, model.doors)
+    expect(frame('cabin')).toEqual(frame('cabin'))
+    expect(frame('cabin').bounds.height).toBeLessThan(4)
+    expect(frame('cabin')).toEqual((() => {
+      const tall = setup(10)
+      return getPassengerCameraFrame('cabin', tall.installation, tall.components, tall.drive, tall.safety, tall.doors)
+    })())
+    expect(frame('cutaway').bounds).toEqual(frame('overview').bounds)
+    expect(frame('cutaway').direction).not.toEqual(frame('overview').direction)
   })
 
   it('keeps user ownership across ordinary renders but reframes for meaningful events', () => {

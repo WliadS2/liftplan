@@ -195,7 +195,8 @@ describe('explicit generic traction and suspension foundation', () => {
     }
     expect(bounds.min[1]).toBeGreaterThan(components.carSling!.bounds.max[1])
     expect(bounds.height).toBeLessThan(getPassengerCameraBounds('overview', components, model).height)
-    expect(getPassengerCameraBounds('mechanical', components, model).height).toBeLessThan(getPassengerCameraBounds('overview', components, model).height)
+    expect(getPassengerCameraBounds('cabin', components, model).height).toBeLessThan(getPassengerCameraBounds('overview', components, model).height)
+    expect(getPassengerCameraBounds('mechanical', components, model)).toEqual(getPassengerCameraBounds('overview', components, model))
   })
 
   it.each(COMPONENT_DATA_SOURCES)('preserves %s provenance throughout parsing and normalization', (source) => {

@@ -76,9 +76,10 @@ describe('fixed installation camera contract',()=>{
   })
   it('declares distinct installation, moving-detail and fixed-detail ownership for every family view',()=>{
     for(const policies of [PASSENGER_CAMERA_POLICIES,GOODS_CAMERA_POLICIES,CAR_CAMERA_POLICIES]){
-      expect(policies.overview).toBe('installation');expect(policies.cutaway).toBe('installation');expect(policies.doors).toBe('fixed-detail')
+      expect(policies.overview).toBe('installation');expect(policies.cutaway).toBe('section');expect(policies.doors).toBe('fixed-detail')
     }
-    expect(PASSENGER_CAMERA_POLICIES.mechanical).toBe('moving-detail')
+    expect(PASSENGER_CAMERA_POLICIES.cabin).toBe('moving-detail')
+    expect(PASSENGER_CAMERA_POLICIES.mechanical).toBe('fixed-detail')
     expect(GOODS_CAMERA_POLICIES.platform).toBe('moving-detail');expect(GOODS_CAMERA_POLICIES.loads).toBe('moving-detail')
     expect(GOODS_CAMERA_POLICIES.guides).toBe('moving-detail')
     expect(CAR_CAMERA_POLICIES.vehicle).toBe('moving-detail');expect(CAR_CAMERA_POLICIES.approach).toBe('fixed-detail')

@@ -38,9 +38,9 @@ export function PassengerDoorMeshes({ model, viewMode, inspection }: {
     <mesh rotation={part.axisRotation} scale={part.scale} geometry={resources.cylinder} material={materials.get(opacity)![part.material]} />
   </group>)
   return <group name="passenger-door-system">{entrances.map((entry) => {
-    const policy = getDoorViewVisibility(viewMode, entry.role === 'cabin' ? entry.side === inspection.side : entry.id === inspection.landing?.id)
+    const policy = getDoorViewVisibility(viewMode, entry.role === 'cabin' ? entry.side === inspection.side : entry.id === inspection.landing?.id, entry.role)
     const groups = [entry.frame, entry.sill, entry.track, entry.operator, entry.interlock].filter((part) => !!part)
-    return <group key={entry.id} name={entry.id}>
+    return <group key={entry.id} name={entry.id} visible={viewMode !== 'cabin' || entry.role === 'cabin'}>
       {!entry.panels.length && <Line points={entry.outline} lineWidth={1} color={TECHNICAL_MATERIALS.doorEdge} />}
       {entry.panels.map((panel) => {
         const attached = getDoorPanelParts(entry, panel)

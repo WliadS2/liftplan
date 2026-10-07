@@ -41,19 +41,21 @@ export function PassengerElevatorAssembly({
   // The mechanical component subtree and its shared profile geometry remain mounted.
   return (
     <group>
-      {model.shaft && <Shaft key={`shaft-${viewMode}`} shaft={model.shaft} viewMode={viewMode} />}
-      {model.pit && <Pit key={`pit-${viewMode}`} pit={model.pit} opacity={visibility.pitOpacity} />}
+      {viewMode !== 'cabin' && model.shaft && <Shaft key={`shaft-${viewMode}`} shaft={model.shaft} viewMode={viewMode} />}
+      {viewMode !== 'cabin' && model.pit && <Pit key={`pit-${viewMode}`} pit={model.pit} opacity={visibility.pitOpacity} />}
+      {viewMode !== 'cabin' &&
       <LandingLevels
         key={`landings-${viewMode}`}
         footprint={model.levelFootprint}
         levels={model.levels}
         opacity={visibility.landingOpacity}
-      />
+      />}
       <group visible={visibility.showMechanicalSystems}><PassengerMechanicalAssembly
         layout={mechanicalLayout}
         components={mechanicalComponents}
         drive={drive}
         safety={safety}
+        carOnly={viewMode === 'cabin'}
         showCounterweight={visibility.showCounterweight}
         showTractionRopes={visibility.showTractionRopes}
         opacity={visibility.mechanicalOpacity}

@@ -164,6 +164,7 @@ describe('Auto camera and export regressions', () => {
   it('retains all approach envelopes with distinct hierarchy without dominating the full-height section', () => {
     const { scene } = data()
     const approach = createCarLiftRenderModel(scene, 'approach')
+    expect(approach.assemblies.every((a) => ['approach-envelope', 'vehicle-swept-envelope', 'door-passage-envelope'].includes(a.kind))).toBe(true)
     const entry = approach.assemblies.find((a) => a.id === 'car-entry-approach')!, exit = approach.assemblies.find((a) => a.id === 'car-exit-approach')!
     expect(entry.appearance).not.toEqual(exit.appearance)
     expect(approach.assemblies.filter((a) => a.kind === 'door-passage-envelope')).toHaveLength(2)
@@ -171,6 +172,11 @@ describe('Auto camera and export regressions', () => {
     const section = createCarLiftRenderModel(scene, 'cutaway')
     expect(section.assemblies.some((a) => a.kind === 'approach-envelope')).toBe(false)
     expect(section.assemblies.some((a) => a.kind === 'vehicle-swept-envelope')).toBe(false)
+    const shaft = section.assemblies.find((a) => a.kind === 'shaft')!
+    expect(shaft.appearance.presentation).toBe('section')
+    expect(shaft).toMatchObject(scene.assemblies.find((a) => a.kind === 'shaft')!)
+    expect(createCarLiftRenderModel(scene, 'overview').assemblies.find((a) => a.kind === 'shaft')!.appearance.presentation).toBe('outline')
+    expect(getCarLiftCameraFrame(scene, 'cutaway').direction).not.toEqual(getCarLiftCameraFrame(scene, 'overview').direction)
     expect(getCarLiftCameraFrame(scene,'cutaway').bounds.height).toBeCloseTo(18.8)
   })
   it.each([2, 6, 10])('fits finite deterministic semantic bounds in all views for %i stops', (stopCount) => {

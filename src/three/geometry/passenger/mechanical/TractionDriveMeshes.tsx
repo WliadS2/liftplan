@@ -7,7 +7,7 @@ import { createSheaveGeometry } from './traction-geometry'
 import type { TractionDriveModel } from './traction-drive-model'
 import { DynamicCableMeshes } from './DynamicCableMeshes'
 
-export function TractionDriveMeshes({ model, showRopes = true }: { readonly model: TractionDriveModel; readonly showRopes?: boolean }) {
+export function TractionDriveMeshes({ model, showRopes = true, carOnly = false }: { readonly model: TractionDriveModel; readonly showRopes?: boolean; readonly carOnly?: boolean }) {
   const resources = useMemo(() => ({
     sheaves: model.sheaves.map((s) => createSheaveGeometry(s)),
   }), [model])
@@ -18,18 +18,19 @@ export function TractionDriveMeshes({ model, showRopes = true }: { readonly mode
   const boxes = useMemo(() => [...model.supports, ...(model.machine?.boxes ?? [])], [model])
   const cylinders = model.machine?.cylinders ?? []
   return <group name="traction-drive">
-    <ComponentBoxes parts={boxes} opacity={1} />
+    <group visible={!carOnly}><ComponentBoxes parts={boxes} opacity={1} />
     {cylinders.map((c) => <mesh key={c.id} name={c.id} position={c.center} rotation={c.rotation} material={materials[c.material]}>
       <cylinderGeometry args={[c.radius, c.radius, c.length, 20]} />
     </mesh>)}
-    {(['car', 'counterweight', 'fixed'] as const).map((attachment) => <group key={attachment} name={`simulation-${attachment}-hitches`}>
+    </group>
+    {(['car', 'counterweight', 'fixed'] as const).map((attachment) => <group key={attachment} name={`simulation-${attachment}-hitches`} visible={!carOnly || attachment === 'car'}>
       <ComponentBoxes parts={model.hitches.filter((hitch) => hitch.attachment === attachment).map((hitch) => hitch.plate)} opacity={1} />
       {model.suspension?.terminations.filter((termination) => model.hitches.some((hitch) => hitch.attachment === attachment && termination.id.startsWith(`${hitch.id}-termination-`)))
         .map((c) => <mesh key={c.id} name={c.id} position={c.center} rotation={c.rotation} material={materials[c.material]}>
           <cylinderGeometry args={[c.radius, c.radius, c.length, 20]} />
         </mesh>)}
     </group>)}
-    {model.sheaves.map((s, i) => <group key={s.id} name={`sheave-${s.id}`} position={s.center} rotation={[0, s.rotationY, 0]}>
+    {model.sheaves.map((s, i) => <group key={s.id} name={`sheave-${s.id}`} visible={!carOnly} position={s.center} rotation={[0, s.rotationY, 0]}>
       <group name={`sheave-rotor-${s.id}`}>
         <mesh geometry={resources.sheaves[i]} material={materials.sheave} />
         {s.role === 'traction' && <Line points={[[s.hubDiameter / 2, 0, s.width / 2], [s.diameter * 0.45, 0, s.width / 2]]} color="#59697a" lineWidth={2} />}

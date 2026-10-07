@@ -7,7 +7,7 @@ import { createPassengerMechanicalLayout } from '../geometry/passenger/mechanica
 import { createPassengerMechanicalComponents } from '../geometry/passenger/mechanical/mechanical-component-model'
 import { createPassengerInstallationModel } from '../geometry/passenger/passenger-installation-model'
 import type { LiftGeometryPlanningInput } from '../geometry/lift-geometry-planning-input'
-import type { ThreeViewMode } from './view-mode'
+import { PASSENGER_RUNTIME_VIEW_MODES, type ThreeViewMode } from './view-mode'
 import type { MechanicalPlanningIssueCode } from '../geometry/passenger/mechanical/passenger-mechanical-layout'
 import { createTractionDriveModel, type DriveIssueCode } from '../geometry/passenger/mechanical/traction-drive-model'
 import { getPassengerCameraFrame, getPassengerCameraInstallationKey } from '../camera/passenger-camera-bounds'
@@ -154,48 +154,10 @@ export function ThreeConfiguratorViewport({
       <div className="viewport-heading-row">
         <h2 id="viewport-heading">3D-Ansicht</h2>
         <div className="viewport-mode-controls" role="group" aria-label="Ansichtsmodus">
-          <button
-            aria-pressed={viewMode === 'overview'}
-            type="button"
-            onClick={() => setViewMode('overview')}
-          >
-            Gesamtansicht
-          </button>
-          <button
-            aria-pressed={viewMode === 'mechanical'}
-            type="button"
-            onClick={() => setViewMode('mechanical')}
-          >
-            Mechanik
-          </button>
-          <button
-            aria-pressed={viewMode === 'drive'}
-            type="button"
-            onClick={() => setViewMode('drive')}
-          >
-            Antrieb
-          </button>
-          <button
-            aria-pressed={viewMode === 'safety'}
-            type="button"
-            onClick={() => setViewMode('safety')}
-          >
-            Sicherheit
-          </button>
-          <button
-            aria-pressed={viewMode === 'doors'}
-            type="button"
-            onClick={() => setViewMode('doors')}
-          >
-            Türen
-          </button>
-          <button
-            aria-pressed={viewMode === 'cutaway'}
-            type="button"
-            onClick={() => setViewMode('cutaway')}
-          >
-            Schnittansicht
-          </button>
+          {PASSENGER_RUNTIME_VIEW_MODES.map((mode) => <button key={mode.id}
+            aria-pressed={viewMode === mode.id} type="button" onClick={() => setViewMode(mode.id)}>
+            {mode.label}
+          </button>)}
           <button type="button" onClick={() => setCameraResetRevision((revision) => revision + 1)}>
             Ansicht zurücksetzen
           </button>

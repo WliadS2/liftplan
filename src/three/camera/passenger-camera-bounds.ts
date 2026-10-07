@@ -7,13 +7,17 @@ import type { PassengerSafetyModel } from '../geometry/passenger/mechanical/pass
 import type { DoorInspection, PassengerDoorSystemModel } from '../geometry/passenger/doors/passenger-door-model'
 import type { PassengerInstallationModel } from '../geometry/passenger/passenger-installation-model'
 import { metres } from '../../engineering'
-import type { CameraFrame } from './camera-fit'
+import type { CameraFrame, CameraVector } from './camera-fit'
 import { getSemanticMovingFrame } from './semantic-moving-frame'
 
 export interface PassengerCameraFrame extends CameraFrame {
   readonly bounds: MechanicalBounds
   readonly target: MechanicalBounds['center']
 }
+
+/** Presentation-only view orientations (unitless direction vectors, not dimensions). */
+export const PASSENGER_CABIN_DIRECTION: CameraVector = [0.8, 0.45, 1]
+export const PASSENGER_SECTION_DIRECTION: CameraVector = [1, 0.12, 0.38]
 
 const combine = (bounds: readonly (MechanicalBounds | undefined)[]) => createMechanicalBounds(bounds.flatMap((entry) => entry ? [entry.min, entry.max] : []))
 const averageCenters = (bounds: readonly (MechanicalBounds | undefined)[], fallback: MechanicalBounds['center']): MechanicalBounds['center'] => {
@@ -28,18 +32,21 @@ function installationBounds(model: PassengerInstallationModel): MechanicalBounds
   ])
 }
 
-/** Presentation-only focus: long rails/ropes must not shrink local assembly inspection. */
+/** Presentation-only focus: local car/drive details exclude unrelated fixed installation extents. */
 export function getPassengerCameraBounds(mode: ThreeViewMode, components: PassengerMechanicalComponentModel, drive: TractionDriveModel, safety?: PassengerSafetyModel, doors?: PassengerDoorSystemModel, inspection?: DoorInspection): MechanicalBounds {
-  const localMechanics = [components.carSling?.bounds, components.counterweightFrame?.bounds,
+  const movingCar = [components.carSling?.bounds,
     safety?.linkage?.bounds, ...(safety?.gears.map((g) => g.bounds) ?? []), ...(doors?.cabin.map((d) => d.bounds) ?? []),
-    ...components.carGuideShoes.flatMap((s) => s.boxes.map(componentBoxBounds)), ...components.counterweightGuideShoes.flatMap((s) => s.boxes.map(componentBoxBounds)),
+    ...components.carGuideShoes.flatMap((s) => s.boxes.map(componentBoxBounds)),
+    ...drive.hitches.filter((hitch) => hitch.attachment === 'car').map((hitch) => hitch.bounds),
   ]
   const topDrive = [drive.machine?.bounds, ...drive.supports.map(componentBoxBounds),
     ...drive.sheaves.filter((s) => s.role === 'traction' || s.role === 'deflection').map((s) => s.bounds), safety?.machineBrake?.bounds]
   const contexts = mode === 'doors' && inspection?.bounds
     ? [inspection.bounds]
-    : mode === 'mechanical' && localMechanics.some(Boolean)
-    ? localMechanics
+    : mode === 'cabin' && movingCar.some(Boolean)
+    ? movingCar
+    : mode === 'mechanical'
+    ? [components.bounds, drive.bounds, safety?.bounds]
     : mode === 'safety' && safety?.bounds
     ? [safety.bounds, components.carSling?.bounds]
     : mode === 'drive' && topDrive.some(Boolean)
@@ -55,19 +62,29 @@ export function getPassengerCameraFrame(mode: ThreeViewMode, installation: Passe
   const subsystemBounds = getPassengerCameraBounds(mode, components, drive, safety, doors, inspection)
   const completeBounds = combine([installationBounds(installation), components.bounds, drive.bounds, safety?.bounds, doors?.bounds])
   const cabin = installation.cabin
-  if (mode === 'overview' || mode === 'cutaway') {
-    return {bounds:completeBounds,target:completeBounds.center,
-      direction:mode === 'cutaway' ? [0.65,0.25,1] : undefined}
+  if (mode === 'overview') return { bounds: completeBounds, target: completeBounds.center }
+  if (mode === 'cutaway') {
+    // Fixed full-height section, viewed predominantly laterally through the omitted near shaft walls
+    // (+X/+Z), matching the hidden right cabin wall and front wall sections.
+    return { bounds: completeBounds, target: completeBounds.center, direction: PASSENGER_SECTION_DIRECTION }
   }
-  if (cabin && mode === 'mechanical') {
+  if (mode === 'mechanical') {
+    // Rails, buffers and counterweight are the subject, not a second moving-cabin view.
+    return { bounds: subsystemBounds, target: subsystemBounds.center }
+  }
+  if (cabin && mode === 'cabin') {
     const cabinBounds = createMechanicalBounds([
       [metres(-cabin.width/2), cabin.bottomY, metres(-cabin.depth/2)],
       [metres(cabin.width/2), metres(cabin.bottomY + cabin.height), metres(cabin.depth/2)],
     ])
+    // Car-carried parts only: these move rigidly with the cabin, so the runtime offset keeps them framed.
+    // Do not use the generic fallback (which may contain fixed systems) for a cabin with no carried parts.
     const carBounds = combine([cabinBounds, components.carSling?.bounds,
       ...components.carGuideShoes.flatMap((shoe) => shoe.boxes.map(componentBoxBounds)),
-      ...doors?.cabin.map((door) => door.bounds) ?? [], safety?.linkage?.bounds])
-    const semantic = getSemanticMovingFrame(carBounds)
+      ...doors?.cabin.map((door) => door.bounds) ?? [], safety?.linkage?.bounds,
+      ...safety?.gears.map((gear) => gear.bounds) ?? [],
+      ...drive.hitches.filter((hitch) => hitch.attachment === 'car').map((hitch) => hitch.bounds)])
+    const semantic = getSemanticMovingFrame(carBounds, PASSENGER_CABIN_DIRECTION)
     return { ...semantic, bounds: createMechanicalBounds([
       semantic.bounds.min.map(metres) as unknown as MechanicalBounds['min'],
       semantic.bounds.max.map(metres) as unknown as MechanicalBounds['max'],

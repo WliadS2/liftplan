@@ -4,6 +4,7 @@ import type { GoodsLiftRenderModel, GoodsRenderableAssembly } from './goods-lift
 import { TechnicalEnvelope, TechnicalSceneLabel } from '../TechnicalEnvelope'
 import { isGoodsMovingAssembly, type GoodsVisualDoorLayout } from './goods-motion-bindings'
 import { CarrierDoor } from '../carrier/CarrierDoor'
+import { ShaftSection } from '../ShaftSection'
 
 function SurfaceAssembly({ assembly }: { readonly assembly: GoodsRenderableAssembly }) {
   const [width, height, depth] = assembly.size
@@ -33,6 +34,7 @@ function BoxAssembly({ assembly }: { readonly assembly: GoodsRenderableAssembly 
 }
 
 function GoodsAssemblyPrimitive({ assembly, showLabels }: { readonly assembly: GoodsRenderableAssembly; readonly showLabels: boolean }) {
+  if (assembly.appearance.presentation === 'section') return <ShaftSection center={assembly.center} size={assembly.size} color={assembly.appearance.color} />
   if (assembly.appearance.presentation === 'line') {
     const halfHeight = assembly.size[1] / 2
     return <Line name={assembly.id} points={[

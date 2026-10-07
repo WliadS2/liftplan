@@ -78,15 +78,15 @@ export function DetailedBuffers({ buffers, opacity }: { readonly buffers: Buffer
   </group>
 }
 
-export function MechanicalComponentMeshes({ model, opacity, showCounterweight = true }: { readonly model: PassengerMechanicalComponentModel; readonly opacity: number; readonly showCounterweight?: boolean }) {
+export function MechanicalComponentMeshes({ model, opacity, showCounterweight = true, carOnly = false }: { readonly model: PassengerMechanicalComponentModel; readonly opacity: number; readonly showCounterweight?: boolean; readonly carOnly?: boolean }) {
   const rails = useMemo(() => [...(model.carRails ?? []), ...(model.counterweightRails ?? [])], [model.carRails, model.counterweightRails])
   return <group>
-    <ProfiledRails rails={rails} opacity={opacity} hiddenIds={showCounterweight ? [] : model.counterweightRails?.map((r) => r.id)} />
+    <group visible={!carOnly}><ProfiledRails rails={rails} opacity={opacity} hiddenIds={showCounterweight ? [] : model.counterweightRails?.map((r) => r.id)} /></group>
     <group name="simulation-car-mechanics">
       {model.carSling && <ComponentBoxes parts={model.carSling.boxes} opacity={opacity} />}
       <GuideShoes shoes={model.carGuideShoes} opacity={opacity} />
     </group>
-    <group visible={showCounterweight}>
+    <group visible={showCounterweight && !carOnly}>
     <group name="simulation-counterweight-mechanics">
     {model.counterweightFrame && <group>
       <ComponentBoxes parts={model.counterweightFrame.boxes} opacity={opacity} />
@@ -96,6 +96,6 @@ export function MechanicalComponentMeshes({ model, opacity, showCounterweight = 
     </group>
     {model.counterweightBuffers && <DetailedBuffers buffers={model.counterweightBuffers} opacity={opacity} />}
     </group>
-    {model.carBuffers && <DetailedBuffers buffers={model.carBuffers} opacity={opacity} />}
+    <group visible={!carOnly}>{model.carBuffers && <DetailedBuffers buffers={model.carBuffers} opacity={opacity} />}</group>
   </group>
 }

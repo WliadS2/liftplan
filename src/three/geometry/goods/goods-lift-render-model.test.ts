@@ -153,6 +153,11 @@ describe('goods-lift semantic 3D model', () => {
     const cutaway = createGoodsLiftRenderModel(scene().scene, 'cutaway')
     expect(cutaway.assemblies.some((entry) => entry.id.includes('wall-front'))).toBe(false)
     expect(cutaway.assemblies.some((entry) => entry.id.includes('wall-rear'))).toBe(true)
+    const shaft = cutaway.assemblies.find((entry) => entry.kind === 'shaft')!
+    expect(shaft.appearance.presentation).toBe('section')
+    expect(shaft).toMatchObject(scene().scene.assemblies.find((entry) => entry.kind === 'shaft')!)
+    expect(createGoodsLiftRenderModel(scene().scene, 'overview').assemblies.find((entry) => entry.kind === 'shaft')!.appearance.presentation).toBe('outline')
+    expect(getGoodsLiftCameraFrame(scene().scene, 'cutaway').direction).not.toEqual(getGoodsLiftCameraFrame(scene().scene, 'overview').direction)
   })
 
   it.each([2, 6, 10])('keeps camera fitting finite and deterministic for %i stops', (stopCount) => {

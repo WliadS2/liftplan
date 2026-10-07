@@ -15,6 +15,7 @@ export interface PassengerMechanicalAssemblyProps {
   readonly safety: PassengerSafetyModel
   readonly showCounterweight: boolean
   readonly showTractionRopes: boolean
+  readonly carOnly?: boolean
   readonly opacity?: number
 }
 
@@ -24,12 +25,12 @@ function RailAxes({ system, opacity }: { readonly system: PassengerRailSystemLay
     color={TECHNICAL_MATERIALS.guideRail} lineWidth={1} opacity={opacity} transparent={opacity < 1} />)}</group>
 }
 
-export function PassengerMechanicalAssembly({ layout, components, drive, safety, showCounterweight, showTractionRopes, opacity = 1 }: PassengerMechanicalAssemblyProps) {
+export function PassengerMechanicalAssembly({ layout, components, drive, safety, showCounterweight, showTractionRopes, carOnly = false, opacity = 1 }: PassengerMechanicalAssemblyProps) {
   return <group>
-    <MechanicalComponentMeshes model={components} opacity={opacity} showCounterweight={showCounterweight} />
-    {layout.carRails && !components.carRails && <RailAxes system={layout.carRails} opacity={opacity} />}
+    <MechanicalComponentMeshes model={components} opacity={opacity} showCounterweight={showCounterweight} carOnly={carOnly} />
+    {!carOnly && layout.carRails && !components.carRails && <RailAxes system={layout.carRails} opacity={opacity} />}
     {showCounterweight && layout.counterweightRails && !components.counterweightRails && <RailAxes system={layout.counterweightRails} opacity={opacity} />}
-    {layout.carFrame && !components.carSling && <group>
+    {layout.carFrame && !components.carSling && <group name="simulation-car-frame-reference">
       {[...layout.carFrame.uprights, layout.carFrame.crosshead, layout.carFrame.lowerSling, ...layout.carFrame.platformSupports].map((line) =>
         <Line key={line.id} points={[line.start, line.end]} color={TECHNICAL_MATERIALS.carFrame} lineWidth={1} />)}
     </group>}
@@ -38,16 +39,16 @@ export function PassengerMechanicalAssembly({ layout, components, drive, safety,
       <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       <Edges color={TECHNICAL_MATERIALS.counterweightFrame} />
     </mesh>}
-    <TractionDriveMeshes model={drive} showRopes={showTractionRopes} />
-    <PassengerSafetyMeshes model={safety} />
-    {layout.machine && !drive.machine && <mesh position={layout.machine.center}>
+    <TractionDriveMeshes model={drive} showRopes={showTractionRopes} carOnly={carOnly} />
+    <PassengerSafetyMeshes model={safety} carOnly={carOnly} />
+    {!carOnly && layout.machine && !drive.machine && <mesh position={layout.machine.center}>
       <boxGeometry args={layout.machine.size} />
       <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       <Edges color={TECHNICAL_MATERIALS.machine} />
     </mesh>}
     {showTractionRopes && layout.suspension && !drive.suspension && <Line color={TECHNICAL_MATERIALS.suspension} lineWidth={1} opacity={opacity}
       points={layout.suspension.path} transparent={opacity < 1} />}
-    {layout.zones.map((zone) => <mesh key={zone.kind} position={[0, zone.centerY, 0]}>
+    {!carOnly && layout.zones.map((zone) => <mesh key={zone.kind} position={[0, zone.centerY, 0]}>
       <boxGeometry args={[zone.width, zone.height, zone.depth]} />
       <meshBasicMaterial color={TECHNICAL_MATERIALS.mechanicalZone} depthWrite={false} opacity={0} transparent />
       <Edges color={TECHNICAL_MATERIALS.mechanicalZone} />

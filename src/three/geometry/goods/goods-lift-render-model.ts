@@ -22,7 +22,7 @@ export const GOODS_LIFT_VIEW_MODE_CATALOG: readonly {
 export interface GoodsRenderAppearance {
   readonly color: string
   readonly opacity: number
-  readonly presentation: 'solid' | 'surface' | 'outline' | 'line'
+  readonly presentation: 'solid' | 'surface' | 'outline' | 'line' | 'section'
   readonly lineWidth?: number
   readonly dashed?: boolean
 }
@@ -50,7 +50,7 @@ function visibleInMode(assembly: GoodsSceneBox, mode: GoodsLiftViewMode): boolea
     return assembly.kind === 'door' || assembly.kind === 'landing-door' || assembly.kind === 'level' ||
       assembly.kind === 'shaft' || assembly.kind === 'platform' || assembly.kind === 'platform-wall'
   }
-  if (mode === 'loads') return loadKinds.has(assembly.kind) || ['platform-floor', 'floor-structure', 'platform', 'door'].includes(assembly.kind)
+  if (mode === 'loads') return loadKinds.has(assembly.kind) || ['platform-floor', 'floor-structure', 'platform'].includes(assembly.kind)
   if (mode === 'guides') {
     return assembly.kind === 'guide' || assembly.kind === 'shaft' || assembly.kind === 'platform' ||
       assembly.kind === 'moving-envelope' || assembly.kind === 'level' ||
@@ -66,7 +66,7 @@ function appearance(assembly: GoodsSceneBox, mode: GoodsLiftViewMode): GoodsRend
   if (assembly.kind === 'floor-structure') return { color: '#687d88', opacity: 1, presentation: 'solid', lineWidth: 1.2 }
   if (assembly.kind === 'guide-shoe') return { color: '#364953', opacity: 1, presentation: 'solid', lineWidth: 1 }
   if (assembly.kind === 'buffer') return { color: assembly.id.endsWith('contact') ? '#9caab2' : '#5f6e76', opacity: 1, presentation: 'solid', lineWidth: 1 }
-  if (assembly.kind === 'shaft') return { color: '#64748b', opacity: 0.45, presentation: 'outline', lineWidth: 1 }
+  if (assembly.kind === 'shaft') return { color: '#64748b', opacity: 0.45, presentation: mode === 'cutaway' ? 'section' : 'outline', lineWidth: 1 }
   if (assembly.kind === 'pit' || assembly.kind === 'headroom') return { color: '#64748b', opacity: 0.055, presentation: 'outline' }
   if (assembly.kind === 'level') return { color: '#64748b', opacity: 0.25, presentation: 'outline' }
   if (assembly.kind === 'platform') return { color: '#82919a', opacity: mode === 'loads' ? 0.3 : 0.6, presentation: 'outline', lineWidth: 1 }
@@ -82,7 +82,7 @@ function appearance(assembly: GoodsSceneBox, mode: GoodsLiftViewMode): GoodsRend
   if (assembly.kind === 'moving-envelope') return { color: '#64748b', opacity: 0.18, presentation: 'outline' }
   if (assembly.kind === 'pallet') return { color: '#716349', opacity: 1, presentation: 'outline', lineWidth: 2.5 }
   if (assembly.kind === 'roll-container') return { color: '#435f6a', opacity: 1, presentation: 'outline', lineWidth: 1.8, dashed: true }
-  return { color: '#67596b', opacity: 0.9, presentation: 'outline', lineWidth: 1, dashed: true }
+  return { color: '#67596b', opacity: mode === 'loads' ? 0.45 : 0.9, presentation: 'outline', lineWidth: 1, dashed: true }
 }
 
 const assemblyLabels: Partial<Record<GoodsSceneBox['kind'], string>> = {
