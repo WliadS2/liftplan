@@ -51,6 +51,7 @@ function unavailableMessage(issues: readonly SimulationIssue[]): string {
 
 /** Compact intent/status UI; all timing and capability decisions stay in the pure simulation model. */
 export function PassengerSimulationControls({ controller }: { readonly controller: PassengerSimulationController }) {
+  const [collapsed, setCollapsed] = useState(false)
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot)
   const { state } = snapshot
   const [targetLevel, setTargetLevel] = useState(
@@ -62,36 +63,59 @@ export function PassengerSimulationControls({ controller }: { readonly controlle
     .map(([name]) => name as Exclude<PassengerSimulationCapabilityName, 'cabinMovement'>)
   const pose = import.meta.env.DEV ? controller.getPose() : undefined
 
-  return <div className="development-simulation-controls">
-    <p className="panel-note">Vertikalfahrt mit Nenngeschwindigkeit, ohne Beschleunigungs- oder Bremsmodell. Geschwindigkeitsänderungen gelten ab der nächsten Fahrt.</p>
-    <p className="viewport-status">
-      {missingCapabilities.length ? 'Fahrdemo teilweise verfügbar.' : 'Fahrdemo verfügbar.'}
-      {' '}Visualisierung ohne Nachweis des realen Fahrverhaltens.
-    </p>
-    {missingCapabilities.length > 0 && <details className="viewport-status">
-      <summary>Fehlende Teilfunktionen</summary>
-      {missingCapabilities.map((name) => <p key={name}>{capabilityMessages[name]}</p>)}
-    </details>}
-    <div className="viewport-mode-controls" role="group" aria-label="Fahrdemo">
-      <label>Zielhaltestelle: <select aria-label="Zielhaltestelle" value={targetLevel} disabled={state.phase !== 'idle'} onChange={(event) => setTargetLevel(event.target.value)}>
-        {controller.model.levels.map((level) => <option key={level.id} value={level.id}>{level.index + 1}</option>)}
-      </select></label>
-      <button type="button" disabled={state.phase !== 'idle' || targetLevel === state.currentLevel || controller.speedStatus !== 'available'} onClick={() => controller.dispatch({ type: 'start', targetLevel })}>Fahrt starten</button>
-      <button type="button" disabled={state.phase === 'idle' || state.paused} onClick={() => controller.dispatch({ type: 'pause' })}>Pause</button>
-      <button type="button" disabled={!state.paused} onClick={() => controller.dispatch({ type: 'resume' })}>Fortsetzen</button>
-      <button type="button" onClick={() => controller.dispatch({ type: 'reset' })}>Zurücksetzen</button>
+  return <div className="simulation-controls">
+    <div className="simulation-status-row" style={{ cursor: 'pointer' }} onClick={() => setCollapsed(!collapsed)}>
+      <strong style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: collapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }}>
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+        Fahrdemo
+      </strong>
+      <span role="status">
+        {state.paused ? `Pausiert (${phases[state.phase]})` : phases[state.phase]} · Haltestelle {current.index + 1}
+        {state.phase !== 'idle' ? ` → ${controller.model.levels.find((level) => level.id === state.targetLevel)!.index + 1}` : ''}
+      </span>
     </div>
-    <p className="viewport-status" role="status">
-      {state.paused ? `Pausiert (${phases[state.phase]})` : phases[state.phase]} · Haltestelle {current.index + 1}
-      {state.phase !== 'idle' ? ` → ${controller.model.levels.find((level) => level.id === state.targetLevel)!.index + 1}` : ''}
-    </p>
-    {import.meta.env.DEV && pose && <details className="viewport-status"><summary>Bewegungsdaten</summary>
-      <p>Stand beim letzten Zustandswechsel: Kabinenboden {pose.cabinY.toFixed(3)} m
+
+    {!collapsed && (
+      <>
+    <div className="simulation-actions">
+      <label>
+        Zielhaltestelle
+        <select aria-label="Zielhaltestelle" value={targetLevel} disabled={state.phase !== 'idle'} onChange={(event) => setTargetLevel(event.target.value)}>
+          {controller.model.levels.map((level) => <option key={level.id} value={level.id}>{level.index + 1}</option>)}
+        </select>
+      </label>
+      <button className="btn-primary" type="button" disabled={state.phase !== 'idle' || targetLevel === state.currentLevel || controller.speedStatus !== 'available'} onClick={() => controller.dispatch({ type: 'start', targetLevel })}>▶ Fahrt starten</button>
+      <button className="btn-secondary" type="button" disabled={state.phase === 'idle' || state.paused} onClick={() => controller.dispatch({ type: 'pause' })}>Pause</button>
+      <button className="btn-secondary" type="button" disabled={!state.paused} onClick={() => controller.dispatch({ type: 'resume' })}>Fortsetzen</button>
+      <button className="btn-tertiary" type="button" onClick={() => controller.dispatch({ type: 'reset' })}>↺ Zurücksetzen</button>
+    </div>
+
+    <div style={{ marginTop: 'var(--space-8)' }}>
+      <p className="panel-note" style={{ position: 'relative', right: 'auto', bottom: 'auto' }}>
+        Vertikalfahrt mit Nenngeschwindigkeit.<br/>
+        Ohne Beschleunigungs- oder Bremsmodell.
+      </p>
+    </div>
+
+    {missingCapabilities.length > 0 && <details className="panel-note" style={{ position: 'relative', right: 'auto', bottom: 'auto', marginTop: 'var(--space-8)' }}>
+      <summary>Fehlende Teilfunktionen</summary>
+      <ul style={{ margin: 0, paddingLeft: 'var(--space-16)' }}>
+        {missingCapabilities.map((name) => <li key={name}>{capabilityMessages[name]}</li>)}
+      </ul>
+    </details>}
+    
+    {import.meta.env.DEV && pose && <details className="panel-note" style={{ position: 'relative', right: 'auto', bottom: 'auto', marginTop: 'var(--space-4)' }}>
+      <summary>Bewegungsdaten</summary>
+      <p style={{ margin: 0 }}>Stand beim letzten Zustandswechsel: Kabinenboden {pose.cabinY.toFixed(3)} m
         {pose.counterweightY === undefined ? '' : ` · Gegengewichtmitte ${pose.counterweightY.toFixed(3)} m`}
         {' '}· Fahrfortschritt {(pose.travelProgress * 100).toFixed(1)} % · Türöffnung {(pose.cabinDoorProgress * 100).toFixed(1)} %
         {pose.tractionSheaveRotation === undefined ? '' : ` · Treibscheibenwinkel ${pose.tractionSheaveRotation.toFixed(3)} rad`}</p>
     </details>}
     {snapshot.issues.map((issue, index) => <p className="viewport-status" role="alert" key={index}>{errors[issue.code]}</p>)}
+      </>
+    )}
   </div>
 }
 

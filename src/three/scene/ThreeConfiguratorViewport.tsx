@@ -91,8 +91,17 @@ export interface ThreeConfiguratorViewportProps {
   readonly visualizationData?: PassengerVisualizationData
 }
 
-function ViewportFallback({ children }: { readonly children: string }) {
-  return <div className="viewport-fallback">{children}</div>
+function ViewportFallback({ children }: { readonly children: React.ReactNode }) {
+  return (
+    <div className="viewport-fallback">
+      <div className="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="empty-state-icon">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+        </svg>
+        <div className="empty-state-text">{children}</div>
+      </div>
+    </div>
+  )
 }
 
 export function ThreeConfiguratorViewport({
@@ -158,6 +167,7 @@ export function ThreeConfiguratorViewport({
             aria-pressed={viewMode === mode.id} type="button" onClick={() => setViewMode(mode.id)}>
             {mode.label}
           </button>)}
+          <span className="viewport-mode-reset" />
           <button type="button" onClick={() => setCameraResetRevision((revision) => revision + 1)}>
             Ansicht zurücksetzen
           </button>
@@ -178,11 +188,13 @@ export function ThreeConfiguratorViewport({
 
       {!modelResult || modelResult.status === 'empty' ? (
         <ViewportFallback>
-          Planungsdaten eingeben, um die 3D-Ansicht zu starten.
+          <strong>Planungsdaten unvollständig</strong>
+          <p>Erforderliche Werte eingeben, um das 3D-Modell zu generieren.</p>
         </ViewportFallback>
       ) : modelResult.status === 'invalid' && !model ? (
         <ViewportFallback>
-          Die eingegebenen Planungsmaße können nicht dargestellt werden.
+          <strong>Geometriefehler</strong>
+          <p>Die aktuellen Abmessungen erzeugen ein ungültiges Modell.</p>
         </ViewportFallback>
       ) : (
         <>

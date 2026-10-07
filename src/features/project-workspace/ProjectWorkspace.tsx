@@ -70,9 +70,10 @@ interface MillimetreFieldProps {
 }
 
 function MillimetreField({ label, value, onChange }: MillimetreFieldProps) {
+  const text = label.replace(/\s*\(mm\)$/, '')
   return (
     <label className="field">
-      <span>{label}</span>
+      <span>{text}</span>
       <input
         type="number"
         value={value ?? ''}
@@ -81,6 +82,7 @@ function MillimetreField({ label, value, onChange }: MillimetreFieldProps) {
           onChange(parsed === undefined ? undefined : millimetres(parsed))
         }}
       />
+      <span className="unit-label">mm</span>
     </label>
   )
 }
@@ -509,27 +511,29 @@ export function ProjectWorkspace() {
         </aside>
 
         <main className="central-workspace">
-          <div className="central-tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              className="central-tab"
-              aria-pressed={activeTab === '3d'}
-              onClick={() => setActiveTab('3d')}
-            >
-              3D-Modell
-            </button>
-            <button
-              type="button"
-              role="tab"
-              className="central-tab"
-              aria-pressed={activeTab === 'plans'}
-              onClick={() => setActiveTab('plans')}
-            >
-              Pläne
-            </button>
+          <div className="central-tabs-header">
+            <div className="central-tabs" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                className="central-tab"
+                aria-selected={activeTab === '3d'}
+                onClick={() => setActiveTab('3d')}
+              >
+                3D-Modell
+              </button>
+              <button
+                type="button"
+                role="tab"
+                className="central-tab"
+                aria-selected={activeTab === 'plans'}
+                onClick={() => setActiveTab('plans')}
+              >
+                Pläne
+              </button>
+            </div>
           </div>
-          <div className="central-content" style={{ display: activeTab === '3d' ? 'flex' : 'none' }}>
+          <div className="central-content" style={{ display: activeTab === '3d' ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0 }}>
             <ThreeSceneErrorBoundary>
               <Suspense fallback={<div className="viewport-fallback">3D-Ansicht wird geladen.</div>}>
                 <LiftFamilyViewport technicalModel={technicalFamilyModel} />
@@ -569,168 +573,168 @@ export function ProjectWorkspace() {
               <p className="panel-note">Geometrische Planungsprüfung, keine technische oder normative Freigabe.</p>
             </section>
             
-            <dl className="data-list">
-              <div>
-                <dt>Projekt</dt>
-                <dd>{project.name || 'Nicht angegeben'}</dd>
+            <div className="data-list">
+              <div className="data-row">
+                <span className="data-label">Projekt</span>
+                <span className="data-value">{project.name || 'Nicht angegeben'}</span>
               </div>
-              <div>
-                <dt>Aufzugstyp</dt>
-                <dd>
+              <div className="data-row">
+                <span className="data-label">Aufzugstyp</span>
+                <span className="data-value">
                   {
                     liftTypes.find((liftType) => liftType.id === project.liftFamily)
                       ?.displayName
                   }
-                </dd>
+                </span>
               </div>
               {isPassengerLift && (
                 <>
-                  <div>
-                    <dt>Tragfähigkeit</dt>
-                    <dd>{formatValue(project.configuration.capacityKg, 'kg')}</dd>
+                  <div className="data-row">
+                    <span className="data-label">Tragfähigkeit</span>
+                    <span className="data-value">{formatValue(project.configuration.capacityKg, 'kg')}</span>
                   </div>
-                  <div>
-                    <dt>Personenanzahl</dt>
-                    <dd>{formatValue(project.configuration.passengerCount)}</dd>
+                  <div className="data-row">
+                    <span className="data-label">Personenanzahl</span>
+                    <span className="data-value">{formatValue(project.configuration.passengerCount)}</span>
                   </div>
-                  <div>
-                    <dt>Haltestellen</dt>
-                    <dd>{formatValue(project.configuration.stopCount)}</dd>
+                  <div className="data-row">
+                    <span className="data-label">Haltestellen</span>
+                    <span className="data-value">{formatValue(project.configuration.stopCount)}</span>
                   </div>
-                  <div>
-                    <dt>Nenngeschwindigkeit</dt>
-                    <dd>
+                  <div className="data-row">
+                    <span className="data-label">Nenngeschwindigkeit</span>
+                    <span className="data-value">
                       {formatValue(
                         project.configuration.ratedSpeedMetresPerSecond,
                         'm/s',
                       )}
-                    </dd>
+                    </span>
                   </div>
-                  <div>
-                    <dt>Kabine (B/T/H)</dt>
-                    <dd>
+                  <div className="data-row">
+                    <span className="data-label">Kabine (B/T/H)</span>
+                    <span className="data-value">
                       {formatValue(project.configuration.cabinWidthMm)}×
                       {formatValue(project.configuration.cabinDepthMm)}×
                       {formatValue(project.configuration.cabinHeightMm)} mm
-                    </dd>
+                    </span>
                   </div>
-                  <div>
-                    <dt>Tür (B/H)</dt>
-                    <dd>
+                  <div className="data-row">
+                    <span className="data-label">Tür (B/H)</span>
+                    <span className="data-value">
                       {formatValue(project.configuration.doorWidthMm)}×
                       {formatValue(project.configuration.doorHeightMm)} mm
-                    </dd>
+                    </span>
                   </div>
-                  <div>
-                    <dt>Schacht (B/T)</dt>
-                    <dd>
+                  <div className="data-row">
+                    <span className="data-label">Schacht (B/T)</span>
+                    <span className="data-value">
                       {formatValue(project.configuration.shaftWidthMm)}×
                       {formatValue(project.configuration.shaftDepthMm)} mm
-                    </dd>
+                    </span>
                   </div>
-                  <div>
-                    <dt>Geschosshöhe</dt>
-                    <dd>{formatValue(project.configuration.floorHeightMm, 'mm')}</dd>
+                  <div className="data-row">
+                    <span className="data-label">Geschosshöhe</span>
+                    <span className="data-value">{formatValue(project.configuration.floorHeightMm, 'mm')}</span>
                   </div>
-                  <div>
-                    <dt>Grube / Kopf</dt>
-                    <dd>
+                  <div className="data-row">
+                    <span className="data-label">Grube / Kopf</span>
+                    <span className="data-value">
                       {formatValue(project.configuration.pitDepthMm)} /{' '}
                       {formatValue(project.configuration.headroomMm)} mm
-                    </dd>
+                    </span>
                   </div>
-                  <div>
-                    <dt>Durchlader</dt>
-                    <dd>
+                  <div className="data-row">
+                    <span className="data-label">Durchlader</span>
+                    <span className="data-value">
                       {project.configuration.throughCar === undefined
                         ? 'Nicht angegeben'
                         : project.configuration.throughCar
                           ? 'Ja'
                           : 'Nein'}
-                    </dd>
+                    </span>
                   </div>
-                  <div>
-                    <dt>Antriebskonzept</dt>
-                    <dd>{project.configuration.driveConcept || 'Nicht angegeben'}</dd>
+                  <div className="data-row">
+                    <span className="data-label">Antriebskonzept</span>
+                    <span className="data-value">{project.configuration.driveConcept || 'Nicht angegeben'}</span>
                   </div>
                 </>
               )}
               {validGoodsConfiguration && (
                 <>
-                  <div><dt>Tragfähigkeit</dt><dd>{formatValue(validGoodsConfiguration.ratedLoadKg, 'kg')}</dd></div>
-                  <div><dt>Haltestellen</dt><dd>{formatValue(validGoodsConfiguration.stopCount)}</dd></div>
-                  <div><dt>Nenngeschwindigkeit</dt><dd>{formatValue(validGoodsConfiguration.nominalSpeedMetresPerSecond, 'm/s')}</dd></div>
-                  <div><dt>Plattform (B/T/H)</dt><dd>
+                  <div className="data-row"><span className="data-label">Tragfähigkeit</span><span className="data-value">{formatValue(validGoodsConfiguration.ratedLoadKg, 'kg')}</span></div>
+                  <div className="data-row"><span className="data-label">Haltestellen</span><span className="data-value">{formatValue(validGoodsConfiguration.stopCount)}</span></div>
+                  <div className="data-row"><span className="data-label">Nenngeschwindigkeit</span><span className="data-value">{formatValue(validGoodsConfiguration.nominalSpeedMetresPerSecond, 'm/s')}</span></div>
+                  <div className="data-row"><span className="data-label">Plattform (B/T/H)</span><span className="data-value">
                     {formatValue(validGoodsConfiguration.platformWidthMm)}×
                     {formatValue(validGoodsConfiguration.platformDepthMm)}×
                     {formatValue(validGoodsConfiguration.platformHeightMm)} mm
-                  </dd></div>
-                  <div><dt>Tür (B/H)</dt><dd>
+                  </span></div>
+                  <div className="data-row"><span className="data-label">Tür (B/H)</span><span className="data-value">
                     {formatValue(validGoodsConfiguration.doorWidthMm)}×
                     {formatValue(validGoodsConfiguration.doorHeightMm)} mm
-                  </dd></div>
-                  <div><dt>Schacht (B/T)</dt><dd>
+                  </span></div>
+                  <div className="data-row"><span className="data-label">Schacht (B/T)</span><span className="data-value">
                     {formatValue(validGoodsConfiguration.shaftWidthMm)}×
                     {formatValue(validGoodsConfiguration.shaftDepthMm)} mm
-                  </dd></div>
-                  <div><dt>Durchlader</dt><dd>{validGoodsConfiguration.throughCar === undefined
-                    ? 'Nicht angegeben' : validGoodsConfiguration.throughCar ? 'Ja' : 'Nein'}</dd></div>
+                  </span></div>
+                  <div className="data-row"><span className="data-label">Durchlader</span><span className="data-value">{validGoodsConfiguration.throughCar === undefined
+                    ? 'Nicht angegeben' : validGoodsConfiguration.throughCar ? 'Ja' : 'Nein'}</span></div>
                 </>
               )}
               {validCarConfiguration && (
                 <>
-                  <div><dt>Tragfähigkeit</dt><dd>{formatValue(validCarConfiguration.ratedLoadKg, 'kg')}</dd></div>
-                  <div><dt>Haltestellen</dt><dd>{formatValue(validCarConfiguration.stopCount)}</dd></div>
-                  <div><dt>Nenngeschwindigkeit</dt><dd>{formatValue(validCarConfiguration.nominalSpeedMetresPerSecond, 'm/s')}</dd></div>
-                  <div><dt>Plattform (B/T/H)</dt><dd>
+                  <div className="data-row"><span className="data-label">Tragfähigkeit</span><span className="data-value">{formatValue(validCarConfiguration.ratedLoadKg, 'kg')}</span></div>
+                  <div className="data-row"><span className="data-label">Haltestellen</span><span className="data-value">{formatValue(validCarConfiguration.stopCount)}</span></div>
+                  <div className="data-row"><span className="data-label">Nenngeschwindigkeit</span><span className="data-value">{formatValue(validCarConfiguration.nominalSpeedMetresPerSecond, 'm/s')}</span></div>
+                  <div className="data-row"><span className="data-label">Plattform (B/T/H)</span><span className="data-value">
                     {formatValue(validCarConfiguration.platformWidthMm)}×
                     {formatValue(validCarConfiguration.platformDepthMm)}×
                     {formatValue(validCarConfiguration.usableHeightMm)} mm
-                  </dd></div>
-                  <div><dt>Tür (B/H)</dt><dd>
+                  </span></div>
+                  <div className="data-row"><span className="data-label">Tür (B/H)</span><span className="data-value">
                     {formatValue(validCarConfiguration.doorClearWidthMm)}×
                     {formatValue(validCarConfiguration.doorClearHeightMm)} mm
-                  </dd></div>
-                  <div><dt>Fahrzeug (B/L/H)</dt><dd>
+                  </span></div>
+                  <div className="data-row"><span className="data-label">Fahrzeug (B/L/H)</span><span className="data-value">
                     {formatValue(validCarConfiguration.vehicle?.widthMm)}×
                     {formatValue(validCarConfiguration.vehicle?.lengthMm)}×
                     {formatValue(validCarConfiguration.vehicle?.heightMm)} mm
-                  </dd></div>
-                  <div><dt>Fahrzeugmasse</dt><dd>{formatValue(validCarConfiguration.vehicle?.massKg, 'kg')}</dd></div>
-                  <div><dt>Fahrzeugversatz (L/Q)</dt><dd>
+                  </span></div>
+                  <div className="data-row"><span className="data-label">Fahrzeugmasse</span><span className="data-value">{formatValue(validCarConfiguration.vehicle?.massKg, 'kg')}</span></div>
+                  <div className="data-row"><span className="data-label">Fahrzeugversatz (L/Q)</span><span className="data-value">
                     {formatValue(validCarConfiguration.vehiclePosition?.longitudinalOffsetMm)} /{' '}
                     {formatValue(validCarConfiguration.vehiclePosition?.lateralOffsetMm)} mm
-                  </dd></div>
-                  <div><dt>Durchlader</dt><dd>{validCarConfiguration.throughCar === undefined
-                    ? 'Nicht angegeben' : validCarConfiguration.throughCar ? 'Ja' : 'Nein'}</dd></div>
+                  </span></div>
+                  <div className="data-row"><span className="data-label">Durchlader</span><span className="data-value">{validCarConfiguration.throughCar === undefined
+                    ? 'Nicht angegeben' : validCarConfiguration.throughCar ? 'Ja' : 'Nein'}</span></div>
                 </>
               )}
-            </dl>
+            </div>
 
             <h3>Projektinformationen</h3>
-            <dl className="data-list">
-              <div>
-                <dt>Projektkennung</dt>
-                <dd>{project.id}</dd>
+            <div className="data-list">
+              <div className="data-row">
+                <span className="data-label">Projektkennung</span>
+                <span className="data-value">{project.id}</span>
               </div>
-              <div>
-                <dt>Versionskennung</dt>
-                <dd>{project.schemaVersion}</dd>
+              <div className="data-row">
+                <span className="data-label">Versionskennung</span>
+                <span className="data-value">{project.schemaVersion}</span>
               </div>
-              <div>
-                <dt>Projektversion</dt>
-                <dd>{project.projectVersion === 0 ? 'Noch keine Version gespeichert' : `Version ${project.projectVersion}`}</dd>
+              <div className="data-row">
+                <span className="data-label">Projektversion</span>
+                <span className="data-value">{project.projectVersion === 0 ? 'Noch keine Version gespeichert' : `Version ${project.projectVersion}`}</span>
               </div>
-              <div>
-                <dt>Strukturprüfung</dt>
-                <dd>
+              <div className="data-row">
+                <span className="data-label">Strukturprüfung</span>
+                <span className="data-value">
                   {validation.status === 'valid'
                     ? 'Struktur geprüft'
                     : 'Eingabe prüfen'}
-                </dd>
+                </span>
               </div>
-            </dl>
-            <button type="button" className="secondary-button" onClick={resetProject}>
+            </div>
+            <button type="button" className="btn-danger" onClick={resetProject}>
               Projekt zurücksetzen
             </button>
           </div>

@@ -228,20 +228,20 @@ export function PlansWorkspace({ context, project }: {
             {sides.map((entry) => <option key={entry} value={entry}>{entry === 'front' ? 'Vorne' : 'Hinten'}</option>)}
           </select></label>}
         </>}
-        <fieldset className="plans-export-options">
-          <legend>Exportieren</legend>
-          <label><input type="radio" name="plan-export-scope" value="current" checked={exportScope === 'current'}
-            onChange={() => setExportScope('current')} /> Aktuelle Ansicht</label>
-          <label><input type="radio" name="plan-export-scope" value="plan-set" checked={exportScope === 'plan-set'}
-            onChange={() => setExportScope('plan-set')} /> Gesamter Plansatz</label>
-          <button type="button" onClick={() => void exportPdf()} disabled={exportingFormat !== undefined}>
-            {exportingFormat === 'pdf' ? 'PDF wird erstellt …' : 'PDF erstellen'}
-          </button>
-          <button type="button" onClick={() => void exportDxf()} disabled={exportingFormat !== undefined}>
-            {exportingFormat === 'dxf' ? 'DXF wird erstellt …' : 'DXF exportieren'}
-          </button>
-        </fieldset>
       </div>
+      <fieldset className="plans-export-options">
+        <legend>Exportieren</legend>
+        <label><input type="radio" name="plan-export-scope" value="current" checked={exportScope === 'current'}
+          onChange={() => setExportScope('current')} /> Aktuelle Ansicht</label>
+        <label><input type="radio" name="plan-export-scope" value="plan-set" checked={exportScope === 'plan-set'}
+          onChange={() => setExportScope('plan-set')} /> Gesamter Plansatz</label>
+        <button className="btn-secondary" type="button" onClick={() => void exportPdf()} disabled={exportingFormat !== undefined}>
+          {exportingFormat === 'pdf' ? 'PDF wird erstellt …' : 'PDF erstellen'}
+        </button>
+        <button className="btn-secondary" type="button" onClick={() => void exportDxf()} disabled={exportingFormat !== undefined}>
+          {exportingFormat === 'dxf' ? 'DXF wird erstellt …' : 'DXF exportieren'}
+        </button>
+      </fieldset>
     </div>
     {exportMessage?.contextKey === exportContextKey && exportMessage.text !== fitWarningMessage && <p
       className={exportMessage.kind === 'error' ? 'plans-warning' : 'plans-export-success'} role="status">

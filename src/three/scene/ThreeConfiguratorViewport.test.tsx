@@ -42,7 +42,7 @@ describe('actual passenger viewport mode wiring', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Kabine' }))
     const cabinFrame = runtime.camera!.frame
     fireEvent.change(screen.getByRole('combobox', { name: 'Zielhaltestelle' }), { target: { value: 'level-6' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Fahrt starten' }))
+    fireEvent.click(screen.getByRole('button', { name: '▶ Fahrt starten' }))
     act(() => runtime.controller!.advance(30))
     expect(runtime.controller!.getPose().cabinOffsetY).toBe(15)
     expect(runtime.camera!.motion!.getOffset()).toEqual([0, 15, 0])

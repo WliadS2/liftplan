@@ -23,10 +23,14 @@ function NumberField({ label, value, step, onChange }: {
   readonly step?: string
   readonly onChange: (value?: number) => void
 }) {
+  const match = label.match(/^(.*?)\s+\(([^)]+)\)$/)
+  const text = match ? match[1] : label
+  const unit = match ? match[2] : undefined
   return <label className="field">
-    <span>{label}</span>
+    <span>{text}</span>
     <input type="number" step={step} value={value ?? ''}
       onChange={(event) => onChange(parseOptionalNumber(event.target.value))} />
+    {unit && <span className="unit-label">{unit}</span>}
   </label>
 }
 
@@ -35,8 +39,16 @@ function MillimetreField({ label, value, onChange }: {
   readonly value?: Millimetres
   readonly onChange: (value?: Millimetres) => void
 }) {
-  return <NumberField label={`${label} (mm)`} value={value}
-    onChange={(next) => onChange(next === undefined ? undefined : millimetres(next))} />
+  const text = label.replace(/\s*\(mm\)$/, '')
+  return <label className="field">
+    <span>{text}</span>
+    <input type="number" value={value ?? ''}
+      onChange={(event) => {
+        const parsed = parseOptionalNumber(event.target.value)
+        onChange(parsed === undefined ? undefined : millimetres(parsed))
+      }} />
+    <span className="unit-label">mm</span>
+  </label>
 }
 
 function BooleanField({ label, value, onChange }: {

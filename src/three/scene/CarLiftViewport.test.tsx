@@ -30,7 +30,7 @@ describe('Autoaufzug viewport states and controls', () => {
     viewport(createCarLiftQaFixture())
     const overview=camera.props!.frame
     fireEvent.change(screen.getByRole('combobox',{name:'Zielhaltestelle'}),{target:{value:'level-6'}})
-    fireEvent.click(screen.getByRole('button',{name:'Fahrt starten'}))
+    fireEvent.click(screen.getByRole('button',{name:'▶ Fahrt starten'}))
     act(()=>driver.controller!.advance(4))
     expect(driver.controller!.getPose().platformOffsetMm).toBeGreaterThan(0)
     expect(camera.props!.motion!.getOffset()).toEqual([0,0,0]);expect(camera.props!.frame).toEqual(overview)
@@ -53,7 +53,7 @@ describe('Autoaufzug viewport states and controls', () => {
     }
     const view = render(<CarLiftViewport {...props(1)} />)
     fireEvent.change(screen.getByRole('combobox', { name: 'Zielhaltestelle' }), { target: { value: 'level-6' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Fahrt starten' }))
+    fireEvent.click(screen.getByRole('button', { name: '▶ Fahrt starten' }))
     act(() => { driver.controller!.advance(4); driver.controller!.dispatch({ type: 'pause' }) })
     const controller = driver.controller!, pose = controller.getPose(), state = controller.getState()
     view.rerender(<CarLiftViewport {...props(2)} />)
@@ -62,7 +62,7 @@ describe('Autoaufzug viewport states and controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Fortsetzen' }))
     act(() => { controller.advance(20) })
     fireEvent.change(screen.getByRole('combobox', { name: 'Zielhaltestelle' }), { target: { value: 'level-1' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Fahrt starten' }))
+    fireEvent.click(screen.getByRole('button', { name: '▶ Fahrt starten' }))
     expect(controller.getState().travelDurationSeconds).toBe(7)
     view.rerender(<CarLiftViewport {...props(2)} />)
     expect(driver.controller).not.toBe(controller)
@@ -70,7 +70,7 @@ describe('Autoaufzug viewport states and controls', () => {
   })
   it('distinguishes empty planning data from renderer unavailability', () => {
     viewport(createCarLiftPlanningConfiguration('Leer'))
-    expect(screen.getByText('Planungsdaten eingeben, um die 3D-Ansicht zu starten.')).toBeInTheDocument()
+    expect(screen.getByText(/Planungsdaten unvollst.ndig/)).toBeInTheDocument()
     expect(screen.queryByTestId('car-canvas')).not.toBeInTheDocument()
     expect(screen.queryByText('3D-Darstellung für diesen Aufzugstyp noch nicht verfügbar.')).not.toBeInTheDocument()
   })

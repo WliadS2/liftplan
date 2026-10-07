@@ -71,7 +71,7 @@ describe('goods-lift viewport', () => {
     renderConfiguration(createGoodsLiftQaFixture())
     const overview=camera.props!.frame
     fireEvent.change(screen.getByRole('combobox',{name:'Zielhaltestelle'}),{target:{value:'level-6'}})
-    fireEvent.click(screen.getByRole('button',{name:'Fahrt starten'}))
+    fireEvent.click(screen.getByRole('button',{name:'▶ Fahrt starten'}))
     act(()=>driver.controller!.advance(4))
     expect(driver.controller!.getPose().platformOffsetMm).toBeGreaterThan(0)
     expect(camera.props!.motion!.getOffset()).toEqual([0,0,0]);expect(camera.props!.frame).toEqual(overview)
@@ -95,7 +95,7 @@ describe('goods-lift viewport', () => {
         sceneModel: normalized.status === 'empty' ? undefined : createGoodsLiftSceneModel(normalized.model) }
     }
     const view = render(<GoodsLiftViewport {...propsFor(1)} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Fahrt starten' }))
+    fireEvent.click(screen.getByRole('button', { name: '▶ Fahrt starten' }))
     act(() => { driver.controller!.advance(2.5); driver.controller!.dispatch({ type: 'pause' }) })
     const controller = driver.controller!, pose = controller.getPose(), state = controller.getState()
     view.rerender(<GoodsLiftViewport {...propsFor(2)} />)
@@ -105,7 +105,7 @@ describe('goods-lift viewport', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Fortsetzen' }))
     act(() => { controller.advance(10) })
     fireEvent.change(screen.getByRole('combobox', { name: 'Zielhaltestelle' }), { target: { value: 'level-1' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Fahrt starten' }))
+    fireEvent.click(screen.getByRole('button', { name: '▶ Fahrt starten' }))
     expect(controller.getState().travelDurationSeconds).toBe(1.75)
   })
   it('isolates runtime from the project store and resets on Passenger/Goods/Car switching', () => {
@@ -117,13 +117,13 @@ describe('goods-lift viewport', () => {
       if (family === 'goods') store.getState().loadDevelopmentConfiguration(createGoodsLiftQaFixture())
       view.rerender(element())
       if (family !== 'goods') {
-        expect(screen.queryByRole('button', { name: 'Fahrt starten' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: '▶ Fahrt starten' })).not.toBeInTheDocument()
         continue
       }
       const configurationBefore = JSON.stringify(store.getState().project.configuration)
       expect(driver.controller!.getState()).toMatchObject({ phase: 'idle', currentLevel: 'level-1', paused: false })
       fireEvent.change(screen.getByRole('combobox', { name: 'Zielhaltestelle' }), { target: { value: 'level-6' } })
-      fireEvent.click(screen.getByRole('button', { name: 'Fahrt starten' }))
+      fireEvent.click(screen.getByRole('button', { name: '▶ Fahrt starten' }))
       act(() => { driver.controller!.advance(driver.controller!.getState().travelDurationSeconds + 3) })
       expect(driver.controller!.getPose().floorMm).toBe(15000)
       expect(JSON.stringify(store.getState().project.configuration)).toBe(configurationBefore)
@@ -134,7 +134,7 @@ describe('goods-lift viewport', () => {
     renderConfiguration(configured())
     expect(screen.getByText('Fahrdemo verfügbar.', { exact: false })).toBeInTheDocument()
     fireEvent.change(screen.getByRole('combobox', { name: 'Zielhaltestelle' }), { target: { value: 'level-2' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Fahrt starten' }))
+    fireEvent.click(screen.getByRole('button', { name: '▶ Fahrt starten' }))
     expect(driver.controller!.getState().phase).toBe('door-closing')
     fireEvent.click(screen.getByRole('button', { name: 'Pause' }))
     expect(driver.controller!.getState().paused).toBe(true)
@@ -142,7 +142,7 @@ describe('goods-lift viewport', () => {
     act(() => { driver.controller!.advance(driver.controller!.getState().travelDurationSeconds + 3) })
     expect(screen.getByRole('status')).toHaveTextContent('Türen geöffnet · Haltestelle 2')
     fireEvent.click(screen.getByRole('button', { name: 'Lasten' }))
-    fireEvent.click(screen.getByRole('button', { name: /^Zurücksetzen$/ }))
+    fireEvent.click(screen.getByRole('button', { name: '↺ Zurücksetzen' }))
     expect(driver.controller!.getPose()).toMatchObject({ platformOffsetMm: 0, frontDoorProgress: 0, rearDoorProgress: 0 })
     expect(camera.props!.request).toMatchObject({ viewMode: 'loads', resetRevision: 1 })
   })
@@ -155,7 +155,7 @@ describe('goods-lift viewport', () => {
     const config = configured({ stopCount: 6, storeyHeightsMm: Array(5).fill(millimetres(3500)) })
     const view = render(<GoodsLiftViewport {...propsFor(config)} />)
     fireEvent.change(screen.getByRole('combobox', { name: 'Zielhaltestelle' }), { target: { value: 'level-6' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Fahrt starten' }))
+    fireEvent.click(screen.getByRole('button', { name: '▶ Fahrt starten' }))
     act(() => { driver.controller!.advance(driver.controller!.getState().travelDurationSeconds + 3) })
     const old = driver.controller
     view.rerender(<GoodsLiftViewport {...propsFor({ ...config })} />)
@@ -167,7 +167,7 @@ describe('goods-lift viewport', () => {
     expect(driver.controller!.model.levels).toHaveLength(2)
     expect(screen.getByRole('combobox', { name: 'Zielhaltestelle' })).toHaveValue('level-2')
     view.rerender(<GoodsLiftViewport {...propsFor(createGoodsLiftPlanningConfiguration('Reset'))} />)
-    expect(screen.queryByRole('button', { name: 'Fahrt starten' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '▶ Fahrt starten' })).not.toBeInTheDocument()
     expect(screen.getByText(/Fahrdemo nicht verfügbar – Planung unvollständig/)).toBeInTheDocument()
   })
   it('resets the active semantic frame without changing the goods view', () => {
@@ -180,7 +180,7 @@ describe('goods-lift viewport', () => {
   })
   it('shows the explicit incomplete state when no semantic scene can be created', () => {
     renderConfiguration(createGoodsLiftPlanningConfiguration('Leer'))
-    expect(screen.getByText('Planungsdaten eingeben, um die 3D-Ansicht zu starten.')).toBeInTheDocument()
+    expect(screen.getByText(/Planungsdaten unvollst.ndig/)).toBeInTheDocument()
     expect(screen.queryByTestId('goods-canvas')).not.toBeInTheDocument()
   })
 

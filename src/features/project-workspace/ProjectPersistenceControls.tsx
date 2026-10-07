@@ -52,6 +52,7 @@ export function ProjectPersistenceControls() {
   
   const openDialogRef = useRef<HTMLDialogElement>(null)
   const renameDialogRef = useRef<HTMLDialogElement>(null)
+  const versionsDialogRef = useRef<HTMLDialogElement>(null)
   const deleteDialogRef = useRef<HTMLDialogElement>(null)
 
   const liftTypes = useMemo(() => getLiftTypeDefinitions(), [])
@@ -222,21 +223,29 @@ export function ProjectPersistenceControls() {
   const disabled = persistenceMode !== 'project'
 
   return (
-    <section className="project-persistence" aria-label="Projektverwaltung">
-      <div className="project-persistence-actions">
-        <button type="button" className="primary-action" onClick={handleCreate}>Neues Projekt</button>
-        <button type="button" className="primary-action" disabled={disabled} onClick={() => void autosave.saveNow(currentRecord())}>
-          Projekt speichern
+    <>
+    <section className="project-persistence-toolbar" aria-label="Projektverwaltung">
+      <div className="toolbar-group">
+        <button type="button" className="btn-primary" onClick={handleCreate}>Neues Projekt</button>
+        <button type="button" onClick={handleOpenClick}>Projekt öffnen</button>
+        <button type="button" className="btn-primary" disabled={disabled} onClick={() => void autosave.saveNow(currentRecord())}>
+          Speichern
         </button>
-        <span className="toolbar-divider" />
-        <button type="button" onClick={handleOpenClick}>Projekt öffnen…</button>
-        <button type="button" disabled={disabled} onClick={() => void handleDuplicate()}>Projekt duplizieren</button>
-        <button type="button" disabled={disabled} onClick={handleRenameClick}>Projekt umbenennen…</button>
-        <button type="button" disabled={disabled} onClick={handleDeleteClick}>Projekt löschen…</button>
       </div>
-      <div className="project-persistence-actions secondary-project-actions">
-        <button type="button" disabled={disabled} onClick={() => void handleExport()}>Projektdatei exportieren</button>
-        <button type="button" onClick={() => importRef.current?.click()}>Projektdatei importieren</button>
+
+      <div className="toolbar-separator" />
+
+      <div className="toolbar-group">
+        <button type="button" className="btn-secondary" disabled={disabled} onClick={() => void handleDuplicate()}>Duplizieren</button>
+        <button type="button" className="btn-secondary" disabled={disabled} onClick={handleRenameClick}>Umbenennen</button>
+        <button type="button" className="btn-danger" disabled={disabled} onClick={handleDeleteClick}>Löschen</button>
+      </div>
+
+      <div className="toolbar-separator" />
+
+      <div className="toolbar-group">
+        <button type="button" className="btn-tertiary" disabled={disabled} onClick={() => void handleExport()}>Exportieren</button>
+        <button type="button" className="btn-tertiary" onClick={() => importRef.current?.click()}>Importieren</button>
         <input
           ref={importRef}
           className="visually-hidden"
@@ -248,40 +257,70 @@ export function ProjectPersistenceControls() {
             event.currentTarget.value = ''
           }}
         />
+      </div>
+
+      <div className="toolbar-separator" />
+
+      <div className="toolbar-group">
+        <button type="button" className="btn-tertiary" onClick={() => versionsDialogRef.current?.showModal()} disabled={disabled}>
+          Versionsverlauf
+        </button>
+      </div>
+
+      <div className="save-status-container">
         <span className={`save-status save-status-${status}`}>{PROJECT_SAVE_STATUS_LABELS[status]}</span>
       </div>
-      <details className="project-versions">
-        <summary>Versionsverlauf ({versions.length})</summary>
-        <form className="version-save-form" onSubmit={(e) => void handleVersionSave(e)}>
-          <input
-            aria-label="Versionsnotiz"
-            maxLength={240}
-            placeholder="Optionale Versionsnotiz"
-            value={versionNote}
-            onChange={(event) => setVersionNote(event.target.value)}
-          />
-          <button type="submit" disabled={disabled}>Version speichern</button>
-        </form>
-        {versions.length === 0 ? <p className="versions-empty">Keine gespeicherten Versionen.</p> : (
-          <div className="version-history-list">
-            {versions.map((version) => (
-              <div key={version.version} className="version-item">
-                <div className="version-info">
-                  <strong>v{version.version}</strong>
-                  <span className="version-date">{new Date(version.createdAt).toLocaleString('de-CH', { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                  {version.note && <span className="version-note">{version.note}</span>}
-                </div>
-                <button type="button" className="restore-action" onClick={() => void handleRestore(version)}>Wiederherstellen</button>
-              </div>
-            ))}
-          </div>
-        )}
-      </details>
       {(message || disabled) && <p className={`project-persistence-message ${message?.includes('fehlgeschlagen') ? 'error' : 'success'}`} role="status">
         {disabled ? 'Entwicklungsdemo wird nicht gespeichert.' : message}
       </p>}
+    </section>
 
       {/* Dialogs */}
+      <dialog ref={versionsDialogRef} className="liftplan-dialog versions-dialog">
+        <div className="dialog-content">
+          <div className="dialog-header">
+            <h3 className="dialog-title">Versionsverlauf</h3>
+            <button type="button" aria-label="Schließen" className="close-button" onClick={() => versionsDialogRef.current?.close()}>&times;</button>
+          </div>
+          
+          <form className="version-save-form" onSubmit={(e) => void handleVersionSave(e)}>
+            <input
+              aria-label="Versionsnotiz"
+              maxLength={240}
+              placeholder="Optionale Versionsnotiz"
+              value={versionNote}
+              onChange={(event) => setVersionNote(event.target.value)}
+            />
+            <button type="submit" className="btn-primary" disabled={disabled}>Version speichern</button>
+          </form>
+          
+          {versions.length === 0 ? (
+            <div className="dialog-empty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="empty-state-icon">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <p>Keine gespeicherten Versionen vorhanden.</p>
+            </div>
+          ) : (
+            <div className="version-history-list">
+              {versions.map((version) => (
+                <div key={version.version} className="version-item">
+                  <div className="version-info">
+                    <span className="version-tag">v{version.version}</span>
+                    <span className="version-date">{new Date(version.createdAt).toLocaleString('de-CH', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                    {version.note && <span className="version-note">{version.note}</span>}
+                  </div>
+                  <button type="button" className="btn-secondary restore-action" onClick={() => {
+                    void handleRestore(version);
+                    versionsDialogRef.current?.close();
+                  }}>Wiederherstellen</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </dialog>
       <dialog ref={openDialogRef} className="liftplan-dialog open-project-dialog">
         <div className="dialog-content">
           <div className="dialog-header">
@@ -289,7 +328,12 @@ export function ProjectPersistenceControls() {
             <button type="button" aria-label="Schließen" className="close-button" onClick={() => openDialogRef.current?.close()}>&times;</button>
           </div>
           {projects.length === 0 ? (
-            <p className="dialog-empty">Keine gespeicherten Projekte vorhanden.</p>
+            <div className="dialog-empty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="empty-state-icon">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+              <p>Keine gespeicherten Projekte vorhanden.</p>
+            </div>
           ) : (
             <ul className="project-list">
               {projects.map((entry) => (
@@ -316,8 +360,8 @@ export function ProjectPersistenceControls() {
               <input autoFocus value={renameInput} onChange={(e) => setRenameInput(e.target.value)} />
             </label>
             <div className="dialog-actions">
-              <button type="button" onClick={() => renameDialogRef.current?.close()}>Abbrechen</button>
-              <button type="submit" className="primary-action">Umbenennen</button>
+              <button type="button" className="btn-secondary" onClick={() => renameDialogRef.current?.close()}>Abbrechen</button>
+              <button type="submit" className="btn-primary">Umbenennen</button>
             </div>
           </div>
         </form>
@@ -328,11 +372,11 @@ export function ProjectPersistenceControls() {
           <h3 className="dialog-title">Projekt löschen</h3>
           <p>Möchten Sie das Projekt „{project.name}“ wirklich unwiderruflich löschen?</p>
           <div className="dialog-actions">
-            <button type="button" onClick={() => deleteDialogRef.current?.close()}>Abbrechen</button>
-            <button type="button" className="danger-action" onClick={() => void confirmDelete()}>Löschen</button>
+            <button type="button" className="btn-secondary" onClick={() => deleteDialogRef.current?.close()}>Abbrechen</button>
+            <button type="button" className="btn-danger" onClick={() => void confirmDelete()}>Löschen</button>
           </div>
         </div>
       </dialog>
-    </section>
+    </>
   )
 }

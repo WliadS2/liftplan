@@ -29,8 +29,17 @@ export interface GoodsLiftViewportProps {
   readonly initialViewMode?: GoodsLiftViewMode
 }
 
-function ViewportFallback({ children }: { readonly children: string }) {
-  return <div className="viewport-fallback">{children}</div>
+function ViewportFallback({ children }: { readonly children: React.ReactNode }) {
+  return (
+    <div className="viewport-fallback">
+      <div className="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="empty-state-icon">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+        </svg>
+        <div className="empty-state-text">{children}</div>
+      </div>
+    </div>
+  )
 }
 
 export function GoodsLiftViewport({
@@ -67,7 +76,7 @@ export function GoodsLiftViewport({
       {sceneModel && <div className="viewport-mode-controls" role="group" aria-label="Ansichtsmodus">
         {availableModes.map((mode) => <button key={mode.id} type="button" aria-pressed={activeViewMode === mode.id}
           onClick={() => setViewMode(mode.id)}>{mode.label}</button>)}
-        <button type="button" onClick={() => setCameraResetRevision((revision) => revision + 1)}>Ansicht zurücksetzen</button>
+        <span className="viewport-mode-reset"/><button type="button" onClick={() => setCameraResetRevision((revision) => revision + 1)}>Ansicht zurücksetzen</button>
       </div>}
     </div>
 
@@ -78,7 +87,7 @@ export function GoodsLiftViewport({
     {simulation && simulationResult.status !== 'available' && <GoodsSimulationUnavailable result={simulationResult} />}
 
     {!sceneModel || normalized.status === 'empty' ? (
-      <ViewportFallback>Planungsdaten eingeben, um die 3D-Ansicht zu starten.</ViewportFallback>
+      <ViewportFallback><strong>Planungsdaten unvollständig</strong><p>Erforderliche Werte eingeben, um das 3D-Modell zu generieren.</p></ViewportFallback>
     ) : (
       <>
         <div className="viewport-canvas">

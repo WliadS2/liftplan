@@ -24,8 +24,17 @@ export interface CarLiftViewportProps {
   readonly validation: CarSpatialValidationResult
   readonly initialViewMode?: CarLiftViewMode
 }
-function Fallback({ children }: { readonly children: string }) {
-  return <div className="viewport-fallback" role="status">{children}</div>
+function Fallback({ children }: { readonly children: React.ReactNode }) {
+  return (
+    <div className="viewport-fallback">
+      <div className="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="empty-state-icon">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+        </svg>
+        <div className="empty-state-text">{children}</div>
+      </div>
+    </div>
+  )
 }
 
 export function CarLiftViewport({ normalized, sceneModel, validation, initialViewMode = 'overview' }: CarLiftViewportProps) {
@@ -50,7 +59,7 @@ export function CarLiftViewport({ normalized, sceneModel, validation, initialVie
       {renderable && <div className="viewport-mode-controls" role="group" aria-label="Ansichtsmodus">
         {CAR_LIFT_VIEW_MODE_CATALOG.map((mode) => <button key={mode.id} type="button"
           aria-pressed={viewMode === mode.id} onClick={() => setViewMode(mode.id)}>{mode.label}</button>)}
-        <button type="button" onClick={() => setResetRevision((v) => v + 1)}>Ansicht zurücksetzen</button>
+        <span className="viewport-mode-reset"/><button type="button" onClick={() => setResetRevision((v) => v + 1)}>Ansicht zurücksetzen</button>
       </div>}
     </div>
     {simulation
@@ -58,7 +67,7 @@ export function CarLiftViewport({ normalized, sceneModel, validation, initialVie
           onReset={() => setResetRevision((v) => v + 1)} />
       : simulationResult.status !== 'available' && <PlatformSimulationUnavailable result={simulationResult} />}
     {simulation && simulationResult.status !== 'available' && <PlatformSimulationUnavailable result={simulationResult} />}
-    {!sceneModel || !sceneModel.assemblies.length ? <Fallback>Planungsdaten eingeben, um die 3D-Ansicht zu starten.</Fallback> : <>
+    {!sceneModel || !sceneModel.assemblies.length ? <Fallback><strong>Planungsdaten unvollständig</strong><p>Erforderliche Werte eingeben, um das 3D-Modell zu generieren.</p></Fallback> : <>
       <div className="viewport-canvas">
         <Canvas dpr={[1, 1.5]} gl={{ alpha: false, antialias: true, powerPreference: 'high-performance' }}
           fallback={<Fallback>3D-Ansicht konnte nicht geladen werden.</Fallback>}>
