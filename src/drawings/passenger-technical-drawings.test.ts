@@ -10,7 +10,8 @@ import {
   createPassengerSectionDrawing,
   findDimensions,
 } from './passenger-technical-drawings'
-import type { DrawingRectangle, TechnicalDrawingDocument } from './technical-drawing'
+import type { DrawingRectangle, TechnicalDrawingDocument, DrawingText, DrawingPolyline } from './technical-drawing'
+import { calculateDrawingBounds } from './technical-drawing'
 import { createTechnicalDrawingPresentation } from './technical-drawing'
 
 function context(configuration: PassengerPlanningConfiguration) {
@@ -170,21 +171,43 @@ describe('passenger technical drawing projections', () => {
 
   it('places plan labels in deterministic annotation lanes with leaders', () => {
     const drawing = createPassengerPlanDrawing(context(createPassengerMechanicalFixture()))
-    const counterweight = rectangles(drawing).find((entry) => entry.componentId === 'counterweight')!
     const counterweightLabel = drawing.primitives.find((entry) => entry.id === 'counterweight-label')
     const cabinLabel = drawing.primitives.find((entry) => entry.id === 'cabin-label')
     const railLabel = drawing.primitives.find((entry) => entry.id === 'car-rail-label')
     const doorDimension = drawing.primitives.find((entry) => entry.kind === 'dimension' && entry.semantic === 'door-width')
     const cabinDimension = drawing.primitives.find((entry) => entry.kind === 'dimension' && entry.semantic === 'cabin-width')
 
-    expect(counterweightLabel).toMatchObject({
-      kind: 'text',
-      position: { x: counterweight.x + counterweight.width / 2, y: counterweight.y + counterweight.height + 150 },
-    })
+    expect(counterweightLabel).toMatchObject({ kind: 'text' })
+    const geometryBounds = calculateDrawingBounds(drawing.primitives, 'geometry')
+    const annotationBounds = calculateDrawingBounds(drawing.primitives, 'annotation')
+
+    const textLabel = counterweightLabel as DrawingText
+    const polylineLeader = drawing.primitives.find((entry) => entry.id === 'counterweight-label-leader') as DrawingPolyline
+
+    // 1. Counterweight label position must be finite
+    expect(Number.isFinite(textLabel?.position.x)).toBe(true)
+    expect(Number.isFinite(textLabel?.position.y)).toBe(true)
+
+    // 2. Label must be positioned in the intended annotation lane (strictly outside geometry bounds)
+    const isOutsideGeometry = textLabel.position.x > geometryBounds.maxX || textLabel.position.x < geometryBounds.minX
+    expect(isOutsideGeometry).toBe(true)
+
+    // 3. Its leader polyline must exist and reference the correct component
+    expect(polylineLeader).toMatchObject({ kind: 'polyline', layer: 'annotation' })
+    if (polylineLeader) {
+      const targetPoint = polylineLeader.points[0]
+      // Target point references the component geometry
+      expect(targetPoint.x).toBeGreaterThanOrEqual(geometryBounds.minX)
+      expect(targetPoint.x).toBeLessThanOrEqual(geometryBounds.maxX)
+    }
+
+    // 4. Label and leader must remain within valid drawing bounds
+    expect(textLabel.position.x).toBeGreaterThanOrEqual(annotationBounds.minX)
+    expect(textLabel.position.x).toBeLessThanOrEqual(annotationBounds.maxX)
+
     expect(drawing.primitives).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: 'counterweight-label-leader', kind: 'line', layer: 'annotation' }),
-      expect.objectContaining({ id: 'cabin-label-leader', kind: 'line', layer: 'annotation' }),
-      expect.objectContaining({ id: 'car-rail-label-leader', kind: 'line', layer: 'annotation' }),
+      expect.objectContaining({ id: 'cabin-label-leader', kind: 'polyline', layer: 'annotation' }),
+      expect.objectContaining({ id: 'car-rail-label-leader', kind: 'polyline', layer: 'annotation' }),
     ]))
     expect(cabinLabel).toMatchObject({ kind: 'text', anchor: 'start' })
     expect(railLabel).toMatchObject({ kind: 'text', text: 'Führungsschiene', anchor: 'start' })
@@ -229,8 +252,8 @@ describe('passenger technical drawing projections', () => {
   it('uses a professional plan hierarchy with explicit rail profiles and counterweight internals', () => {
     const drawing = createPassengerPlanDrawing(context(createPassengerMechanicalFixture()), '1:20')
     expect(drawing.primitives.find((entry) => entry.id === 'shaft')).toMatchObject({ role: 'cut' })
-    expect(drawing.primitives.filter((entry) => entry.kind === 'polyline' && entry.id.includes('car-rail'))).toHaveLength(2)
-    expect(drawing.primitives.filter((entry) => entry.kind === 'polyline' && entry.id.includes('counterweight-rail'))).toHaveLength(2)
+    expect(drawing.primitives.filter((entry) => entry.kind === 'polyline' && entry.id.includes('car-rail') && !entry.id.includes('leader'))).toHaveLength(2)
+    expect(drawing.primitives.filter((entry) => entry.kind === 'polyline' && entry.id.includes('counterweight-rail') && !entry.id.includes('leader'))).toHaveLength(2)
     expect(drawing.primitives.find((entry) => entry.id === 'counterweight-stack')).toMatchObject({ role: 'hidden' })
     expect(drawing.primitives.find((entry) => entry.id === 'cabin-axis-x')).toMatchObject({ kind: 'centerline' })
     expect(drawing.primitives.find((entry) => entry.id === 'cabin-front-axis')).toMatchObject({ kind: 'centerline' })

@@ -14,6 +14,7 @@ import { createPassengerSafetyModel } from '../three/geometry/passenger/mechanic
 import { createPassengerDoorSystem, type DoorEntranceModel } from '../three/geometry/passenger/doors/passenger-door-model'
 import { validatePassengerSpatialGeometry, type PassengerSpatialValidationResult } from '../collision/passenger-spatial-validation'
 import type { PassengerSpatialGeometryInputs } from '../collision/passenger-spatial-envelopes'
+import { layoutGoodsDrawingAnnotations } from './goods-drawing-annotation-layout'
 import {
   createTechnicalDrawingDocument,
   componentAnnotation,
@@ -276,7 +277,7 @@ export function createPassengerPlanDrawing(context: PassengerDrawingContext,
   return createTechnicalDrawingDocument({
     id: 'passenger-plan', title: 'Grundriss', view: 'plan', status: drawingStatus(context, complete),
     incompleteMessage: complete ? undefined : 'Für den Grundriss fehlen Schacht- oder Kabinendaten.',
-    coordinateSystem: 'X horizontal; Z vertical with page Y = -Z', scale: scaleMetadata(scale), primitives,
+    coordinateSystem: 'X horizontal; Z vertical with page Y = -Z', scale: scaleMetadata(scale), primitives: layoutGoodsDrawingAnnotations(primitives, 100), annotationLayout: 'goods-columns',
   })
 }
 
@@ -427,7 +428,7 @@ export function createPassengerSectionDrawing(context: PassengerDrawingContext,
   return createTechnicalDrawingDocument({
     id: 'passenger-section', title: 'Schnitt', view: 'section', status: drawingStatus(context, complete),
     incompleteMessage: complete ? undefined : 'Für den Schnitt fehlen Schachthöhe oder Haltestellen.',
-    coordinateSystem: 'X horizontal; Y vertical with page Y = -Y', scale: scaleMetadata(scale), primitives,
+    coordinateSystem: 'X horizontal; Y vertical with page Y = -Y', scale: scaleMetadata(scale), primitives: layoutGoodsDrawingAnnotations(primitives, 100), annotationLayout: 'goods-columns',
   })
 }
 
@@ -482,7 +483,7 @@ export function createPassengerDoorElevationDrawing(context: PassengerDrawingCon
     id: `passenger-door-${level?.id ?? 'none'}-${side}`, title: 'Türansicht', view: 'door-elevation',
     status: drawingStatus(context, complete),
     incompleteMessage: complete ? undefined : 'Für diese Türansicht fehlen explizite Zugangs- oder Haltestellendaten.',
-    coordinateSystem: 'Entrance-local width horizontal; Y vertical with page Y = -Y', scale: scaleMetadata(scale), primitives,
+    coordinateSystem: 'Entrance-local width horizontal; Y vertical with page Y = -Y', scale: scaleMetadata(scale), primitives: layoutGoodsDrawingAnnotations(primitives, 100), annotationLayout: 'goods-columns',
   })
 }
 
