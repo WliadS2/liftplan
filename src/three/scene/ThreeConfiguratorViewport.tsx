@@ -239,6 +239,7 @@ export function ThreeConfiguratorViewport({
               }} />}
             </Canvas>
           </div>
+          <div className="viewport-notices">
           {modelResult.status === 'partial' && (
             <p className="viewport-status">
               Teilansicht – weitere Planungsdaten fehlen.
@@ -272,6 +273,7 @@ export function ThreeConfiguratorViewport({
           {(geometryInput?.doors || viewMode === 'doors') && !!doors?.missingData.length && <p className="viewport-status">Türdarstellung unvollständig – explizite Bauteildaten fehlen.</p>}
           {doors?.validation.issues.map((issue, index) => <p key={`doors-${index}`} className="viewport-status" role="alert">{doorMessages[issue.code]}</p>)}
           {viewMode === 'doors' && doorInspection?.level && !doorInspection.cabinAtLevel && !simulation && <p className="viewport-status">Die Kabine bleibt an ihrer Ausgangsposition. Fokus: Schachttür der gewählten Haltestelle.</p>}
+                  </div>
         </>
       )}
 

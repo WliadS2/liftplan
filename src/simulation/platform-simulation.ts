@@ -1,5 +1,6 @@
 import { metres, millimetres, millimetresToMetres, type Millimetres, type MetresPerSecond } from '../engineering'
 import { calculateVerticalTravelDuration } from './vertical-travel'
+import type { CarrierDriveVisualization } from './carrier-drive-visualization'
 
 export type PlatformSimulationPhase = 'idle' | 'door-closing' | 'moving' | 'door-opening' | 'door-open'
 export type PlatformSimulationIssue = { readonly code: 'planning-incomplete' | 'geometric-conflict' | 'invalid-timing'
@@ -8,11 +9,13 @@ export type PlatformSimulationCapabilityName = 'platformMovement' | 'frontDoorMo
 export interface PlatformVisualizationTiming { readonly source: 'visualization'; readonly doorSeconds: number }
 export const PLATFORM_VISUALIZATION_TIMING: PlatformVisualizationTiming = Object.freeze({ source: 'visualization', doorSeconds: 1.5 })
 export interface PlatformSimulationModel {
+  readonly mechanicalVisualization?:CarrierDriveVisualization
   readonly family: 'goods' | 'car'
   readonly nominalSpeedMetresPerSecond?: MetresPerSecond
   readonly levels: readonly { readonly id: string; readonly index: number; readonly elevationMm: Millimetres }[]
   readonly referenceFloorMm: Millimetres
   readonly capabilities: Readonly<Record<PlatformSimulationCapabilityName, { readonly available: boolean; readonly path: string }>>
+  /** Physical dynamics remain unsupported; mechanicalVisualization separately declares kinematic bindings. */
   readonly unavailableBehaviors: readonly ['driveSimulation', 'counterweightSimulation', 'ropeSimulation', 'safetyGearSimulation']
   readonly timing: PlatformVisualizationTiming
 }

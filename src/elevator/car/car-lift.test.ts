@@ -168,7 +168,7 @@ describe('car-lift configuration and normalization', () => {
     }
     expect(getLiftFamilyCapability('car', 'simulation').status).toBe('available')
     expect(createLiftFamilyTechnicalModel(carConfiguration())).toMatchObject({
-      status: 'available', family: 'car', validation: { status: 'ok' },
+      status: 'available', family: 'car', validation: { status: 'unknown' },
     })
   })
 })

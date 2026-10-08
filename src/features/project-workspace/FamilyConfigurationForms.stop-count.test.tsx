@@ -15,6 +15,40 @@ import { calculateCameraFit } from '../../three/camera/camera-fit'
 import { getCameraFrameTrigger } from '../../three/camera/camera-interaction-policy'
 
 afterEach(cleanup)
+describe('conditional explicit drive planning forms', () => {
+  it.each(['goods', 'car'] as const)('%s edits only the selected concept and does not seed component dimensions', (family) => {
+    const store = createProjectStore()
+    store.getState().setLiftFamily(family)
+    const initial = store.getState().project.configuration
+    if (initial.family !== 'goods' && initial.family !== 'car') throw Error('Expected carrier family')
+    const editable = initial
+    function Harness() {
+      const [configuration, setConfiguration] = useState(editable)
+      const onChange = (next: typeof editable) => { store.getState().updateConfiguration(next); setConfiguration(next) }
+      return configuration.family === 'goods' ? <GoodsLiftConfigurationForm configuration={configuration} onChange={onChange}/>
+        : <CarLiftConfigurationForm configuration={configuration} onChange={onChange}/>
+    }
+    render(<Harness/>)
+    fireEvent.click(screen.getByText('Antrieb und Mechanik'))
+    const concept = screen.getByRole('combobox', {name:'Antriebskonzept'})
+    expect(concept).toHaveProperty('value','unspecified')
+    fireEvent.change(concept, {target:{value:'traction'}})
+    fireEvent.change(screen.getByRole('spinbutton', {name:'Gegengewichtsweg je Trägerweg'}), {target:{value:'1'}})
+    expect(store.getState().project.configuration).toMatchObject({drive:{concept:'traction',source:'planning',counterweight:{travelRatio:1}}})
+    fireEvent.change(concept, {target:{value:'hydraulic'}})
+    expect(screen.queryByRole('spinbutton',{name:'Gegengewichtsweg je Trägerweg'})).toBeNull()
+    fireEvent.change(screen.getByRole('combobox', {name:'Hydraulikanordnung'}), {target:{value:'direct'}})
+    fireEvent.change(screen.getByRole('spinbutton', {name:'Verfügbarer Plungerhub mm'}), {target:{value:'1234'}})
+    fireEvent.change(screen.getByRole('spinbutton', {name:'Plungerweg je Trägerweg'}), {target:{value:'1'}})
+    expect(store.getState().project.configuration).toMatchObject({drive:{concept:'hydraulic',source:'planning',layout:'direct',travel:{availableStrokeMm:1234,plungerPerCarrierRatio:1}}})
+    const configured = store.getState().project.configuration
+    expect('drive' in configured && configured.drive).not.toHaveProperty('cylinder')
+    expect('drive' in configured && configured.drive).not.toHaveProperty('counterweight')
+    fireEvent.change(concept, {target:{value:'unspecified'}})
+    expect(store.getState().project.configuration).toMatchObject({drive:{concept:'unspecified'}})
+    expect(store.getState().persistenceMode).toBe('project')
+  })
+})
 describe('non-passenger stop count editing through the actual forms and store', () => {
   it.each(['goods', 'car'] as const)('%s regenerates uniform levels through 6 → 2 → 6 → 10 → 2', (family) => {
     const store = createProjectStore()

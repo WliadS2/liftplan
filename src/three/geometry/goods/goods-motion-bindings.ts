@@ -9,7 +9,7 @@ const movingKinds = new Set<GoodsSceneBox['kind']>([
   'carrier-frame', 'floor-structure', 'guide-shoe',
 ])
 /** Only actual carrier attachments move. Rail axes, levels, shaft and swept bounds remain fixed. */
-export const isGoodsMovingAssembly = (assembly: GoodsSceneBox) => movingKinds.has(assembly.kind)
+export const isGoodsMovingAssembly = (assembly: GoodsSceneBox) => assembly.driveAttachment === 'carrier' || movingKinds.has(assembly.kind)
 export interface GoodsVisualDoorLayout {
   readonly id: string
   readonly role: 'platform' | 'landing'

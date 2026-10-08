@@ -5,6 +5,7 @@ import { TechnicalEnvelope, TechnicalSceneLabel } from '../TechnicalEnvelope'
 import { isGoodsMovingAssembly, type GoodsVisualDoorLayout } from './goods-motion-bindings'
 import { CarrierDoor } from '../carrier/CarrierDoor'
 import { ShaftSection } from '../ShaftSection'
+import { CarrierDriveAssembly } from '../carrier/CarrierDriveAssembly'
 
 function SurfaceAssembly({ assembly }: { readonly assembly: GoodsRenderableAssembly }) {
   const [width, height, depth] = assembly.size
@@ -69,7 +70,8 @@ export function GoodsLiftAssembly({ model, doors = [] }: {
         showLabels={model.viewMode === 'platform' || model.viewMode === 'loads'} />
   }
   return <group name="goods-lift-assembly">
-    <group name="goods-fixed-assembly">{model.assemblies.filter((a) => !isGoodsMovingAssembly(a)).map(primitive)}</group>
-    <group name="goods-moving-assembly">{model.assemblies.filter(isGoodsMovingAssembly).map(primitive)}</group>
+    <group name="goods-fixed-assembly">{model.assemblies.filter((a) => a.driveAttachment === undefined && !isGoodsMovingAssembly(a)).map(primitive)}</group>
+    <group name="goods-moving-assembly">{model.assemblies.filter((a)=>a.driveAttachment === undefined && isGoodsMovingAssembly(a)).map(primitive)}</group>
+    <CarrierDriveAssembly drive={model.drive} visibleIds={new Set(model.assemblies.map((a)=>a.id))} mode={model.viewMode}/>
   </group>
 }

@@ -44,16 +44,15 @@ export function PlatformSimulationControls({ controller, availability, onReset }
       <button className="btn-tertiary" type="button" onClick={() => { controller.dispatch({ type: 'reset' }); onReset() }}>↺ Zurücksetzen</button>
     </div>
 
-    <div style={{ marginTop: 'var(--space-8)' }}>
-      <p className="viewport-status">{availability === 'complete' ? 'Fahrdemo verfügbar.' : 'Fahrdemo teilweise verfügbar.'}
-        {' '}Visualisierung ohne Nachweis des realen Fahrverhaltens.</p>
-      <p className="panel-note" style={{ position: 'relative', right: 'auto', bottom: 'auto', marginTop: 'var(--space-4)' }}>
-        Vertikalfahrt mit Nenngeschwindigkeit.<br/>
-        Ohne Beschleunigungs- oder Bremsmodell.
-      </p>
-      <p className="panel-note" style={{ position: 'relative', right: 'auto', bottom: 'auto', marginTop: 'var(--space-4)' }}>Türblätter, Türrahmen und Schwellen schematisch; keine Darstellung eines bestimmten Türantriebs.</p>
-      {controller.model.family === 'car' && <p className="panel-note" style={{ position: 'relative', right: 'auto', bottom: 'auto', marginTop: 'var(--space-4)' }}>Autoaufzug: keine Fahrzeugfahr- oder Wendebewegung.</p>}
-    </div>
+    <details className="panel-note" style={{ position: 'relative', right: 'auto', bottom: 'auto', marginTop: 'var(--space-8)' }}>
+      <summary>{availability === 'complete' ? 'Fahrdemo verfügbar' : 'Fahrdemo teilweise verfügbar'}</summary>
+      <ul style={{ margin: 'var(--space-4) 0 0', paddingLeft: 'var(--space-16)' }}>
+        <li>Visualisierung ohne Nachweis des realen Fahrverhaltens.</li>
+        <li>Vertikalfahrt mit Nenngeschwindigkeit, ohne Beschleunigungs- oder Bremsmodell.</li>
+        <li>Türblätter, Türrahmen und Schwellen schematisch; keine Darstellung eines bestimmten Türantriebs.</li>
+        {controller.model.family === 'car' && <li>Autoaufzug: keine Fahrzeugfahr- oder Wendebewegung.</li>}
+      </ul>
+    </details>
     {issues.length > 0 && <p role="alert" className="viewport-status">Diese Aktion ist im aktuellen Zustand der Fahrdemo nicht verfügbar.</p>}
       </>
     )}

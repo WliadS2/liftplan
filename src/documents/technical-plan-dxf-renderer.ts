@@ -26,6 +26,8 @@ export const TECHNICAL_DXF_LAYERS = [
   'LOADS',
   'VEHICLE',
   'APPROACH',
+  'HYDRAULIC',
+  'SAFETY',
 ] as const
 
 export type TechnicalDxfLayer = (typeof TECHNICAL_DXF_LAYERS)[number]
@@ -68,6 +70,8 @@ const layerDefinitions: readonly DxfLayerDefinition[] = [
   { name: 'LOADS', color: 30, lineType: 'CONTINUOUS' },
   { name: 'VEHICLE', color: 6, lineType: 'CONTINUOUS' },
   { name: 'APPROACH', color: 8, lineType: 'HIDDEN' },
+  { name: 'HYDRAULIC', color: 30, lineType: 'CONTINUOUS' },
+  { name: 'SAFETY', color: 7, lineType: 'CONTINUOUS' },
 ]
 
 const normalizeNumber = (value: number): string => {
@@ -121,17 +125,19 @@ export function technicalDxfLayerForPrimitive(primitive: TechnicalDrawingPrimiti
   if (primitive.layer === 'annotation') return 'ANNOTATIONS'
 
   if (key.includes('buffer')) return 'BUFFERS'
+  if (key.includes('hydraulic')) return 'HYDRAULIC'
+  if (key.includes('safety-gear') || key.includes('monitoring')) return 'SAFETY'
   if (key.includes('car-entry-approach') || key.includes('car-exit-approach') || key.includes('car-vehicle-sweep') ||
     key.includes('car-door-passage-envelope')) return 'APPROACH'
   if (key.includes('car-vehicle') || key.includes('car-wheel-contact')) return 'VEHICLE'
   if (key.includes('pallet') || key.includes('roll-container') || key.includes('forklift') || key.includes('load-envelope')) return 'LOADS'
   if (key.includes('rope') || key.includes('suspension')) return 'ROPES'
-  if (key.includes('door') || key.includes('entrance') || key.includes('landing-') || key.includes('cabin-front') ||
+  if (key.includes('door') || key.includes('entrance') || key.includes('landing-') || key.includes('-front-opening') || key.includes('-rear-opening') || key.includes('cabin-front') ||
     key.includes('cabin-rear') || key.includes('panel') || key.includes('jamb') || key.includes('sill') ||
     key.includes('operator') || key.includes('hanger')) return 'DOORS'
   if (key.includes('rail') || key.includes('shoe') || key.includes('goods-guide')) return 'GUIDE_RAILS'
   if (key.includes('counterweight')) return 'COUNTERWEIGHT'
-  if (key.includes('car-frame') || key.includes('car-upright') || key.includes('car-crosshead') ||
+  if (key.includes('frame-') || key.includes('floor-structure') || key.includes('car-frame') || key.includes('car-upright') || key.includes('car-crosshead') ||
     key.includes('car-lower') || key.includes('car-platform')) return 'CAR_FRAME'
   if (key.includes('machine') || key.includes('sheave') || key.includes('traction') || key.includes('governor') ||
     key.includes('tension')) return 'MACHINE'

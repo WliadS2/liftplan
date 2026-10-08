@@ -74,13 +74,13 @@ describe('Autoaufzug viewport states and controls', () => {
     expect(screen.queryByTestId('car-canvas')).not.toBeInTheDocument()
     expect(screen.queryByText('3D-Darstellung für diesen Aufzugstyp noch nicht verfügbar.')).not.toBeInTheDocument()
   })
-  it('offers all six Auto-specific modes without passenger/goods controls', () => {
+  it('offers configured Auto-specific mechanical modes without goods load controls', () => {
     viewport(createCarLiftQaFixture())
-    for (const label of ['Gesamtansicht', 'Plattform', 'Fahrzeug', 'Türen', 'Zufahrt', 'Schnittansicht']) {
+    for (const label of ['Gesamtansicht', 'Plattform', 'Fahrzeug', 'Mechanik','Antrieb','Türen', 'Zufahrt','Führungssystem','Sicherheit', 'Schnittansicht']) {
       fireEvent.click(screen.getByRole('button', { name: label }))
       expect(screen.getByRole('button', { name: label })).toHaveAttribute('aria-pressed', 'true')
     }
-    for (const label of ['Lasten', 'Antrieb', 'Sicherheit', 'Mechanik']) expect(screen.queryByRole('button', { name: label })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Lasten' })).not.toBeInTheDocument()
   })
   it('resets the current semantic camera without reverting the view', () => {
     viewport(createCarLiftQaFixture())

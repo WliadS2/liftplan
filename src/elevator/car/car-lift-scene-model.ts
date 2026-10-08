@@ -1,11 +1,13 @@
 import { millimetres, millimetresToMetres, type Metres } from '../../engineering'
 import type { CarBoxMm, CarLiftNormalizedModel, CarPlanPointMm } from './car-lift-model'
+import { createCarrierDriveScene, type CarrierDriveScene, type DriveSceneBox } from '../models/carrier-drive-scene'
 
 export interface CarSceneBox {
   readonly id: string
   readonly kind: 'shaft' | 'pit' | 'headroom' | 'level' | 'platform' | 'platform-floor' | 'platform-roof' | 'platform-wall' | 'door' | 'landing-door' | 'guide' | 'moving-envelope' |
     'vehicle-body' | 'wheel-contact' | 'approach-envelope' | 'vehicle-swept-envelope' | 'door-passage-envelope'
-    | 'carrier-frame' | 'floor-structure' | 'guide-shoe' | 'buffer'
+    | 'carrier-frame' | 'floor-structure' | 'guide-shoe' | 'buffer' | DriveSceneBox['kind']
+  readonly driveAttachment?: DriveSceneBox['driveAttachment']
   readonly center: readonly [Metres, Metres, Metres]
   readonly size: readonly [Metres, Metres, Metres]
   readonly headingDegrees?: number
@@ -24,6 +26,7 @@ export interface CarSceneLine {
 }
 
 export interface CarLiftSceneModel {
+  readonly drive?: CarrierDriveScene
   readonly family: 'car'
   readonly assemblies: readonly (CarSceneBox | CarSceneLine)[]
 }
@@ -213,5 +216,7 @@ export function createCarLiftSceneModel(model: CarLiftNormalizedModel): CarLiftS
     const id = part.id === 'rail-0' ? 'car-guide-a' : part.id === 'rail-1' ? 'car-guide-b' : `car-${part.id}`
     assemblies.push({ ...box(id,part.kind,part.bounds), componentSource: part.source })
   }
-  return { family: 'car', assemblies }
+  const drive = createCarrierDriveScene(model.drive,'car')
+  assemblies.push(...drive.parts)
+  return { family: 'car', assemblies, drive }
 }

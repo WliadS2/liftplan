@@ -540,7 +540,7 @@ export function ProjectWorkspace() {
               </Suspense>
             </ThreeSceneErrorBoundary>
           </div>
-          <div className="central-content" style={{ display: activeTab === 'plans' ? 'flex' : 'none' }}>
+          <div className="central-content" style={{ display: activeTab === 'plans' ? 'flex' : 'none', flex: 1, minHeight: 0, minWidth: 0 }}>
              <PlansWorkspace context={drawingContext} project={project} />
           </div>
         </main>

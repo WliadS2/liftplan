@@ -2,7 +2,7 @@
 
 import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPassengerMechanicalFixture } from '../../dev/fixtures/passenger-mechanical-fixture'
 import { kilograms, metresPerSecond, millimetres } from '../../engineering'
 import { createLiftGeometryPlanningInput } from '../../three/geometry/lift-geometry-planning-input'
@@ -14,7 +14,11 @@ import { createCarLiftPlanningConfiguration, createCenteredVehiclePosition, crea
 import { createLiftPlanProject, replaceProjectConfiguration } from '../../projects'
 import { PlansWorkspace } from './PlansWorkspace'
 
-afterEach(cleanup)
+beforeEach(()=>{
+  vi.spyOn(HTMLElement.prototype,'clientWidth','get').mockReturnValue(960)
+  vi.spyOn(HTMLElement.prototype,'clientHeight','get').mockReturnValue(640)
+})
+afterEach(()=>{cleanup();vi.restoreAllMocks()})
 
 function demoContext(update: Partial<ReturnType<typeof createPassengerMechanicalFixture>> = {}) {
   const planning = createLiftGeometryPlanningInput({
@@ -140,11 +144,14 @@ describe('PlansWorkspace validation status', () => {
     render(<PlansWorkspace context={demoContext()} project={project} />)
     fireEvent.click(screen.getByRole('button', { name: 'Schnitt' }))
     const svg = screen.getByRole('img', { name: 'Schnitt' })
-    expect(svg).not.toHaveAttribute('width')
-    expect(svg).not.toHaveAttribute('height')
+    expect(svg).toHaveAttribute('width','210mm')
+    expect(svg).toHaveAttribute('height','297mm')
     expect(svg).not.toHaveAttribute('data-page-fit')
     expect(svg.querySelector('g[clip-path]')).toBeNull()
-    expect(svg.getAttribute('viewBox')).not.toBe('0 0 210 297')
+    expect(svg.getAttribute('viewBox')).toBe('0 0 210 297')
+    expect(svg.querySelector('svg')?.getAttribute('viewBox')).not.toBe('0 0 210 297')
+    expect(svg.querySelector('[data-primitive-id="shaft-section"] rect')).toHaveAttribute('height','8200')
+    expect(svg.querySelector('[data-paper-primitive-id="title-scale-value"]')).toHaveTextContent('Automatisch (Vorschau)')
   })
 
   it('blocks automatic preview export with a clear German message', () => {

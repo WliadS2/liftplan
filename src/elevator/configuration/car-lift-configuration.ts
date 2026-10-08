@@ -11,6 +11,7 @@ import type { LiftConfiguration } from '../models/lift-configuration'
 import { LIFT_FAMILIES } from '../types/lift-family'
 import { updateUniformLevelIntervals } from './uniform-level-update'
 import { carrierMechanicalPlanningSchema, type CarrierMechanicalPlanning } from './carrier-mechanical-planning'
+import { carrierDrivePlanningSchema, carrierSafetyPlanningSchema, type CarrierDrivePlanning, type CarrierSafetyPlanning } from './carrier-drive-planning'
 
 export const CAR_LIFT_PLANNING_SCHEMA_VERSION = 'car-lift-planning-v1' as const
 export const VEHICLE_LOADING_DIRECTIONS = ['shaft-x', 'shaft-z'] as const
@@ -51,6 +52,8 @@ export interface CarLiftDoorPassageEnvelope {
 export interface CarLiftPlanningConfiguration
   extends LiftConfiguration<typeof LIFT_FAMILIES.car, typeof CAR_LIFT_PLANNING_SCHEMA_VERSION> {
   readonly projectName: string
+  readonly drive?: CarrierDrivePlanning
+  readonly safety?: CarrierSafetyPlanning
   readonly mechanical?: CarrierMechanicalPlanning
   readonly ratedLoadKg?: Kilograms
   readonly stopCount?: number
@@ -98,6 +101,8 @@ export const carLiftPlanningConfigurationSchema = z.object({
   family: z.literal(LIFT_FAMILIES.car),
   schemaVersion: z.literal(CAR_LIFT_PLANNING_SCHEMA_VERSION),
   projectName: z.string(),
+  drive: carrierDrivePlanningSchema.optional(),
+  safety: carrierSafetyPlanningSchema.optional(),
   mechanical: carrierMechanicalPlanningSchema.optional(),
   ratedLoadKg: optionalKg,
   stopCount: z.number().int().optional(),

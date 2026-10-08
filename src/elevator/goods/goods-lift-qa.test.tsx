@@ -146,7 +146,7 @@ describe('goods geometry and camera QA', () => {
     const small = createGoodsLiftSceneModel(model({ ...fixture, stopCount: 2, storeyHeightsMm: [mm(3000)] }).model)
     const tall = createGoodsLiftSceneModel(model({ ...fixture, stopCount: 10, storeyHeightsMm: Array(9).fill(mm(3000)) }).model)
     expect(getGoodsLiftCameraFrame(small, 'platform')).toEqual(getGoodsLiftCameraFrame(tall, 'platform'))
-    expect(getGoodsLiftCameraFrame(tall, 'platform').bounds.height).toBeCloseTo(2.66)
+    expect(getGoodsLiftCameraFrame(tall, 'platform').bounds.height).toBeCloseTo(2.76) // Explicit car hitch extends above the frame.
     expect(getGoodsLiftCameraFrame(tall, 'loads').bounds.height).toBeCloseTo(2.38)
     expect(getGoodsLiftCameraFrame(tall, 'overview').target).not.toEqual(getGoodsLiftCameraFrame(tall, 'platform').target)
   })
@@ -223,7 +223,7 @@ describe('goods drawing and export QA', () => {
   it.each([900, 3600])('frames %i mm platforms locally with optional loads absent', (width) => {
     const scene = createGoodsLiftSceneModel(model({ ...fixture, platformWidthMm: mm(width),
       platformDepthMm: mm(width * 1.4), doorWidthMm: mm(width * 0.8),
-      pallet: undefined, rollContainer: undefined, forkliftEnvelope: undefined, mechanical: undefined }).model)
+      pallet: undefined, rollContainer: undefined, forkliftEnvelope: undefined, mechanical: undefined,drive:undefined,safety:undefined }).model)
     for (const mode of ['platform', 'loads'] as const) {
       const frame = getGoodsLiftCameraFrame(scene, mode)
       expect(frame.bounds.width).toBe(width / 1000)

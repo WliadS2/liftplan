@@ -175,7 +175,7 @@ describe('installation overview, local carrier camera and Auto attachments', () 
         expect(f.bounds.min[1]).toBeCloseTo(n.model.shaft!.minY/1000)
         expect(f.bounds.max[1]).toBeCloseTo(n.model.shaft!.maxY/1000)
         expect(f.target).toEqual(f.bounds.center)
-        expect(getGoodsLiftCameraFrame(scene,'platform').bounds.height).toBeCloseTo(2.66)
+        expect(getGoodsLiftCameraFrame(scene,'platform').bounds.height).toBeCloseTo(2.76) // Includes the explicit carried hitch.
       } else {
         const n = createCarLiftNormalizedModel({ ...fixture,...update })
         if (n.status === 'empty') throw Error('Missing')

@@ -1,5 +1,6 @@
 import { millimetres, type Millimetres, type MetresPerSecond } from '../../engineering'
 import { normalizeCarrierMechanics, type CarrierMechanicalModel } from '../models/carrier-mechanical-model'
+import { normalizeCarrierDrive, type CarrierDriveModel } from '../models/carrier-drive-model'
 import type {
   GoodsLiftPlanningConfiguration,
   GoodsLoadEnvelope,
@@ -46,6 +47,7 @@ export interface GoodsLiftNormalizedModel {
   readonly nominalSpeedMetresPerSecond?: MetresPerSecond
   readonly family: 'goods'
   readonly mechanical?: CarrierMechanicalModel
+  readonly drive: CarrierDriveModel
   readonly sourceSchemaVersion: string
   readonly projectName: string
   readonly platform?: GoodsBoxMm
@@ -196,6 +198,7 @@ export function createGoodsLiftNormalizedModel(
 
   const model: GoodsLiftNormalizedModel = {
     family: 'goods',
+    drive: normalizeCarrierDrive(configuration.drive,configuration.safety,{levels:levelResult.levels,shaft}),
     sourceSchemaVersion: configuration.schemaVersion,
     projectName: configuration.projectName,
     nominalSpeedMetresPerSecond: configuration.nominalSpeedMetresPerSecond,

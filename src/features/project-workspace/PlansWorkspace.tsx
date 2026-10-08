@@ -8,7 +8,7 @@ import {
   type LiftDrawingSide,
   type LiftFamilyDrawingContext,
 } from '../../drawings/lift-family-technical-drawings'
-import { TechnicalDrawingSvg } from '../../drawings/TechnicalDrawingSvg'
+import { PlanDrawingViewer } from './PlanDrawingViewer'
 import { createTechnicalDrawingPresentation, TECHNICAL_DRAWING_SCALES, type TechnicalDrawingScale } from '../../drawings/technical-drawing'
 import {
   createTechnicalPlanPdfMetadata,
@@ -67,7 +67,7 @@ export function PlansWorkspace({ context, project }: {
   }, [context, scale, selectedLevelId, selectedSide, view])
   const presentation = useMemo(() => document ? createTechnicalDrawingPresentation(document) : undefined, [document])
   const previewSheet = useMemo(() => {
-    if (!document || !presentation?.page || scale === 'auto') return undefined
+    if (!document) return undefined
     const selectedLanding = levels.find((entry) => entry.id === levelId)
     return createTechnicalPlanPdfMetadata(
       project,
@@ -76,7 +76,7 @@ export function PlansWorkspace({ context, project }: {
       new Date(),
       document.view === 'door-elevation' && selectedLanding ? { landing: selectedLanding.index + 1, side } : undefined,
     )
-  }, [document, levelId, levels, presentation?.page, project, scale, side])
+  }, [document, levelId, levels, project, scale, side])
   const fitWarningMessage = presentation?.fit === 'does-not-fit'
     ? `Die Zeichnung passt im Maßstab ${scale} nicht auf A4.`
     : undefined
@@ -251,7 +251,8 @@ export function PlansWorkspace({ context, project }: {
       {document.status === 'conflict' && <p className="plans-warning" role="status">Planungsdaten enthalten Konflikte.</p>}
       {document.status === 'incomplete' && <p className="plans-warning" role="status">{document.incompleteMessage}</p>}
       {fitWarningMessage && <p className="plans-warning" role="status">{fitWarningMessage}</p>}
-      <div className="technical-drawing-frame"><TechnicalDrawingSvg document={document} presentation={presentation} sheet={previewSheet} /></div>
+      {presentation && previewSheet && <PlanDrawingViewer document={document} presentation={presentation} sheet={previewSheet}
+        resetKey={[project.id,document.id,scale,levelId,side].join('|')}/>}
       <p className="plans-scale-note">{scale === 'auto'
         ? 'Automatisch eingepasste Bildschirmvorschau · nicht druckverbindlich.'
         : `A4-Papieransicht · Geometrie ${scale} · Browserdarstellung nicht druckverbindlich.`}</p>

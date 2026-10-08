@@ -10,6 +10,30 @@ import {
   type GoodsLoadEnvelope,
 } from '../../elevator'
 import { kilograms, metresPerSecond, millimetres, type Millimetres } from '../../engineering'
+import type { CarrierDrivePlanning } from '../../elevator/configuration/carrier-drive-planning'
+
+function DrivePlanningFields({drive,onChange}:{readonly drive?:CarrierDrivePlanning;readonly onChange:(drive:CarrierDrivePlanning)=>void}) {
+  return <details><summary>Antrieb und Mechanik</summary>
+    <label className="field"><span>Antriebskonzept</span><select value={drive?.concept ?? 'unspecified'} onChange={(event)=>{
+      const concept = event.target.value
+      if (concept === 'unspecified') onChange({concept})
+      else if (concept === 'traction' || concept === 'hydraulic') onChange({concept,source:'planning'})
+    }}><option value="unspecified">Nicht angegeben</option><option value="traction">Traktion</option><option value="hydraulic">Hydraulisch</option></select></label>
+    {drive?.concept === 'traction' && <NumberField label="Gegengewichtsweg je Trägerweg" step="any" value={drive.counterweight?.travelRatio}
+      onChange={(travelRatio)=>onChange({...drive,counterweight:{...drive.counterweight,travelRatio}})}/>}
+    {drive?.concept === 'hydraulic' && <>
+      <label className="field"><span>Hydraulikanordnung</span><select value={drive.layout ?? ''} onChange={(event)=>onChange({...drive,
+        layout:event.target.value === 'direct' || event.target.value === 'indirect' ? event.target.value : undefined})}>
+        <option value="">Nicht angegeben</option><option value="direct">Direkt wirkend</option><option value="indirect">Indirekt mit expliziter Seilführung</option>
+      </select></label>
+      <MillimetreField label="Verfügbarer Plungerhub" value={drive.travel?.availableStrokeMm}
+        onChange={(availableStrokeMm)=>onChange({...drive,travel:{...drive.travel,availableStrokeMm}})}/>
+      <NumberField label="Plungerweg je Trägerweg" step="any" value={drive.travel?.plungerPerCarrierRatio}
+        onChange={(plungerPerCarrierRatio)=>onChange({...drive,travel:{...drive.travel,plungerPerCarrierRatio}})}/>
+    </>}
+    <p className="panel-note">Komponentenhüllen und Anbindungen benötigen explizite Planungsdaten. Keine automatische Auslegung oder Konformitätsbewertung.</p>
+  </details>
+}
 
 function parseOptionalNumber(value: string): number | undefined {
   if (value.trim() === '') return undefined
@@ -109,6 +133,7 @@ export function GoodsLiftConfigurationForm({ configuration, onChange }: {
   const update = (value: Parameters<typeof updateGoodsLiftPlanningConfiguration>[1]) =>
     onChange(updateGoodsLiftPlanningConfiguration(configuration, value))
   return <div className="field-group" data-lift-family-form="goods">
+    <DrivePlanningFields drive={configuration.drive} onChange={(drive)=>update({drive})}/>
     <h3>Allgemein</h3>
     <label className="field"><span>Projektname</span><input type="text" value={configuration.projectName}
       onChange={(event) => update({ projectName: event.target.value })} /></label>
@@ -197,6 +222,7 @@ export function CarLiftConfigurationForm({ configuration, onChange }: {
   const updatePosition = (value: Partial<NonNullable<CarLiftPlanningConfiguration['vehiclePosition']>>) =>
     update({ vehiclePosition: { ...configuration.vehiclePosition, ...value } })
   return <div className="field-group" data-lift-family-form="car">
+    <DrivePlanningFields drive={configuration.drive} onChange={(drive)=>update({drive})}/>
     <h3>Allgemein</h3>
     <label className="field"><span>Projektname</span><input type="text" value={configuration.projectName}
       onChange={(event) => update({ projectName: event.target.value })} /></label>

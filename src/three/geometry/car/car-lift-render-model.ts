@@ -1,11 +1,17 @@
 import type { CarLiftSceneModel, CarSceneBox, CarSceneLine } from '../../../elevator/car/car-lift-scene-model'
+import type { CarrierDriveScene } from '../../../elevator/models/carrier-drive-scene'
+import { DRIVE_KIND_LABELS, driveAppearance, isDriveKind, isMechanicsKind, isSafetyKind, isCarrierStructureKind, isDriveContextKind } from '../carrier/drive-presentation'
 
 export const CAR_LIFT_VIEW_MODE_CATALOG = [
   { id: 'overview', label: 'Gesamtansicht' },
   { id: 'platform', label: 'Plattform' },
   { id: 'vehicle', label: 'Fahrzeug' },
+  { id: 'mechanical', label: 'Mechanik' },
+  { id: 'drive', label: 'Antrieb' },
   { id: 'doors', label: 'Türen' },
   { id: 'approach', label: 'Zufahrt' },
+  { id: 'guides', label: 'Führungssystem' },
+  { id: 'safety', label: 'Sicherheit' },
   { id: 'cutaway', label: 'Schnittansicht' },
 ] as const
 export type CarLiftViewMode = typeof CAR_LIFT_VIEW_MODE_CATALOG[number]['id']
@@ -19,6 +25,7 @@ export interface CarRenderAppearance {
 }
 export type CarRenderableAssembly = CarSceneAssembly & { readonly appearance: CarRenderAppearance }
 export interface CarLiftRenderModel {
+  readonly drive?: CarrierDriveScene
   readonly family: 'car'
   readonly viewMode: CarLiftViewMode
   readonly assemblies: readonly CarRenderableAssembly[]
@@ -32,6 +39,11 @@ const vehicleKinds: readonly CarSceneAssembly['kind'][] = ['vehicle-body', 'whee
 const approachKinds: readonly CarSceneAssembly['kind'][] = ['approach-envelope', 'vehicle-swept-envelope', 'door-passage-envelope']
 
 function visible(assembly: CarSceneAssembly, mode: CarLiftViewMode): boolean {
+  if (mode === 'mechanical') return isMechanicsKind(assembly.kind) || assembly.kind === 'platform'
+  if (mode === 'drive') return isDriveKind(assembly.kind) && assembly.kind !== 'safety-gear' || isDriveContextKind(assembly.kind)
+  if (mode === 'safety') return isSafetyKind(assembly.kind) || assembly.kind === 'carrier-frame'
+  if (mode === 'guides') return ['guide','guide-shoe','carrier-frame','floor-structure'].includes(assembly.kind)
+  if ('driveAttachment' in assembly && assembly.driveAttachment !== undefined && mode === 'platform') return assembly.driveAttachment === 'carrier'
   if (assembly.kind === 'vehicle-reference') return mode === 'vehicle'
   if (mode === 'overview') return assembly.kind !== 'moving-envelope' && !approachKinds.includes(assembly.kind)
   if (mode === 'vehicle') return ['platform-floor', 'floor-structure', 'loading-direction'].includes(assembly.kind) || vehicleKinds.includes(assembly.kind)
@@ -43,6 +55,8 @@ function visible(assembly: CarSceneAssembly, mode: CarLiftViewMode): boolean {
 }
 
 function appearance(assembly: CarSceneAssembly, mode: CarLiftViewMode): CarRenderAppearance {
+  if (isDriveKind(assembly.kind)) return driveAppearance(assembly.kind)
+  if (mode === 'drive' && assembly.kind === 'platform') return {color:'#82919a',opacity:0.25,presentation:'outline',lineWidth:1}
   if (assembly.kind === 'shaft' && mode === 'cutaway') return { color: '#64748b', opacity: 0.22, presentation: 'section' }
   if (assembly.kind === 'carrier-frame') return { color: '#5e707c', opacity: 1, presentation: 'solid', lineWidth: 1.2 }
   if (assembly.kind === 'floor-structure') return { color: '#687d88', opacity: 1, presentation: 'solid', lineWidth: 1.2 }
@@ -71,7 +85,7 @@ function appearance(assembly: CarSceneAssembly, mode: CarLiftViewMode): CarRende
 export function createCarLiftRenderModel(scene: CarLiftSceneModel, viewMode: CarLiftViewMode, inspectionLevel?: string): CarLiftRenderModel {
   const firstDoor = scene.assemblies.find((a)=>'doorAttachment' in a && a.doorAttachment?.role === 'landing')
   const level = inspectionLevel ?? (firstDoor && 'doorAttachment' in firstDoor && firstDoor.doorAttachment?.role === 'landing' ? firstDoor.doorAttachment.levelId : undefined)
-  return { family: 'car', viewMode, assemblies: scene.assemblies.filter((a) => visible(a, viewMode))
+  return { family: 'car', viewMode, drive:scene.drive, assemblies: scene.assemblies.filter((a) => visible(a, viewMode))
     .filter((a)=>viewMode !== 'doors' || !level ||
       (a.kind !== 'landing-door' || ('doorAttachment' in a && a.doorAttachment?.role === 'landing' && a.doorAttachment.levelId === level)) &&
       (a.kind !== 'level' || a.id === `car-${level}`))
@@ -90,6 +104,13 @@ export function getCarLiftRenderLegend(model: CarLiftRenderModel): readonly stri
   }
   return [...new Set(model.assemblies.map((a) => a.kind === 'approach-envelope'
     ? (a.id.includes('entry') ? 'Einfahrtshülle' : 'Ausfahrtshülle')
-    : a.kind === 'guide' && 'componentSource' in a && a.componentSource ? 'Führungsschienen (Hüllkörper)'
+    : isDriveKind(a.kind) ? DRIVE_KIND_LABELS[a.kind] : a.kind === 'guide' && 'componentSource' in a && a.componentSource ? 'Führungsschienen (Hüllkörper)'
     : a.kind === 'door' || a.kind === 'landing-door' ? `Türen ${a.id.endsWith('rear') ? 'hinten' : 'vorne'}` : labels[a.kind]).filter(Boolean))] as string[]
+}
+
+export function getAvailableCarLiftViewModes(scene: CarLiftSceneModel) {
+  return CAR_LIFT_VIEW_MODE_CATALOG.filter((entry)=>entry.id === 'mechanical' ? scene.assemblies.some((a)=>isCarrierStructureKind(a.kind))
+    : entry.id === 'drive' ? scene.assemblies.some((a)=>isDriveKind(a.kind) && a.kind !== 'safety-gear')
+    : entry.id === 'safety' ? scene.assemblies.some((a)=>a.kind === 'safety-gear' || a.kind === 'buffer')
+    : entry.id === 'guides' ? scene.assemblies.some((a)=>a.kind === 'guide') : true)
 }

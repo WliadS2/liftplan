@@ -1,5 +1,7 @@
 import type { GoodsLiftSceneModel, GoodsSceneBox } from '../../elevator/goods/goods-lift-scene-model'
 import { metres } from '../../engineering'
+import { getCarrierDriveInspectionBounds } from './carrier-drive-camera'
+import { isDriveKind } from '../geometry/carrier/drive-presentation'
 import { getSemanticMovingFrame } from './semantic-moving-frame'
 import { isGoodsMovingAssembly } from '../geometry/goods/goods-motion-bindings'
 import type { CameraBounds, CameraFrame, CameraVector } from './camera-fit'
@@ -32,7 +34,14 @@ function boundsForAssemblies(assemblies: readonly GoodsSceneBox[]): CameraBounds
 const kindSet = (scene: GoodsLiftSceneModel, kinds: readonly GoodsSceneBox['kind'][]) =>
   scene.assemblies.filter((assembly) => kinds.includes(assembly.kind))
 
+function getGoodsDriveBounds(scene: GoodsLiftSceneModel, visible: readonly GoodsSceneBox[]) {
+  const context = visible.filter((a) => !isDriveKind(a.kind))
+    .map((a) => ({ center: a.center, size: a.size, moving: isGoodsMovingAssembly(a) }))
+  return getCarrierDriveInspectionBounds(scene.drive, new Set(visible.map((a) => a.id)), 0, context)
+}
+
 function targetForMode(scene: GoodsLiftSceneModel, viewMode: GoodsLiftViewMode, fallback: CameraVector): CameraVector {
+  if (viewMode === 'mechanical' || viewMode === 'drive' || viewMode === 'safety') return fallback
   if (viewMode === 'platform' || viewMode === 'loads') {
     const assemblies = kindSet(scene, viewMode === 'platform' ? ['platform', 'platform-floor']
       : ['platform', 'platform-floor', 'pallet', 'roll-container', 'forklift-envelope'])
@@ -49,6 +58,7 @@ function targetForMode(scene: GoodsLiftSceneModel, viewMode: GoodsLiftViewMode, 
 const viewDirections: Readonly<Record<GoodsLiftViewMode, CameraVector>> = {
   overview: [1, 0.65, 1],
   platform: [1, 0.8, 1],
+  mechanical:[1,0.45,1], drive:[1,0.3,1], safety:[1,0.3,1],
   doors: [0.35, 0.12, 1],
   loads: [0.6, 1.1, 1],
   guides: [1, 0.35, 1],
@@ -66,7 +76,8 @@ export function getGoodsLiftCameraFrame(scene: GoodsLiftSceneModel, viewMode: Go
   const framed = viewMode === 'overview' || viewMode === 'cutaway'
     ? cameraAssemblies.filter((a)=>!['pallet','roll-container','forklift-envelope','moving-envelope'].includes(a.kind))
     : cameraAssemblies
-  const bounds = boundsForAssemblies(framed)
+  const bounds = viewMode === 'drive' ? getGoodsDriveBounds(scene, visible) ?? boundsForAssemblies(framed)
+    : boundsForAssemblies(framed)
   if (viewMode === 'overview' || viewMode === 'cutaway') {
     return { bounds,target:bounds.center,direction:viewDirections[viewMode] }
   }
@@ -99,5 +110,5 @@ export function getGoodsLiftCameraInstallationKey(scene: GoodsLiftSceneModel): s
   return scene.assemblies.map((assembly) => [
     assembly.id, ...assembly.center.map((value) => Number(value.toFixed(6))),
     ...assembly.size.map((value) => Number(value.toFixed(6))),
-  ].join(':')).join('|')
+  ].join(':')).join('|')+JSON.stringify(scene.drive)
 }

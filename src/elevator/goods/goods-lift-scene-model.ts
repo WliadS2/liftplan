@@ -1,5 +1,6 @@
 import { millimetres, millimetresToMetres, type Metres } from '../../engineering'
 import type { GoodsBoxMm, GoodsLiftNormalizedModel } from './goods-lift-model'
+import { createCarrierDriveScene, type CarrierDriveScene, type DriveSceneBox } from '../models/carrier-drive-scene'
 
 export interface GoodsSceneBox {
   readonly id: string
@@ -7,7 +8,8 @@ export interface GoodsSceneBox {
     'platform' | 'platform-floor' | 'platform-roof' | 'platform-wall' |
     'door' | 'landing-door' | 'guide' | 'moving-envelope' |
     'carrier-frame' | 'floor-structure' | 'guide-shoe' | 'buffer' |
-    'pallet' | 'roll-container' | 'forklift-envelope'
+    'pallet' | 'roll-container' | 'forklift-envelope' | DriveSceneBox['kind']
+  readonly driveAttachment?: DriveSceneBox['driveAttachment']
   readonly center: readonly [Metres, Metres, Metres]
   readonly size: readonly [Metres, Metres, Metres]
   readonly componentSource?: import('../configuration/carrier-mechanical-planning').CarrierComponentSource
@@ -17,6 +19,7 @@ export interface GoodsSceneBox {
 }
 
 export interface GoodsLiftSceneModel {
+  readonly drive?: CarrierDriveScene
   readonly family: 'goods'
   readonly assemblies: readonly GoodsSceneBox[]
 }
@@ -172,5 +175,7 @@ export function createGoodsLiftSceneModel(model: GoodsLiftNormalizedModel): Good
     const id = part.id === 'rail-0' ? 'goods-guide-a' : part.id === 'rail-1' ? 'goods-guide-b' : `goods-${part.id}`
     assemblies.push({ ...box(id,part.kind,part.bounds), componentSource: part.source })
   }
-  return { family: 'goods', assemblies }
+  const drive = createCarrierDriveScene(model.drive,'goods')
+  assemblies.push(...drive.parts)
+  return { family: 'goods', assemblies, drive }
 }

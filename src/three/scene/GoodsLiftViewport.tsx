@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { createGoodsSimulationController, createGoodsSimulationModel } from '../../simulation/goods-simulation'
 import { createGoodsVisualDoorLayouts } from '../geometry/goods/goods-motion-bindings'
 import { GoodsSimulationDriver } from './GoodsSimulationDriver'
+import { CarrierDriveNotice } from './CarrierDriveNotice'
 import { GoodsSimulationControls, GoodsSimulationUnavailable } from './GoodsSimulationControls'
 import { millimetresToMetres } from '../../engineering'
 import { useKinematicRuntime, withoutNominalSpeedKey } from './use-kinematic-runtime'
@@ -13,7 +14,7 @@ import type { GoodsLiftSceneModel } from '../../elevator/goods/goods-lift-scene-
 import type { GoodsSpatialValidationResult } from '../../collision/goods-lift-spatial-validation'
 import { AutoFitCamera } from '../camera/AutoFitCamera'
 import { getGoodsLiftCameraFrame, getGoodsLiftCameraInstallationKey } from '../camera/goods-lift-camera'
-import { GOODS_CAMERA_POLICIES } from '../camera/view-camera-policy'
+import { GOODS_CAMERA_POLICIES, getDriveInspectionCameraPolicy } from '../camera/view-camera-policy'
 import { GoodsLiftAssembly } from '../geometry/goods/GoodsLiftAssembly'
 import {
   createGoodsLiftRenderModel,
@@ -64,11 +65,12 @@ export function GoodsLiftViewport({
   const cameraFrame = useMemo(() => sceneModel
     ? getGoodsLiftCameraFrame(sceneModel, activeViewMode, true, inspectionLevel) : undefined, [activeViewMode, sceneModel, inspectionLevel])
   const doors = useMemo(() => sceneModel ? createGoodsVisualDoorLayouts(sceneModel) : [], [sceneModel])
+  const cameraPolicy = activeViewMode === 'drive' ? getDriveInspectionCameraPolicy(sceneModel?.drive?.concept) : GOODS_CAMERA_POLICIES[activeViewMode]
   const cameraMotion = useMemo(() => simulation ? {
     identity: simulation,
     getOffset: (): readonly [number, number, number] => [0,
-      GOODS_CAMERA_POLICIES[activeViewMode] === 'moving-detail' ? millimetresToMetres(simulation.getPose().platformOffsetMm) : 0, 0],
-  } : undefined, [simulation, activeViewMode])
+      cameraPolicy === 'moving-detail' ? millimetresToMetres(simulation.getPose().platformOffsetMm) : 0, 0],
+  } : undefined, [simulation, cameraPolicy])
 
   return <section className="workspace-panel viewport-panel" aria-labelledby="goods-viewport-heading">
     <div className="viewport-heading-row">
@@ -85,6 +87,7 @@ export function GoodsLiftViewport({
           onReset={() => setCameraResetRevision((revision) => revision + 1)} />
       : simulationResult.status !== 'available' && <GoodsSimulationUnavailable result={simulationResult} />}
     {simulation && simulationResult.status !== 'available' && <GoodsSimulationUnavailable result={simulationResult} />}
+    <CarrierDriveNotice capability={simulationResult.status === 'available' ? simulationResult.model.mechanicalVisualization : undefined}/>
 
     {!sceneModel || normalized.status === 'empty' ? (
       <ViewportFallback><strong>Planungsdaten unvollständig</strong><p>Erforderliche Werte eingeben, um das 3D-Modell zu generieren.</p></ViewportFallback>
@@ -98,7 +101,7 @@ export function GoodsLiftViewport({
             <hemisphereLight color="#ffffff" groundColor="#94a3b8" intensity={1.35} />
             <directionalLight intensity={1.8} position={[5, 8, 6]} />
             <directionalLight intensity={0.55} position={[-4, 3, -5]} />
-            <GoodsSimulationDriver controller={simulation} doors={doors}>
+            <GoodsSimulationDriver controller={simulation} doors={doors} drive={sceneModel.drive}>
               {renderModel && <GoodsLiftAssembly model={renderModel} doors={doors} />}
             </GoodsSimulationDriver>
             {cameraFrame && <AutoFitCamera frame={cameraFrame} motion={cameraMotion} request={{
@@ -106,19 +109,21 @@ export function GoodsLiftViewport({
             }} />}
           </Canvas>
         </div>
-        {renderModel && <p className="panel-note" aria-label="3D-Legende">
-          {getGoodsLiftRenderLegend(renderModel).map((entry) => <span key={entry.label}
-            style={{ display: 'inline-block', marginRight: '0.8em' }}>
-            <span aria-hidden="true" style={{ color: entry.color }}>━ </span>{entry.label}
-          </span>)}
-        </p>}
-        {normalized.status === 'partial' && <p className="viewport-status">Teilansicht – weitere Planungsdaten fehlen.</p>}
-        {normalized.status === 'invalid' && <p className="viewport-status" role="alert">
-          Teilansicht – ungültige Planungsdaten werden soweit darstellbar angezeigt.
-        </p>}
-        {validation.status === 'invalid' && normalized.status !== 'invalid' && <p className="viewport-status" role="alert">
-          Die konfigurierte Geometrie enthält Konflikte und wird zur Prüfung weiterhin dargestellt.
-        </p>}
+        <div className="viewport-notices">
+          {renderModel && <p className="panel-note" aria-label="3D-Legende">
+            {getGoodsLiftRenderLegend(renderModel).map((entry) => <span key={entry.label}
+              style={{ display: 'inline-block', marginRight: '0.8em' }}>
+              <span aria-hidden="true" style={{ color: entry.color }}>━ </span>{entry.label}
+            </span>)}
+          </p>}
+          {normalized.status === 'partial' && <p className="viewport-status">Teilansicht – weitere Planungsdaten fehlen.</p>}
+          {normalized.status === 'invalid' && <p className="viewport-status" role="alert">
+            Teilansicht – ungültige Planungsdaten werden soweit darstellbar angezeigt.
+          </p>}
+          {validation.status === 'invalid' && normalized.status !== 'invalid' && <p className="viewport-status" role="alert">
+            Die konfigurierte Geometrie enthält Konflikte und wird zur Prüfung weiterhin dargestellt.
+          </p>}
+        </div>
       </>
     )}
     <p className="panel-note">Planungsvisualisierung ohne Nachweis technischer oder normativer Konformität.</p>

@@ -1,5 +1,8 @@
 import { millimetres } from '../engineering'
-import type { DrawingBounds, TechnicalDrawingPage, TechnicalDrawingPresentation } from './technical-drawing'
+import { TECHNICAL_A4_PAGE_SIZE_MM, type TechnicalDrawingView, type DrawingBounds, type TechnicalDrawingPage, type TechnicalDrawingPresentation } from './technical-drawing'
+
+export const automaticPreviewSheetSize = (view: TechnicalDrawingView) =>
+  TECHNICAL_A4_PAGE_SIZE_MM[view === 'section' ? 'portrait' : 'landscape']
 
 export const TECHNICAL_SHEET_FRAME_MARGIN_MM = 9
 export const TECHNICAL_SHEET_DRAWING_PADDING_MM = 6

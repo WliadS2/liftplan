@@ -6,6 +6,7 @@ import { isCarMovingAssembly } from './car-motion-bindings'
 import { CarrierDoor } from '../carrier/CarrierDoor'
 import { createCarrierDoorLayouts } from '../carrier/carrier-door-model'
 import { ShaftSection } from '../ShaftSection'
+import { CarrierDriveAssembly } from '../carrier/CarrierDriveAssembly'
 
 /** Screen-space annotation spacing, never vehicle dimensions or contact offsets. */
 const referenceLabelOffsets: Readonly<Record<string, readonly [number, number]>> = {
@@ -66,7 +67,8 @@ export function CarLiftAssembly({ model }: { readonly model: CarLiftRenderModel 
       : <CarPrimitive key={a.id} assembly={a} />
   }
   return <group name="car-lift-assembly">
-    <group name="car-fixed-assembly">{model.assemblies.filter((a) => !isCarMovingAssembly(a)).map(primitive)}</group>
-    <group name="car-moving-assembly">{model.assemblies.filter(isCarMovingAssembly).map(primitive)}</group>
+    <group name="car-fixed-assembly">{model.assemblies.filter((a) => !('driveAttachment' in a) && !isCarMovingAssembly(a)).map(primitive)}</group>
+    <group name="car-moving-assembly">{model.assemblies.filter((a)=>!('driveAttachment' in a) && isCarMovingAssembly(a)).map(primitive)}</group>
+    <CarrierDriveAssembly drive={model.drive} visibleIds={new Set(model.assemblies.map((a)=>a.id))} mode={model.viewMode}/>
   </group>
 }

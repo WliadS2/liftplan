@@ -247,6 +247,7 @@
 
 /* 3D VIEWPORT */
 .viewport-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -307,22 +308,35 @@
 }
 
 .viewport-status {
-  padding: var(--space-12) var(--space-20);
+  padding: var(--space-12) var(--space-16);
   background: var(--warning-bg);
   color: var(--warning);
   font-size: var(--text-sm);
-  border-bottom: 1px solid #FCD34D;
+  border: 1px solid #FCD34D;
+  border-radius: var(--radius);
   margin: 0;
+  box-shadow: var(--shadow-sm);
+  width: max-content;
+  max-width: 100%;
 }
 
 /* SIMULATION CONTROLS */
 .simulation-controls {
-  padding: var(--space-16) var(--space-20);
+  position: absolute;
+  bottom: var(--space-20);
+  left: 50%;
+  transform: translateX(-50%);
   background: var(--panel-bg);
-  border-bottom: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-12) var(--space-16);
   display: flex;
   flex-direction: column;
-  gap: var(--space-12);
+  gap: var(--space-8);
+  box-shadow: var(--shadow-lg);
+  z-index: 10;
+  max-width: calc(100% - 40px);
+  min-width: 320px;
 }
 
 .simulation-status-row {
@@ -348,7 +362,8 @@
 
 .simulation-actions {
   display: flex;
-  gap: var(--space-12);
+  flex-wrap: wrap;
+  gap: var(--space-8);
   align-items: center;
 }
 
@@ -356,7 +371,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-8);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   color: var(--text-secondary);
 }
 
@@ -451,11 +466,13 @@
 .plans-workspace-container {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 700px;
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
 }
 
 .plans-toolbar {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -657,14 +674,18 @@ details ul {
 /* RESTORED PLANS & TECHNICAL DRAWING STYLES */
 
 .technical-drawing-frame {
-  flex: 1;
+  flex: 1 1 0;
   overflow: auto;
   background: #F3F4F6;
   display: grid;
   place-items: safe center;
-  padding: 32px;
+  padding: 0;
   min-height: 0;
+  min-width: 0;
 }
+
+.technical-drawing-frame[data-preview-mode="fixed-page"] { padding: 16px; }
+.technical-drawing-frame > .technical-drawing-automatic-sheet { max-width: none; max-height: none; margin: 0; }
 
 .plans-warning, .plans-export-success {
   margin: 0;
@@ -686,6 +707,7 @@ details ul {
 }
 
 .plans-empty, .plans-scale-note {
+  flex-shrink: 0;
   padding: 12px 20px;
   font-size: 0.85rem;
   color: var(--text-muted);
@@ -694,6 +716,7 @@ details ul {
 
 /* Three.js overrides to ensure it fills */
 .viewport-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -878,4 +901,35 @@ details ul {
   stroke: none;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: var(--drawing-font-size, 100px);
+}
+.viewport-notices {
+  position: absolute;
+  top: 64px;
+  left: var(--space-16);
+  right: var(--space-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  pointer-events: none;
+  z-index: 5;
+}
+.viewport-notices > * {
+  pointer-events: auto;
+}
+.viewport-notices > .panel-note {
+  box-shadow: var(--shadow-sm);
+  width: max-content;
+  max-width: 100%;
+  border: 1px solid var(--border);
+}
+.viewport-panel > p.panel-note:last-child {
+  position: absolute;
+  bottom: var(--space-8);
+  right: var(--space-8);
+  margin: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--text-muted);
+  z-index: 10;
+  pointer-events: none;
 }

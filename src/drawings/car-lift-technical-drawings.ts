@@ -1,4 +1,6 @@
 import { millimetres } from '../engineering'
+import { projectCarrierMechanicalPrimitives } from './carrier-mechanical-drawings'
+import { layoutGoodsDrawingAnnotations } from './goods-drawing-annotation-layout'
 import type { CarLiftPlanningConfiguration } from '../elevator/configuration/car-lift-configuration'
 import { createCarLiftNormalizedModel, type CarBoxMm, type CarLiftNormalizedModel } from '../elevator/car/car-lift-model'
 import { validateCarLiftSpatialGeometry, type CarSpatialValidationResult } from '../collision/car-lift-spatial-validation'
@@ -58,7 +60,7 @@ export function createCarLiftDrawingContext(configuration: CarLiftPlanningConfig
 
 export function createCarLiftPlanDrawing(context: CarLiftDrawingContext,
   scale: TechnicalDrawingScale = 'auto'): TechnicalDrawingDocument {
-  const primitives: TechnicalDrawingPrimitive[] = []
+  const primitives: TechnicalDrawingPrimitive[] = projectCarrierMechanicalPrimitives('car','plan',context.model.mechanical,context.model.drive)
   const { shaft, platform, vehicle } = context.model
   if (shaft) {
     primitives.push(rect('car-shaft', 'cut', shaft.minX, -shaft.maxZ, boxWidth(shaft), boxDepth(shaft), 'car-shaft'))
@@ -93,6 +95,14 @@ export function createCarLiftPlanDrawing(context: CarLiftDrawingContext,
       center: drawingPoint(point.x, -point.z), radius: millimetres(45),
     })
   })
+  if (vehicle?.wheelContactPoints?.length === 4) {
+    const wheels = vehicle.wheelContactPoints
+    // Actual rotated contact positions, not assumed tire sizes or axle clearances.
+    for (const [name, a, b] of [['rear', wheels[0], wheels[1]], ['front', wheels[2], wheels[3]]] as const) {
+      primitives.push(line(`car-vehicle-${name}-axle`, 'centerline', a.x, -a.z, b.x, -b.z))
+    }
+    primitives.push(line('car-vehicle-wheelbase-reference', 'centerline', wheels[0].x, -wheels[0].z, wheels[2].x, -wheels[2].z))
+  }
   const envelopes = [context.model.entryApproachEnvelope, context.model.exitApproachEnvelope, context.model.vehicleSweptEnvelope]
   envelopes.forEach((envelope) => {
     if (!envelope) return
@@ -104,7 +114,7 @@ export function createCarLiftPlanDrawing(context: CarLiftDrawingContext,
     const y = entrance.side === 'front' ? -platform.maxZ : -platform.minZ
     primitives.push(line(`${entrance.id}-opening`, 'visible', -entrance.clearWidthMm / 2, y, entrance.clearWidthMm / 2, y))
   })
-  if (context.model.guideSystem && shaft) {
+  if (context.model.guideSystem && shaft && !context.model.mechanical?.parts.some((p)=>p.kind === 'guide')) {
     const half = context.model.guideSystem.spacingMm / 2
     if (context.model.guideSystem.orientation === 'x') {
       primitives.push(line('car-guide-a', 'visible', -half, -shaft.maxZ, -half, -shaft.minZ))
@@ -118,13 +128,14 @@ export function createCarLiftPlanDrawing(context: CarLiftDrawingContext,
   return createTechnicalDrawingDocument({
     id: 'car-plan', title: 'Grundriss', view: 'plan', status: status(context, complete),
     incompleteMessage: complete ? undefined : 'Für den Grundriss fehlen Schacht- oder Plattformdaten.',
-    coordinateSystem: 'X horizontal; Z vertical with page Y = -Z', scale: scaleMetadata(scale), primitives,
+    coordinateSystem: 'X horizontal; Z vertical with page Y = -Z', scale: scaleMetadata(scale),
+    annotationLayout:'goods-columns', primitives:layoutGoodsDrawingAnnotations(primitives,100),
   })
 }
 
 export function createCarLiftSectionDrawing(context: CarLiftDrawingContext,
   scale: TechnicalDrawingScale = 'auto'): TechnicalDrawingDocument {
-  const primitives: TechnicalDrawingPrimitive[] = []
+  const primitives: TechnicalDrawingPrimitive[] = projectCarrierMechanicalPrimitives('car','section',context.model.mechanical,context.model.drive)
   const { shaft, platform, levels, vehicle } = context.model
   if (shaft) {
     primitives.push(rect('car-shaft-section', 'cut', shaft.minX, -shaft.maxY,
@@ -160,12 +171,18 @@ export function createCarLiftSectionDrawing(context: CarLiftDrawingContext,
     const right = shaft?.maxX ?? 500
     primitives.push(line(`car-${level.id}`, 'level', left - 200, -level.elevationMm, right + 200, -level.elevationMm))
     primitives.push(text(`car-${level.id}-label`, `Haltestelle ${level.index + 1}`, right + 450, -level.elevationMm))
+    // Shared front/rear clear dimensions coincide in this X/Y projection.
+    const entrance = context.model.entrances[0]
+    if (entrance) primitives.push(rect(`car-landing-${level.id}-opening`, 'hidden',
+      -entrance.clearWidthMm / 2, -level.elevationMm - entrance.clearHeightMm,
+      entrance.clearWidthMm, entrance.clearHeightMm, entrance.id))
   })
   const complete = Boolean(shaft && levels.length)
   return createTechnicalDrawingDocument({
     id: 'car-section', title: 'Schnitt', view: 'section', status: status(context, complete),
     incompleteMessage: complete ? undefined : 'Für den Schnitt fehlen Schacht- oder Haltestellendaten.',
-    coordinateSystem: 'X horizontal; Y vertical with page Y = -Y', scale: scaleMetadata(scale), primitives,
+    coordinateSystem: 'X horizontal; Y vertical with page Y = -Y', scale: scaleMetadata(scale),
+    annotationLayout:'goods-columns', primitives:layoutGoodsDrawingAnnotations(primitives,100),
   })
 }
 

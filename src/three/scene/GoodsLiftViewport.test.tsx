@@ -132,7 +132,7 @@ describe('goods-lift viewport', () => {
   })
   it('runs the goods control sequence and resets motion plus current-view camera', () => {
     renderConfiguration(configured())
-    expect(screen.getByText('Fahrdemo verfügbar.', { exact: false })).toBeInTheDocument()
+    expect(screen.getByText('Fahrdemo verfügbar', { exact: false })).toBeInTheDocument()
     fireEvent.change(screen.getByRole('combobox', { name: 'Zielhaltestelle' }), { target: { value: 'level-2' } })
     fireEvent.click(screen.getByRole('button', { name: '▶ Fahrt starten' }))
     expect(driver.controller!.getState().phase).toBe('door-closing')

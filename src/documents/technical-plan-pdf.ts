@@ -97,14 +97,28 @@ export function createTechnicalPlanPdfMetadata(
   scale: FixedTechnicalDrawingScale,
   date: Date,
   doorSelection?: DoorDrawingPdfSelection,
-): TechnicalPlanPdfMetadata {
+): TechnicalPlanPdfMetadata
+export function createTechnicalPlanPdfMetadata(
+  project: LiftPlanProject,
+  document: TechnicalDrawingDocument,
+  scale: TechnicalDrawingScale,
+  date: Date,
+  doorSelection?: DoorDrawingPdfSelection,
+): TechnicalDrawingSheetMetadata
+export function createTechnicalPlanPdfMetadata(
+  project: LiftPlanProject,
+  document: TechnicalDrawingDocument,
+  scale: TechnicalDrawingScale,
+  date: Date,
+  doorSelection?: DoorDrawingPdfSelection,
+): TechnicalDrawingSheetMetadata {
   return {
     productName: 'LiftPlan',
     projectName: project.name,
     liftFamilyName: getLiftTypeDefinition(project.liftFamily).displayName,
     drawingType: document.title,
     drawingNumber: createTechnicalPlanPdfDrawingNumber(project.id, document.view),
-    scale,
+    scale: scale === 'auto' ? 'Automatisch (Vorschau)' : scale,
     date: formatGermanCalendarDate(date),
     projectNumber: project.id,
     version: project.schemaVersion,

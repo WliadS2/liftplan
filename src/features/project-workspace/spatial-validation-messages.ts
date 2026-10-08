@@ -114,6 +114,28 @@ export function getLiftSpatialIssueMessage(
   family: 'passenger' | 'goods' | 'car',
   issue: PassengerSpatialIssue | GoodsSpatialIssue | CarSpatialIssue,
 ): string {
+  if ('detail' in issue && issue.detail) {
+    const details:Readonly<Record<string,string>> = {
+      'concept-missing':'Antriebskonzept nicht angegeben.', 'safety-data-missing':'Keine Fangvorrichtungs-Planungshülle angegeben.',
+      'monitoring-data-missing':'Kein Überwachungsverlauf angegeben.',
+      'explicit-motion-relation':'Für das Gegengewicht fehlt die explizite Wegbeziehung.',
+      'declared-stroke-containment':'Der erforderliche Plungerweg überschreitet den angegebenen verfügbaren Hub.',
+      'declared-cylinder-plunger-alignment':'Zylinder und Plunger sind geometrisch nicht ausgerichtet.',
+      'direct-endpoint-alignment':'Plungerende und Trägeranbindung stimmen im Fahrbereich nicht überein.',
+      'swept-shaft-containment':'Eine Antriebs- oder Mechanikhülle überschreitet im Fahrbereich den Schacht.',
+      'declared-rail-interface':'Die konfigurierte Führungsschnittstelle erreicht ihre referenzierte Schiene nicht.',
+      'fixed-obstacle-penetration':'Eine feste Baugruppe durchdringt den Bewegungsraum.',
+      'fixed-component-penetration':'Feste mechanische Baugruppen durchdringen sich.',
+      'carrier-interior-penetration':'Eine angebaute Mechanikhülle ragt in den nutzbaren Trägerraum.',
+      'swept-penetration':'Träger- und Gegengewichtsbewegungsräume durchdringen sich.',
+      'route-outside-shaft':'Der konfigurierte Seil- oder Überwachungsverlauf überschreitet den Schacht.',
+      'zero-length-segment':'Der konfigurierte Verlauf enthält ein Segment ohne Länge.',
+      'detached-endpoint':'Ein Seilende erreicht seine konfigurierte Anbindung nicht.',
+      'invalid-component':'Eine Komponentenhülle ist geometrisch nicht darstellbar.',
+      'invalid-relation':'Eine konfigurierte Wegbeziehung ist ungültig.',
+    }
+    return details[issue.detail] ?? 'Für diese Antriebs- oder Mechanikprüfung fehlen explizite Daten oder Referenzen.'
+  }
   if (family === 'goods') return goodsMessages[issue.code as GoodsSpatialIssueCode]
   if (family === 'car') return carMessages[issue.code as CarSpatialIssueCode]
   return messages[issue.code as PassengerSpatialIssueCode]

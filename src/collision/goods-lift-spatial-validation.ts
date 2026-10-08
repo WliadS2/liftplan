@@ -1,5 +1,6 @@
 import type { Millimetres } from '../engineering'
 import { validateCarrierMechanics } from './carrier-mechanical-validation'
+import { validateCarrierDrive } from './carrier-drive-validation'
 import type { GoodsLoadBoxMm, GoodsLiftNormalizationResult, GoodsLiftNormalizedModel, GoodsPlanRectangleMm } from '../elevator/goods/goods-lift-model'
 
 export type GoodsSpatialValidationStatus = 'ok' | 'warning' | 'invalid' | 'unknown'
@@ -26,6 +27,7 @@ export interface GoodsSpatialIssue {
   readonly measurementsMm?: Readonly<Record<string, Millimetres>>
   /** Explicit travel guard, independent of aggregate planning status. */
   readonly blocksPlatformTravel: boolean
+  readonly detail?: string
 }
 
 export interface GoodsSpatialRuleResult {
@@ -81,6 +83,11 @@ function loadRule(ruleId: string, unavailable: GoodsSpatialIssueCode, outside: G
 
 function evaluateModel(model: GoodsLiftNormalizedModel): readonly GoodsSpatialRuleResult[] {
   const rules: GoodsSpatialRuleResult[] = []
+  for (const rule of validateCarrierDrive(model.drive,model)) rules.push(result(`goods.${rule.ruleId}`,rule.status,
+    rule.status === 'ok' ? [] : [{...issue(rule.status === 'invalid' ? 'invalid-planning-geometry' : 'geometry-unavailable',
+      rule.status === 'invalid' ? 'error' : 'info',rule.involvedComponentIds.map((id)=>`goods-${id}`)),
+      detail:rule.reason, measurementsMm:rule.measurementsMm as Readonly<Record<string,Millimetres>> | undefined,
+      blocksPlatformTravel:rule.blocksTravel}]))
   const mechanical = validateCarrierMechanics(model.mechanical,model.shaft,model.platform,model.levels)
   if (mechanical.length) rules.push(result('goods.carrier.explicit-components',
     mechanical.some((c)=>c.code !== 'component-reference-missing') ? 'invalid' : 'unknown',

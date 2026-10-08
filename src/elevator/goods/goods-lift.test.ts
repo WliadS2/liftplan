@@ -155,7 +155,7 @@ describe('goods-lift configuration and normalization', () => {
 
   it('returns discriminated family models and explicit unavailable states', () => {
     expect(createLiftFamilyTechnicalModel(goodsConfiguration())).toMatchObject({
-      status: 'available', family: 'goods', validation: { status: 'ok' },
+      status: 'available', family: 'goods', validation: { status: 'unknown' },
     })
     expect(createLiftFamilyTechnicalModel(createPassengerPlanningConfiguration('Bestand'))).toMatchObject({
       status: 'available', family: 'passenger', planning: { liftFamily: 'passenger' },
@@ -174,7 +174,9 @@ describe('goods-lift geometric validation', () => {
 
   it('validates platform, moving envelope, doors and through-car access geometrically', () => {
     const validation = validate(goodsConfiguration())
-    expect(validation.status).toBe('ok')
+    expect(validation.status).toBe('unknown') // No drive/safety data in this geometry-only configuration.
+    expect(validation.results.find((r)=>r.ruleId === 'goods.platform.shaft-fit')?.status).toBe('ok')
+    expect(validation.results.find((r)=>r.ruleId === 'goods.drive.concept')?.status).toBe('unknown')
     expect(rule(goodsConfiguration(), 'goods.access.consistency')?.status).toBe('ok')
     expect(rule(goodsConfiguration({ rearAccess: false }), 'goods.access.consistency')?.status).toBe('invalid')
   })

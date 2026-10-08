@@ -11,6 +11,7 @@ import type { LiftConfiguration } from '../models/lift-configuration'
 import { LIFT_FAMILIES } from '../types/lift-family'
 import { updateUniformLevelIntervals } from './uniform-level-update'
 import { carrierMechanicalPlanningSchema, type CarrierMechanicalPlanning } from './carrier-mechanical-planning'
+import { carrierDrivePlanningSchema, carrierSafetyPlanningSchema, type CarrierDrivePlanning, type CarrierSafetyPlanning } from './carrier-drive-planning'
 
 export const GOODS_PLANNING_SCHEMA_VERSION = 'goods-planning-v1' as const
 export const GOODS_LOAD_CATEGORIES = [
@@ -36,6 +37,8 @@ export interface GoodsGuidePlanning {
 export interface GoodsLiftPlanningConfiguration
   extends LiftConfiguration<typeof LIFT_FAMILIES.goods, typeof GOODS_PLANNING_SCHEMA_VERSION> {
   readonly projectName: string
+  readonly drive?: CarrierDrivePlanning
+  readonly safety?: CarrierSafetyPlanning
   readonly ratedLoadKg?: Kilograms
   readonly stopCount?: number
   readonly nominalSpeedMetresPerSecond?: MetresPerSecond
@@ -75,6 +78,8 @@ export const goodsLiftPlanningConfigurationSchema = z.object({
   family: z.literal(LIFT_FAMILIES.goods),
   schemaVersion: z.literal(GOODS_PLANNING_SCHEMA_VERSION),
   projectName: z.string(),
+  drive: carrierDrivePlanningSchema.optional(),
+  safety: carrierSafetyPlanningSchema.optional(),
   ratedLoadKg: finiteNumber.optional().transform((value) => value === undefined ? undefined : kilograms(value)),
   stopCount: z.number().int().optional(),
   nominalSpeedMetresPerSecond: finiteNumber.optional().transform((value) =>

@@ -1,4 +1,5 @@
 import { millimetres } from '../engineering'
+import { projectCarrierMechanicalPrimitives } from './carrier-mechanical-drawings'
 import type { GoodsLiftPlanningConfiguration } from '../elevator'
 import { createGoodsLiftNormalizedModel, type GoodsBoxMm, type GoodsLiftNormalizedModel } from '../elevator/goods/goods-lift-model'
 import { validateGoodsLiftSpatialGeometry, type GoodsSpatialValidationResult } from '../collision/goods-lift-spatial-validation'
@@ -66,7 +67,7 @@ export function createGoodsLiftDrawingContext(configuration: GoodsLiftPlanningCo
 
 export function createGoodsLiftPlanDrawing(context: GoodsLiftDrawingContext,
   scale: TechnicalDrawingScale = 'auto'): TechnicalDrawingDocument {
-  const primitives: TechnicalDrawingPrimitive[] = []
+  const primitives: TechnicalDrawingPrimitive[] = projectCarrierMechanicalPrimitives('goods','plan',context.model.mechanical,context.model.drive)
   const { shaft, platform } = context.model
   if (shaft) {
     primitives.push(rect('goods-shaft', 'cut', shaft.minX, -shaft.maxZ, boxWidth(shaft), boxDepth(shaft), 'goods-shaft'))
@@ -135,7 +136,7 @@ export function createGoodsLiftPlanDrawing(context: GoodsLiftDrawingContext,
 
 export function createGoodsLiftSectionDrawing(context: GoodsLiftDrawingContext,
   scale: TechnicalDrawingScale = 'auto'): TechnicalDrawingDocument {
-  const primitives: TechnicalDrawingPrimitive[] = []
+  const primitives: TechnicalDrawingPrimitive[] = projectCarrierMechanicalPrimitives('goods','section',context.model.mechanical,context.model.drive)
   const { shaft, platform, levels } = context.model
   if (shaft) {
     primitives.push(rect('goods-shaft-section', 'cut', shaft.minX, -shaft.maxY,

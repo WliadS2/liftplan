@@ -34,4 +34,4 @@ Local semantic camera follow retains manual orbit/pan/zoom and performs no per-f
 
 ## Deliberate exclusions
 
-No traction machine, ropes, counterweight, hydraulic actuator, safety gear, real door operator/interlock or vehicle dynamics were added. No manufacturer models, regulatory limits, structural sizing, buffer performance or certification claims were introduced. The synthetic DEV sections are isolated in `carrier-mechanical-demo.ts`; no normal new project receives them. Drawings/PDF/DXF, Passenger implementations and frontend styling are unchanged.
+The original carrier-section milestone did not include drive equipment. The subsequent [drive architecture](carrier-drive-architecture.md) adds explicit traction/hydraulic envelopes, safety planning and kinematic bindings, with shared drawing projections. Real door operators/interlocks, vehicle dynamics, manufacturer models, regulatory limits, structural sizing, buffer performance and certification remain unsupported. Synthetic DEV sections and drive data remain isolated from normal project defaults. Passenger implementations, frontend styling and the physical PDF scale engine remain unchanged.

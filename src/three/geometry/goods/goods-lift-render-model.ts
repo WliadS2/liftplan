@@ -1,7 +1,9 @@
 import type { GoodsLiftSceneModel, GoodsSceneBox } from '../../../elevator/goods/goods-lift-scene-model'
+import type { CarrierDriveScene } from '../../../elevator/models/carrier-drive-scene'
+import { DRIVE_KIND_LABELS, driveAppearance, isDriveKind, isMechanicsKind, isSafetyKind, isCarrierStructureKind, isDriveContextKind } from '../carrier/drive-presentation'
 
 export const GOODS_LIFT_VIEW_MODES = [
-  'overview', 'platform', 'doors', 'loads', 'guides', 'cutaway',
+  'overview', 'platform', 'mechanical', 'drive', 'doors', 'loads', 'guides', 'safety', 'cutaway',
 ] as const
 
 export type GoodsLiftViewMode = (typeof GOODS_LIFT_VIEW_MODES)[number]
@@ -10,12 +12,16 @@ export const GOODS_LIFT_VIEW_MODE_CATALOG: readonly {
   readonly id: GoodsLiftViewMode
   readonly label: string
   readonly requiresGuides?: boolean
+  readonly requires?: 'mechanical' | 'drive' | 'safety'
 }[] = [
   { id: 'overview', label: 'Gesamtansicht' },
   { id: 'platform', label: 'Plattform/Kabine' },
+  { id: 'mechanical', label: 'Mechanik', requires:'mechanical' },
+  { id: 'drive', label: 'Antrieb', requires:'drive' },
   { id: 'doors', label: 'Türen' },
   { id: 'loads', label: 'Lasten' },
   { id: 'guides', label: 'Führungssystem', requiresGuides: true },
+  { id: 'safety', label: 'Sicherheit', requires:'safety' },
   { id: 'cutaway', label: 'Schnittansicht' },
 ]
 
@@ -32,6 +38,7 @@ export interface GoodsRenderableAssembly extends GoodsSceneBox {
 }
 
 export interface GoodsLiftRenderModel {
+  readonly drive?: CarrierDriveScene
   readonly family: 'goods'
   readonly viewMode: GoodsLiftViewMode
   readonly assemblies: readonly GoodsRenderableAssembly[]
@@ -44,6 +51,10 @@ const platformKinds = new Set<GoodsSceneBox['kind']>([
 ])
 
 function visibleInMode(assembly: GoodsSceneBox, mode: GoodsLiftViewMode): boolean {
+  if (mode === 'mechanical') return isMechanicsKind(assembly.kind) || assembly.kind === 'platform'
+  if (mode === 'drive') return isDriveKind(assembly.kind) && assembly.kind !== 'safety-gear' || isDriveContextKind(assembly.kind)
+  if (mode === 'safety') return isSafetyKind(assembly.kind) || assembly.kind === 'carrier-frame'
+  if (assembly.driveAttachment !== undefined && mode === 'platform') return assembly.driveAttachment === 'carrier'
   if (mode === 'overview') return assembly.kind !== 'moving-envelope'
   if (mode === 'platform') return (platformKinds.has(assembly.kind) && assembly.kind !== 'platform-roof') || loadKinds.has(assembly.kind)
   if (mode === 'doors') {
@@ -62,6 +73,8 @@ function visibleInMode(assembly: GoodsSceneBox, mode: GoodsLiftViewMode): boolea
 }
 
 function appearance(assembly: GoodsSceneBox, mode: GoodsLiftViewMode): GoodsRenderAppearance {
+  if (isDriveKind(assembly.kind)) return driveAppearance(assembly.kind)
+  if (mode === 'drive' && assembly.kind === 'platform') return {color:'#82919a',opacity:0.25,presentation:'outline',lineWidth:1}
   if (assembly.kind === 'carrier-frame') return { color: '#5e707c', opacity: 1, presentation: 'solid', lineWidth: 1.2 }
   if (assembly.kind === 'floor-structure') return { color: '#687d88', opacity: 1, presentation: 'solid', lineWidth: 1.2 }
   if (assembly.kind === 'guide-shoe') return { color: '#364953', opacity: 1, presentation: 'solid', lineWidth: 1 }
@@ -95,7 +108,7 @@ const assemblyLabels: Partial<Record<GoodsSceneBox['kind'], string>> = {
 export function getGoodsLiftRenderLegend(model: GoodsLiftRenderModel): readonly { label: string; color: string }[] {
   const entries = new Map<string, string>()
   for (const assembly of model.assemblies) {
-    const label = assembly.kind === 'guide' && assembly.componentSource ? 'Führungsschienen (Hüllkörper)' : assembly.kind === 'door' || assembly.kind === 'landing-door'
+    const label = isDriveKind(assembly.kind) ? DRIVE_KIND_LABELS[assembly.kind] : assembly.kind === 'guide' && assembly.componentSource ? 'Führungsschienen (Hüllkörper)' : assembly.kind === 'door' || assembly.kind === 'landing-door'
       ? `Türen ${assembly.id.endsWith('rear') ? 'hinten' : 'vorne'}` : assemblyLabels[assembly.kind]
     if (label) entries.set(label, assembly.appearance.color)
   }
@@ -112,6 +125,7 @@ export function createGoodsLiftRenderModel(
   const level = inspectionLevel ?? (firstDoor?.doorAttachment?.role === 'landing' ? firstDoor.doorAttachment.levelId : undefined)
   return {
     family: 'goods',
+    drive: scene.drive,
     viewMode,
     assemblies: scene.assemblies
       .filter((assembly) => visibleInMode(assembly, viewMode))
@@ -125,5 +139,7 @@ export function createGoodsLiftRenderModel(
 
 export function getAvailableGoodsLiftViewModes(scene: GoodsLiftSceneModel): readonly typeof GOODS_LIFT_VIEW_MODE_CATALOG[number][] {
   const hasGuides = scene.assemblies.some((assembly) => assembly.kind === 'guide')
-  return GOODS_LIFT_VIEW_MODE_CATALOG.filter((entry) => !entry.requiresGuides || hasGuides)
+  return GOODS_LIFT_VIEW_MODE_CATALOG.filter((entry) => (!entry.requiresGuides || hasGuides) &&
+    (!entry.requires || scene.assemblies.some((a)=>entry.requires === 'mechanical' ? isCarrierStructureKind(a.kind)
+      : entry.requires === 'drive' ? isDriveKind(a.kind) && a.kind !== 'safety-gear' : a.kind === 'safety-gear' || a.kind === 'buffer')))
 }

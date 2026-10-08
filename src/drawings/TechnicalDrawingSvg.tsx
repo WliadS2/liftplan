@@ -75,7 +75,7 @@ function Primitive({ primitive, markerId, hatchId }: {
   }
 }
 
-function SheetPaperPrimitive({ primitive }: { readonly primitive: TechnicalSheetPaperPrimitive }) {
+export function SheetPaperPrimitive({ primitive }: { readonly primitive: TechnicalSheetPaperPrimitive }) {
   const common = { 'data-paper-primitive-id': primitive.id, className: 'technical-sheet-paper-primitive' }
   if (primitive.kind === 'rectangle') {
     return <rect {...common} x={primitive.x} y={primitive.y} width={primitive.width} height={primitive.height}
@@ -95,10 +95,11 @@ function SheetPaperPrimitive({ primitive }: { readonly primitive: TechnicalSheet
       '--sheet-font-size': `${primitive.fontSizeMm}px` } as CSSProperties}>{primitive.text}</text>
 }
 
-export function TechnicalDrawingSvg({ document, presentation: suppliedPresentation, sheet }: {
+export function TechnicalDrawingSvg({ document, presentation: suppliedPresentation, sheet, embeddedViewport }: {
   readonly document: TechnicalDrawingDocument
   readonly presentation?: TechnicalDrawingPresentation
   readonly sheet?: TechnicalDrawingSheetMetadata
+  readonly embeddedViewport?: { readonly x:number; readonly y:number; readonly width:number; readonly height:number }
 }) {
   const presentation = suppliedPresentation ?? createTechnicalDrawingPresentation(document)
   const bounds = presentation.viewBounds
@@ -110,8 +111,10 @@ export function TechnicalDrawingSvg({ document, presentation: suppliedPresentati
   const page = presentation.page
   const sheetLayout = page && sheet ? createTechnicalDrawingSheetLayout(page, presentation.completeBounds) : undefined
   const sheetPrimitives = sheetLayout && sheet ? createTechnicalDrawingSheetPaperPrimitives(sheetLayout, sheet) : undefined
-  return <svg className={`technical-drawing-svg technical-drawing-${presentation.mode}`} role="img" aria-label={document.title}
-    width={page ? `${page.widthMm}mm` : undefined} height={page ? `${page.heightMm}mm` : undefined}
+  return <svg className={`${embeddedViewport ? 'technical-drawing-embedded' : 'technical-drawing-svg'} technical-drawing-${presentation.mode}`}
+    role={embeddedViewport ? undefined : 'img'} aria-label={embeddedViewport ? undefined : document.title}
+    x={embeddedViewport?.x} y={embeddedViewport?.y}
+    width={embeddedViewport?.width ?? (page ? `${page.widthMm}mm` : undefined)} height={embeddedViewport?.height ?? (page ? `${page.heightMm}mm` : undefined)}
     data-page-fit={presentation.fit}
     viewBox={`${bounds.minX} ${bounds.minY} ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
     <defs>

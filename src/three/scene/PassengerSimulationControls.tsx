@@ -92,19 +92,13 @@ export function PassengerSimulationControls({ controller }: { readonly controlle
       <button className="btn-tertiary" type="button" onClick={() => controller.dispatch({ type: 'reset' })}>↺ Zurücksetzen</button>
     </div>
 
-    <div style={{ marginTop: 'var(--space-8)' }}>
-      <p className="panel-note" style={{ position: 'relative', right: 'auto', bottom: 'auto' }}>
-        Vertikalfahrt mit Nenngeschwindigkeit.<br/>
-        Ohne Beschleunigungs- oder Bremsmodell.
-      </p>
-    </div>
-
-    {missingCapabilities.length > 0 && <details className="panel-note" style={{ position: 'relative', right: 'auto', bottom: 'auto', marginTop: 'var(--space-8)' }}>
-      <summary>Fehlende Teilfunktionen</summary>
-      <ul style={{ margin: 0, paddingLeft: 'var(--space-16)' }}>
+    <details className="panel-note" style={{ position: 'relative', right: 'auto', bottom: 'auto', marginTop: 'var(--space-8)' }}>
+      <summary>Hinweise & Einschränkungen</summary>
+      <ul style={{ margin: 'var(--space-4) 0 0', paddingLeft: 'var(--space-16)' }}>
+        <li>Vertikalfahrt mit Nenngeschwindigkeit. Ohne Beschleunigungs- oder Bremsmodell.</li>
         {missingCapabilities.map((name) => <li key={name}>{capabilityMessages[name]}</li>)}
       </ul>
-    </details>}
+    </details>
     
     {import.meta.env.DEV && pose && <details className="panel-note" style={{ position: 'relative', right: 'auto', bottom: 'auto', marginTop: 'var(--space-4)' }}>
       <summary>Bewegungsdaten</summary>

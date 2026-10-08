@@ -1,5 +1,6 @@
 import { millimetres, type Millimetres, type MetresPerSecond } from '../../engineering'
 import { normalizeCarrierMechanics, type CarrierMechanicalModel } from '../models/carrier-mechanical-model'
+import { normalizeCarrierDrive, type CarrierDriveModel } from '../models/carrier-drive-model'
 import type {
   CarLiftApproachEnvelope,
   CarLiftPlanningConfiguration,
@@ -75,6 +76,7 @@ export interface CarLiftNormalizedModel {
   readonly nominalSpeedMetresPerSecond?: MetresPerSecond
   readonly family: 'car'
   readonly mechanical?: CarrierMechanicalModel
+  readonly drive: CarrierDriveModel
   readonly sourceSchemaVersion: string
   readonly projectName: string
   readonly platform?: CarBoxMm
@@ -326,6 +328,7 @@ export function createCarLiftNormalizedModel(configuration: CarLiftPlanningConfi
   }
   const model: CarLiftNormalizedModel = {
     family: 'car', sourceSchemaVersion: configuration.schemaVersion, projectName: configuration.projectName,
+    drive: normalizeCarrierDrive(configuration.drive,configuration.safety,{levels:levels.levels,shaft}),
     nominalSpeedMetresPerSecond: configuration.nominalSpeedMetresPerSecond,
     platform, shaft, movingEnvelope, entrances, levels: levels.levels,
     vehicle: normalizeVehicle(configuration, baseY),

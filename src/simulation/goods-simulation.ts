@@ -2,6 +2,7 @@ import { metres } from '../engineering'
 import type { GoodsLiftNormalizationResult } from '../elevator/goods/goods-lift-model'
 import type { GoodsSpatialValidationResult } from '../collision/goods-lift-spatial-validation'
 import { calculateVerticalTravelDuration } from './vertical-travel'
+import { getCarrierDriveVisualization } from './carrier-drive-visualization'
 import { PLATFORM_VISUALIZATION_TIMING as GOODS_VISUALIZATION_TIMING,
   type PlatformSimulationModel as GoodsSimulationModel, type PlatformSimulationModelResult as GoodsSimulationModelResult,
   type PlatformVisualizationTiming as GoodsVisualizationTiming } from './platform-simulation'
@@ -68,5 +69,6 @@ export function createGoodsSimulationModel(normalized: GoodsLiftNormalizationRes
     model.frontAccess !== undefined && model.rearAccess !== undefined &&
     (!model.frontAccess || door('front')) && (!model.rearAccess || door('rear')) ? 'complete' : 'partial',
   model: { family: 'goods', nominalSpeedMetresPerSecond: model.nominalSpeedMetresPerSecond, levels: model.levels, referenceFloorMm: model.platform.minY,
+    mechanicalVisualization:getCarrierDriveVisualization(model.drive),
     capabilities, timing, unavailableBehaviors: ['driveSimulation', 'counterweightSimulation', 'ropeSimulation', 'safetyGearSimulation'] } }
 }

@@ -4,6 +4,14 @@ import type { CameraBounds, CameraFrame, CameraVector } from './camera-fit'
 import { getSemanticMovingFrame } from './semantic-moving-frame'
 import { isCarMovingAssembly } from '../geometry/car/car-motion-bindings'
 import { metres } from '../../engineering'
+import { getCarrierDriveInspectionBounds } from './carrier-drive-camera'
+import { isDriveKind } from '../geometry/carrier/drive-presentation'
+
+function getCarDriveBounds(scene: CarLiftSceneModel, visible: readonly CarSceneAssembly[]) {
+  const context = visible.flatMap((a) => 'center' in a && !isDriveKind(a.kind)
+    ? [{ center: a.center, size: a.size, moving: isCarMovingAssembly(a) }] : [])
+  return getCarrierDriveInspectionBounds(scene.drive, new Set(visible.map((a) => a.id)), 0, context)
+}
 
 /** Rotation-aware render-space bounds; engineering envelopes are not changed by camera fitting. */
 export function getCarAssemblyBounds(assemblies: readonly CarSceneAssembly[]): CameraBounds {
@@ -24,6 +32,7 @@ export function getCarAssemblyBounds(assemblies: readonly CarSceneAssembly[]): C
 }
 const directions: Readonly<Record<CarLiftViewMode, CameraVector>> = {
   overview: [1, 0.6, 1], platform: [1, 0.7, 1], vehicle: [0.6, 1.3, 1],
+  mechanical:[1,0.45,1], drive:[1,0.3,1], guides:[1,0.35,1], safety:[1,0.3,1],
   doors: [0.35, 0.12, 1], approach: [0.7, 1.4, 1], cutaway: [1, 0.12, 0.38],
 }
 export function getCarLiftCameraFrame(scene: CarLiftSceneModel, viewMode: CarLiftViewMode, doorLevelId?: string): CameraFrame {
@@ -34,7 +43,8 @@ export function getCarLiftCameraFrame(scene: CarLiftSceneModel, viewMode: CarLif
   const framed = viewMode === 'overview' || viewMode === 'cutaway'
     ? visible.filter((a)=>!['vehicle-body','wheel-contact','vehicle-centerline','vehicle-axle','vehicle-reference','moving-envelope'].includes(a.kind))
     : visible
-  const bounds = getCarAssemblyBounds(framed)
+  const bounds = viewMode === 'drive' ? getCarDriveBounds(scene, visible) ?? getCarAssemblyBounds(framed)
+    : getCarAssemblyBounds(framed)
   if (viewMode === 'overview' || viewMode === 'cutaway') return {bounds,target:bounds.center,direction:directions[viewMode]}
   if (viewMode === 'doors') {
     const firstDoor = scene.assemblies.find((a)=>'doorAttachment' in a && a.doorAttachment?.role === 'landing')
@@ -49,12 +59,12 @@ export function getCarLiftCameraFrame(scene: CarLiftSceneModel, viewMode: CarLif
       return {bounds:local,target:local.center,direction:directions.doors}
     }
   }
-  if (viewMode === 'platform' || viewMode === 'vehicle') {
+  if (viewMode === 'platform' || viewMode === 'vehicle' || viewMode === 'guides') {
     const moving = visible.filter(isCarMovingAssembly)
-    if (moving.length) return getSemanticMovingFrame(getCarAssemblyBounds(moving), directions[viewMode])
+    if (moving.length) return getSemanticMovingFrame(getCarAssemblyBounds(moving), directions[viewMode],viewMode === 'guides' ? bounds : undefined)
   }
   return { bounds, target: bounds.center, direction: directions[viewMode] }
 }
 export function getCarLiftCameraInstallationKey(scene: CarLiftSceneModel): string {
-  return JSON.stringify(scene.assemblies)
+  return JSON.stringify([scene.assemblies,scene.drive])
 }

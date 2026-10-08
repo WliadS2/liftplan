@@ -2,6 +2,7 @@ import { metres } from '../engineering'
 import type { CarLiftNormalizationResult } from '../elevator/car/car-lift-model'
 import type { CarSpatialValidationResult } from '../collision/car-lift-spatial-validation'
 import { calculateVerticalTravelDuration } from './vertical-travel'
+import { getCarrierDriveVisualization } from './carrier-drive-visualization'
 import { PLATFORM_VISUALIZATION_TIMING, type PlatformSimulationModelResult } from './platform-simulation'
 
 /** Auto-specific travel guards. No goods geometry, vehicle dynamics or inferred approach motion. */
@@ -14,7 +15,7 @@ export function createCarSimulationModel(normalized: CarLiftNormalizationResult,
     issues: [{ code: speed.status === 'unknown' ? 'planning-incomplete' : 'invalid-timing', path: speed.path }] }
   if (!m.platform || !m.shaft || !m.movingEnvelope || m.levels.length < 2) return {
     status: 'unavailable', issues: [{ code: 'planning-incomplete', path: 'platform.shaft.levels' }] }
-  const conflicts = validation.issues.filter((i) => i.severity === 'error' && [
+  const conflicts = validation.issues.filter((i) => i.blocksPlatformTravel || i.severity === 'error' && [
     'platform-outside-shaft', 'moving-envelope-outside-shaft', 'invalid-level-order', 'invalid-pit-headroom',
   ].includes(i.code))
   const carried = m.vehicle?.bounds
@@ -33,6 +34,7 @@ export function createCarSimulationModel(normalized: CarLiftNormalizationResult,
     entrance.clearHeightMm <= m.platform!.maxY-m.platform!.minY)
   return { status: 'available', availability: 'partial', model: {
     family: 'car', levels: m.levels, referenceFloorMm: m.platform.minY,
+    mechanicalVisualization:getCarrierDriveVisualization(m.drive),
     nominalSpeedMetresPerSecond: m.nominalSpeedMetresPerSecond, timing: PLATFORM_VISUALIZATION_TIMING,
     capabilities: {
       platformMovement: { available: true, path: 'platform.levels' },
