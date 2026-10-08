@@ -1,6 +1,8 @@
 import type { CarrierDriveScene } from '../../../elevator/models/carrier-drive-scene'
 import type { DriveAttachment } from '../../../elevator/configuration/carrier-drive-planning'
 
+export const driveRouteSegmentName = (id:string,index:number) => `drive-route-segment-${id}-${index}`
+
 /** Render-neutral coefficients compiled once per normalized scene; no simulation engine or timing. */
 export function driveMotionFactor(drive:CarrierDriveScene,attachment:DriveAttachment):number | undefined {
   if (attachment === 'fixed') return 0

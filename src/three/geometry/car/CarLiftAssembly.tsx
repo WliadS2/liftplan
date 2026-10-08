@@ -1,4 +1,5 @@
 import { Line } from '@react-three/drei'
+import { useMemo } from 'react'
 import { DoubleSide } from 'three'
 import { CAR_CONTACT_SYMBOL_RADIUS_METRES, type CarLiftRenderModel, type CarRenderableAssembly } from './car-lift-render-model'
 import { TechnicalEnvelope, TechnicalSceneLabel } from '../TechnicalEnvelope'
@@ -7,6 +8,8 @@ import { CarrierDoor } from '../carrier/CarrierDoor'
 import { createCarrierDoorLayouts } from '../carrier/carrier-door-model'
 import { ShaftSection } from '../ShaftSection'
 import { CarrierDriveAssembly } from '../carrier/CarrierDriveAssembly'
+import { ConfiguredMechanicalPart } from '../mechanical/ConfiguredMechanicalPart'
+import { hasConfiguredMechanicalVisual } from '../mechanical/mechanical-visual-model'
 
 /** Screen-space annotation spacing, never vehicle dimensions or contact offsets. */
 const referenceLabelOffsets: Readonly<Record<string, readonly [number, number]>> = {
@@ -60,10 +63,13 @@ function CarPrimitive({ assembly: a }: { readonly assembly: CarRenderableAssembl
 
 /** Dedicated Autoaufzug materialization; no goods assembly, store, or vehicle calculation. */
 export function CarLiftAssembly({ model }: { readonly model: CarLiftRenderModel }) {
+  const boxAssemblies = useMemo(()=>model.assemblies.filter((part)=>'center' in part),[model.assemblies])
   const doors = createCarrierDoorLayouts(model.assemblies.filter((a)=>'center' in a))
   const primitive = (a: CarRenderableAssembly) => {
     const door = doors.find((d)=>d.id === a.id)
     return door ? <CarrierDoor key={a.id} door={door} cutaway={model.viewMode === 'cutaway'} inspection={model.viewMode === 'doors'} />
+      : 'center' in a && hasConfiguredMechanicalVisual(a) ? <ConfiguredMechanicalPart key={a.id} input={a}
+        assemblies={boxAssemblies} opacity={a.appearance.opacity}/>
       : <CarPrimitive key={a.id} assembly={a} />
   }
   return <group name="car-lift-assembly">

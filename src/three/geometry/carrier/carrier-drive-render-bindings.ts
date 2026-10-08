@@ -1,6 +1,6 @@
-import { BufferAttribute,Line,type Object3D } from 'three'
+import { BufferAttribute,Line,Vector3,type Object3D } from 'three'
 import type { CarrierDriveScene } from '../../../elevator/models/carrier-drive-scene'
-import { createCarrierDriveMotionPlan } from './carrier-drive-motion'
+import { createCarrierDriveMotionPlan,driveRouteSegmentName } from './carrier-drive-motion'
 
 /** Compile mesh identities/attributes once. No per-tick geometry/model/array creation. */
 export function bindCarrierDriveScene(drive:CarrierDriveScene | undefined,nodes:ReadonlyMap<string,Object3D>) {
@@ -13,8 +13,13 @@ export function bindCarrierDriveScene(drive:CarrierDriveScene | undefined,nodes:
     const node = nodes.get(route.id)
     const attribute = node instanceof Line ? node.geometry.getAttribute('position') : undefined
     if (node) node.frustumCulled=false
-    return attribute instanceof BufferAttribute ? [{...route,attribute}] : []
+    const segments = route.points.slice(1).flatMap((_,index)=>{
+      const mesh = nodes.get(driveRouteSegmentName(route.id,index))
+      return mesh ? [{node:mesh,index}] : []
+    })
+    return attribute instanceof BufferAttribute ? [{...route,attribute,segments}] : []
   })
+  const up = new Vector3(0,1,0),direction = new Vector3(),start = new Vector3(),end = new Vector3()
   let previousOffset: number | undefined
   return (offset:number)=>{
     if (offset === previousOffset) return
@@ -30,6 +35,16 @@ export function bindCarrierDriveScene(drive:CarrierDriveScene | undefined,nodes:
         route.attribute.setXYZ(index,point.base[0],point.base[1]+offset*(point.factor ?? 0),point.base[2])
       }
       route.attribute.needsUpdate=true
+      for (const segment of route.segments) {
+        start.fromBufferAttribute(route.attribute,segment.index);end.fromBufferAttribute(route.attribute,segment.index+1)
+        direction.subVectors(end,start)
+        const length = direction.length()
+        segment.node.visible=length > 0
+        if (!length) continue
+        segment.node.position.copy(start).add(end).multiplyScalar(0.5)
+        segment.node.quaternion.setFromUnitVectors(up,direction.divideScalar(length))
+        segment.node.scale.y=length
+      }
     }
   }
 }

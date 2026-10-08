@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import { BoxGeometry, Matrix4, Vector3, type InstancedMesh } from 'three'
+import { Matrix4, Vector3, type InstancedMesh } from 'three'
 import { MECHANICAL_MATERIALS } from '../../../materials/technical-materials'
 import type {
   BufferComponentModel, ComponentBox, DetailedRail, GuideShoeModel,
@@ -7,17 +7,22 @@ import type {
 } from './mechanical-component-model'
 import { createRailExtrusion } from './rail-extrusion'
 import type { ProfilePoint } from './rail-profile'
+import { createMechanicalVisualResources } from '../../mechanical/mechanical-visual-geometry'
+import { createPassengerBoxVisualModel } from './passenger-box-visual'
 
 function ComponentMaterial({ role, opacity }: { readonly role: MechanicalMaterialRole; readonly opacity: number }) {
   return <meshStandardMaterial {...MECHANICAL_MATERIALS[role]} opacity={opacity} transparent={opacity < 1} depthWrite={opacity >= 1} />
 }
 
 export function ComponentBoxes({ parts, opacity }: { readonly parts: readonly ComponentBox[]; readonly opacity: number }) {
-  const geometry = useMemo(() => new BoxGeometry(1, 1, 1), [])
-  useEffect(() => () => geometry.dispose(), [geometry])
-  return <group>{parts.map((part) => (
-    <mesh key={part.id} name={part.id} position={part.center} rotation={[0, part.rotationY, 0]} scale={part.size} geometry={geometry}>
-      <ComponentMaterial role={part.material} opacity={opacity} />
+  const resources = useMemo(()=>createMechanicalVisualResources([createPassengerBoxVisualModel(parts)],opacity),[parts,opacity])
+  useEffect(() => () => resources.dispose(), [resources])
+  return <group dispose={null}>{parts.map((part) => (
+    <mesh key={part.id} name={part.id} position={part.center} rotation={[0, part.rotationY, 0]} scale={part.size}
+      geometry={resources.geometry.get('box')} material={resources.materials.get(part.material)}
+      userData={{componentSource:part.source,semanticMaterial:part.material}}>
+      {['frame','support','machine','hitch','shoe'].includes(part.material) &&
+        <lineSegments geometry={resources.edges.get('box')} material={resources.edgeMaterial}/>}
     </mesh>
   ))}</group>
 }

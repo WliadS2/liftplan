@@ -6,6 +6,8 @@ import { isGoodsMovingAssembly, type GoodsVisualDoorLayout } from './goods-motio
 import { CarrierDoor } from '../carrier/CarrierDoor'
 import { ShaftSection } from '../ShaftSection'
 import { CarrierDriveAssembly } from '../carrier/CarrierDriveAssembly'
+import { ConfiguredMechanicalPart } from '../mechanical/ConfiguredMechanicalPart'
+import { hasConfiguredMechanicalVisual } from '../mechanical/mechanical-visual-model'
 
 function SurfaceAssembly({ assembly }: { readonly assembly: GoodsRenderableAssembly }) {
   const [width, height, depth] = assembly.size
@@ -66,6 +68,8 @@ export function GoodsLiftAssembly({ model, doors = [] }: {
   const primitive = (assembly: GoodsRenderableAssembly) => {
     const door = doors.find((entry) => entry.id === assembly.id)
     return door ? <CarrierDoor key={assembly.id} door={door} cutaway={model.viewMode === 'cutaway'} inspection={model.viewMode === 'doors'} />
+      : hasConfiguredMechanicalVisual(assembly) ? <ConfiguredMechanicalPart key={assembly.id} input={assembly}
+        assemblies={model.assemblies} opacity={assembly.appearance.opacity}/>
       : <GoodsAssemblyPrimitive key={assembly.id} assembly={assembly}
         showLabels={model.viewMode === 'platform' || model.viewMode === 'loads'} />
   }
