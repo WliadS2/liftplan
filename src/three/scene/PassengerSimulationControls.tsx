@@ -54,10 +54,13 @@ export function PassengerSimulationControls({ controller }: { readonly controlle
   const [collapsed, setCollapsed] = useState(false)
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot)
   const { state } = snapshot
-  const [targetLevel, setTargetLevel] = useState(
+  const [selectedTargetLevel, setTargetLevel] = useState(
     controller.model.levels.find((level) => level.id !== state.currentLevel)?.id ?? state.currentLevel,
   )
+  const targetLevel = controller.model.levels.some((level)=>level.id===selectedTargetLevel)
+    ? selectedTargetLevel : controller.model.levels.find((level)=>level.id!==state.currentLevel)?.id ?? state.currentLevel
   const current = controller.model.levels.find((level) => level.id === state.currentLevel)!
+  const targetStop = controller.model.levels.find((level)=>level.id===state.targetLevel)!
   const missingCapabilities = (Object.entries(controller.model.capabilities) as [PassengerSimulationCapabilityName, { available: boolean }][]) 
     .filter(([name, value]) => name !== 'cabinMovement' && !value.available)
     .map(([name]) => name as Exclude<PassengerSimulationCapabilityName, 'cabinMovement'>)
@@ -72,8 +75,8 @@ export function PassengerSimulationControls({ controller }: { readonly controlle
         Fahrdemo
       </strong>
       <span role="status">
-        {state.paused ? `Pausiert (${phases[state.phase]})` : phases[state.phase]} · Haltestelle {current.index + 1}
-        {state.phase !== 'idle' ? ` → ${controller.model.levels.find((level) => level.id === state.targetLevel)!.index + 1}` : ''}
+        {state.paused ? `Pausiert (${phases[state.phase]})` : phases[state.phase]} · {current.label || `Haltestelle ${current.index + 1}`}
+        {state.phase !== 'idle' ? ` → ${targetStop.label || `Haltestelle ${targetStop.index + 1}`}` : ''}
       </span>
     </div>
 
@@ -83,7 +86,7 @@ export function PassengerSimulationControls({ controller }: { readonly controlle
       <label>
         Zielhaltestelle
         <select aria-label="Zielhaltestelle" value={targetLevel} disabled={state.phase !== 'idle'} onChange={(event) => setTargetLevel(event.target.value)}>
-          {controller.model.levels.map((level) => <option key={level.id} value={level.id}>{level.index + 1}</option>)}
+          {controller.model.levels.map((level) => <option key={level.id} value={level.id}>{level.label || `Haltestelle ${level.index + 1}`}</option>)}
         </select>
       </label>
       <button className="btn-primary" type="button" disabled={state.phase !== 'idle' || targetLevel === state.currentLevel || controller.speedStatus !== 'available'} onClick={() => controller.dispatch({ type: 'start', targetLevel })}>▶ Fahrt starten</button>

@@ -1,6 +1,7 @@
 import { millimetres, millimetresToMetres, type Metres } from '../../engineering'
 import type { CarBoxMm, CarLiftNormalizedModel, CarPlanPointMm } from './car-lift-model'
 import { createCarrierDriveScene, type CarrierDriveScene, type DriveSceneBox } from '../models/carrier-drive-scene'
+import { isLandingSideServed } from '../configuration/landing-planning'
 
 export interface CarSceneBox {
   readonly id: string
@@ -166,7 +167,7 @@ export function createCarLiftSceneModel(model: CarLiftNormalizedModel): CarLiftS
           millimetresToMetres(z)],
         size: [millimetresToMetres(entrance.clearWidthMm), millimetresToMetres(entrance.clearHeightMm), millimetresToMetres(millimetres(0))],
       })
-      if (model.shaft) model.levels.forEach((level) => assemblies.push({
+      if (model.shaft) model.levels.filter((level) => isLandingSideServed(level, entrance.side)).forEach((level) => assemblies.push({
         id: `car-landing-${level.id}-${entrance.side}`, kind: 'landing-door',
         doorAttachment: { role: 'landing', side: entrance.side, levelId: level.id },
         center: [millimetresToMetres(millimetres(0)),

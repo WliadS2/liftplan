@@ -10,6 +10,7 @@ import {
 import type { LiftConfiguration } from '../models/lift-configuration'
 import { LIFT_FAMILIES } from '../types/lift-family'
 import { updateUniformLevelIntervals } from './uniform-level-update'
+import { landingSettingsSchema, levelElevationsSchema, updateLandingCount, type LandingSettings } from './landing-planning'
 import { carrierMechanicalPlanningSchema, type CarrierMechanicalPlanning } from './carrier-mechanical-planning'
 import { carrierDrivePlanningSchema, carrierSafetyPlanningSchema, type CarrierDrivePlanning, type CarrierSafetyPlanning } from './carrier-drive-planning'
 
@@ -52,7 +53,8 @@ export interface GoodsLiftPlanningConfiguration
   readonly pitDepthMm?: Millimetres
   readonly headroomMm?: Millimetres
   readonly storeyHeightsMm?: readonly Millimetres[]
-  readonly levelElevationsMm?: readonly Millimetres[]
+  readonly levelElevationsMm?: readonly (Millimetres | null)[]
+  readonly landingSettings?: readonly LandingSettings[]
   readonly throughCar?: boolean
   readonly frontAccess?: boolean
   readonly rearAccess?: boolean
@@ -95,7 +97,8 @@ export const goodsLiftPlanningConfigurationSchema = z.object({
   pitDepthMm: optionalMillimetres,
   headroomMm: optionalMillimetres,
   storeyHeightsMm: z.array(finiteNumber.transform(millimetres)).readonly().optional(),
-  levelElevationsMm: z.array(finiteNumber.transform(millimetres)).readonly().optional(),
+  levelElevationsMm: levelElevationsSchema.optional(),
+  landingSettings: z.array(landingSettingsSchema).readonly().optional(),
   throughCar: z.boolean().optional(),
   frontAccess: z.boolean().optional(),
   rearAccess: z.boolean().optional(),
@@ -126,5 +129,6 @@ export function updateGoodsLiftPlanningConfiguration(
   configuration: GoodsLiftPlanningConfiguration,
   update: GoodsLiftPlanningConfigurationUpdate,
 ): GoodsLiftPlanningConfiguration {
-  return updateUniformLevelIntervals(configuration, update)
+  return configuration.levelElevationsMm || configuration.landingSettings
+    ? updateLandingCount(configuration, update, false) : updateUniformLevelIntervals(configuration, update)
 }

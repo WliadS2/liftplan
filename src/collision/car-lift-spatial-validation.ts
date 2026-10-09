@@ -1,4 +1,5 @@
 import type { Millimetres } from '../engineering'
+import { validateLandingOpenings, type LandingIssueCode } from '../elevator/configuration/landing-planning'
 import { validateCarrierMechanics } from './carrier-mechanical-validation'
 import { validateCarrierDrive } from './carrier-drive-validation'
 import type {
@@ -9,7 +10,7 @@ import type {
 
 export type CarSpatialValidationStatus = 'ok' | 'warning' | 'invalid' | 'unknown'
 export type CarSpatialIssueSeverity = 'info' | 'warning' | 'error'
-export type CarSpatialIssueCode =
+export type CarSpatialIssueCode = LandingIssueCode
   | 'geometry-unavailable' | 'invalid-planning-geometry'
   | 'platform-outside-shaft' | 'zero-platform-clearance'
   | 'vehicle-unavailable' | 'vehicle-outside-platform' | 'vehicle-too-tall'
@@ -67,6 +68,10 @@ function planMeasurements(container: CarPlanRectangleMm, subject: CarPlanRectang
 
 function evaluateModel(model: CarLiftNormalizedModel): readonly CarSpatialRuleResult[] {
   const rules: CarSpatialRuleResult[] = []
+  const landingIssues = [...model.landingIssues ?? [], ...validateLandingOpenings(model.levels,
+    model.entrances.map((e)=>({side:e.side,widthMm:e.clearWidthMm,heightMm:e.clearHeightMm})),model.shaft)]
+  rules.push(result('car.landings.configuration',landingIssues.some((i)=>i.status==='invalid') ? 'invalid' : landingIssues.length ? 'unknown' : 'ok',
+    landingIssues.map((i)=>({...issue(i.code,i.status==='invalid'?'error':'info',i.levelId?[i.levelId]:[]),blocksPlatformTravel:i.status==='invalid'}))))
   for (const rule of validateCarrierDrive(model.drive,model)) rules.push(result(`car.${rule.ruleId}`,rule.status,
     rule.status === 'ok' ? [] : [{...issue(rule.status === 'invalid' ? 'invalid-planning-geometry' : 'geometry-unavailable',
       rule.status === 'invalid' ? 'error' : 'info',rule.involvedComponentIds.map((id)=>`car-${id}`)),

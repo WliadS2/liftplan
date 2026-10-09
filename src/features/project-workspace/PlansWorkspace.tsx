@@ -49,22 +49,22 @@ export function PlansWorkspace({ context, project }: {
     readonly contextKey: string
   }>()
   const levels = useMemo(() => getLiftDrawingLevels(context), [context])
-  const sides = useMemo(() => getLiftDrawingSides(context), [context])
   const levelId = levels.some((entry) => entry.id === selectedLevelId) ? selectedLevelId : levels[0]?.id
+  const sides = useMemo(() => getLiftDrawingSides(context,levelId), [context,levelId])
   const side = useMemo(
     () => sides.includes(selectedSide) ? selectedSide : sides[0] ?? selectedSide,
     [selectedSide, sides],
   )
   const document = useMemo(() => {
     if (!context) return undefined
-    if (view === 'plan') return createLiftPlanDrawing(context, scale)
+    if (view === 'plan') return createLiftPlanDrawing(context, scale,levelId)
     if (view === 'section') return createLiftSectionDrawing(context, scale)
     const currentLevels = getLiftDrawingLevels(context)
-    const currentSides = getLiftDrawingSides(context)
     const currentLevelId = currentLevels.some((entry) => entry.id === selectedLevelId) ? selectedLevelId : currentLevels[0]?.id
+    const currentSides = getLiftDrawingSides(context,currentLevelId)
     const currentSide = currentSides.includes(selectedSide) ? selectedSide : currentSides[0] ?? selectedSide
     return createLiftDoorElevationDrawing(context, { levelId: currentLevelId, side: currentSide }, scale)
-  }, [context, scale, selectedLevelId, selectedSide, view])
+  }, [context, scale, selectedLevelId, selectedSide, view,levelId])
   const presentation = useMemo(() => document ? createTechnicalDrawingPresentation(document) : undefined, [document])
   const previewSheet = useMemo(() => {
     if (!document) return undefined
@@ -101,7 +101,7 @@ export function PlansWorkspace({ context, project }: {
     const documents = !context ? [] : exportScope === 'current'
       ? document ? [document] : []
       : [
-          createLiftPlanDrawing(context, exportScale),
+          createLiftPlanDrawing(context, exportScale,levelId),
           createLiftSectionDrawing(context, exportScale),
           createLiftDoorElevationDrawing(context, { levelId, side }, exportScale),
         ]
@@ -155,13 +155,13 @@ export function PlansWorkspace({ context, project }: {
     const selectedLanding = levels.find((entry) => entry.id === levelId)
     const doorSelection = selectedLanding ? { landing: selectedLanding.index + 1, side } : undefined
     const currentModelDocument = !context ? undefined
-      : view === 'plan' ? createLiftPlanDrawing(context, 'auto')
+      : view === 'plan' ? createLiftPlanDrawing(context, 'auto',levelId)
         : view === 'section' ? createLiftSectionDrawing(context, 'auto')
           : createLiftDoorElevationDrawing(context, { levelId, side }, 'auto')
     const documents = !context ? [] : exportScope === 'current'
       ? currentModelDocument ? [currentModelDocument] : []
       : [
-          createLiftPlanDrawing(context, 'auto'),
+          createLiftPlanDrawing(context, 'auto',levelId),
           createLiftSectionDrawing(context, 'auto'),
           createLiftDoorElevationDrawing(context, { levelId, side }, 'auto'),
         ]
@@ -218,12 +218,12 @@ export function PlansWorkspace({ context, project }: {
           onChange={(event) => setScale(event.target.value as TechnicalDrawingScale)}>
           {TECHNICAL_DRAWING_SCALES.map((entry) => <option key={entry} value={entry}>{scaleLabels[entry]}</option>)}
         </select></label>
-        {view === 'door' && <>
+        {view !== 'section' && <>
           <label className="plans-option"><span>Haltestelle</span><select value={levelId ?? ''}
             onChange={(event) => setSelectedLevelId(event.target.value || undefined)}>
-            {levels.map((level) => <option key={level.id} value={level.id}>{level.index + 1}</option>)}
+            {levels.map((level) => <option key={level.id} value={level.id}>{level.label || `Haltestelle ${level.index + 1}`}</option>)}
           </select></label>
-          {sides.length > 1 && <label className="plans-option"><span>Zugang</span><select value={side}
+          {view === 'door' && sides.length > 1 && <label className="plans-option"><span>Zugang</span><select value={side}
             onChange={(event) => setSelectedSide(event.target.value as LiftDrawingSide)}>
             {sides.map((entry) => <option key={entry} value={entry}>{entry === 'front' ? 'Vorne' : 'Hinten'}</option>)}
           </select></label>}

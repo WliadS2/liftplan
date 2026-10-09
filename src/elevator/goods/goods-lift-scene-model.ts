@@ -1,6 +1,7 @@
 import { millimetres, millimetresToMetres, type Metres } from '../../engineering'
 import type { GoodsBoxMm, GoodsLiftNormalizedModel } from './goods-lift-model'
 import { createCarrierDriveScene, type CarrierDriveScene, type DriveSceneBox } from '../models/carrier-drive-scene'
+import { isLandingSideServed } from '../configuration/landing-planning'
 
 export interface GoodsSceneBox {
   readonly id: string
@@ -155,7 +156,7 @@ export function createGoodsLiftSceneModel(model: GoodsLiftNormalizedModel): Good
         size: [millimetresToMetres(entrance.widthMm), millimetresToMetres(entrance.heightMm), millimetresToMetres(millimetres(0))],
       })
       if (model.shaft) {
-        model.levels.forEach((level) => {
+        model.levels.filter((level) => isLandingSideServed(level, entrance.side)).forEach((level) => {
           const landingZ = entrance.side === 'front' ? model.shaft!.maxZ : model.shaft!.minZ
           assemblies.push({
             id: `goods-landing-${level.id}-${entrance.side}`,

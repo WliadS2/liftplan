@@ -10,6 +10,8 @@ export function createCarSimulationModel(normalized: CarLiftNormalizationResult,
   validation: CarSpatialValidationResult): PlatformSimulationModelResult {
   if (normalized.status === 'empty') return { status: 'unavailable', issues: [{ code: 'planning-incomplete', path: 'platform.levels' }] }
   const m = normalized.model
+  if (m.landingIssues?.length) return {status:m.landingIssues.some((i)=>i.status==='invalid') ? 'invalid' : 'unavailable',
+    issues:[{code:'invalid-level',path:'levels'}]}
   const speed = calculateVerticalTravelDuration(metres(0), metres(0), m.nominalSpeedMetresPerSecond)
   if (speed.status !== 'available') return { status: speed.status === 'unknown' ? 'unavailable' : 'invalid',
     issues: [{ code: speed.status === 'unknown' ? 'planning-incomplete' : 'invalid-timing', path: speed.path }] }

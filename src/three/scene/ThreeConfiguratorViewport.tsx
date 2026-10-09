@@ -176,7 +176,7 @@ export function ThreeConfiguratorViewport({
 
       {viewMode === 'doors' && model && doorInspection && <div className="viewport-mode-controls">
         {model.levels.length > 0 && <label>Haltestelle: <select aria-label="Haltestelle" value={doorInspection.level?.id ?? ''} onChange={(event) => setSelectedLevelId(event.target.value)}>
-          {model.levels.map((level) => <option key={level.id} value={level.id}>{level.index + 1}</option>)}
+          {model.levels.map((level) => <option key={level.id} value={level.id}>{level.label || `Haltestelle ${level.index + 1}`}</option>)}
         </select></label>}
         {doors && doors.cabin.length > 1 && <label>Zugang: <select aria-label="Zugang" value={doorInspection.side} onChange={(event) => setSelectedEntranceSide(event.target.value as PassengerEntranceSide)}>
           {doors.cabin.map((entry) => <option key={entry.id} value={entry.side}>{entry.side === 'front' ? 'Vorn' : 'Hinten'}</option>)}

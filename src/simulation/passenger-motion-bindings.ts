@@ -10,6 +10,7 @@ export const doorPanelGroupName = (panelId: string) => `simulation-panel-${panel
 
 /** Only the served landing opens. Door motion uses the supplied open/closed travel vectors. */
 export function getDoorMotionProgress(entry: DoorEntranceModel, pose: SimulationPose): number {
+  if (pose.activeEntranceSides && !pose.activeEntranceSides.includes(entry.side)) return 0
   return entry.role === 'cabin' ? pose.cabinDoorProgress : entry.levelId === pose.activeLandingLevel ? pose.activeLandingDoorProgress : 0
 }
 export function getDoorPanelOffset(entry: DoorEntranceModel, panel: DoorPanelModel, pose: SimulationPose): MechanicalPoint {

@@ -8,16 +8,22 @@ import {
 import type { Millimetres, MetresPerSecond } from '../../engineering'
 import type { PassengerMechanicalPlanningInput } from './passenger/mechanical/passenger-mechanical-planning-input'
 import type { PassengerDoorSystemData } from '../../elevator/configuration/passenger-door-data'
+import type { LandingSettings } from '../../elevator/configuration/landing-planning'
 
 export interface UniformLevelPlanningInput {
   readonly kind: 'uniform'
   readonly stopCount?: number
   readonly floorHeightMm?: Millimetres
+  readonly landingSettings?: readonly LandingSettings[]
+  readonly rearAccess?: boolean
 }
 
 export interface ExplicitLevelPlanningInput {
   readonly kind: 'explicit'
-  readonly elevationsMm: readonly Millimetres[]
+  readonly elevationsMm: readonly (Millimetres | null)[]
+  readonly stopCount?: number
+  readonly landingSettings?: readonly LandingSettings[]
+  readonly rearAccess?: boolean
 }
 
 export type LevelPlanningInput =
@@ -94,10 +100,13 @@ function createPassengerGeometryPlanningInput(
       headroomMm: planning.headroomMm,
     },
     cabinLevelIndex: planning.cabinLevelIndex,
-    levels: planning.levelElevationsMm ? { kind: 'explicit', elevationsMm: planning.levelElevationsMm } : {
+    levels: planning.levelElevationsMm ? { kind: 'explicit', elevationsMm: planning.levelElevationsMm,
+      stopCount: planning.stopCount, landingSettings: planning.landingSettings, rearAccess: planning.throughCar } : {
       kind: 'uniform',
       stopCount: planning.stopCount,
       floorHeightMm: planning.floorHeightMm,
+      landingSettings: planning.landingSettings,
+      rearAccess: planning.throughCar,
     },
     counterweight: {
       widthMm: planning.counterweightWidthMm,

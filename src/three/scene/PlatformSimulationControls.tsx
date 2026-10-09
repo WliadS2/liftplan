@@ -12,9 +12,10 @@ export function PlatformSimulationControls({ controller, availability, onReset }
   const { state, issues } = useSyncExternalStore(controller.subscribe, controller.getSnapshot)
   const defaultTarget = controller.model.levels.find((level) => level.id !== state.currentLevel)!.id
   const [selection, setSelection] = useState({ controller, target: defaultTarget })
-  const target = selection.controller === controller ? selection.target : defaultTarget
+  const target = selection.controller === controller && controller.model.levels.some((level)=>level.id===selection.target) ? selection.target : defaultTarget
   const resting = state.phase === 'idle' || state.phase === 'door-open'
   const current = controller.model.levels.find((level) => level.id === state.currentLevel)!
+  const targetStop = controller.model.levels.find((level)=>level.id===state.targetLevel)!
   return <div className="simulation-controls">
     <div className="simulation-status-row" style={{ cursor: 'pointer' }} onClick={() => setCollapsed(!collapsed)}>
       <strong style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
@@ -24,8 +25,8 @@ export function PlatformSimulationControls({ controller, availability, onReset }
         Fahrdemo
       </strong>
       <span role="status">
-        {state.paused ? `Pausiert (${phases[state.phase]})` : phases[state.phase]} · Haltestelle {current.index + 1}
-        {!resting ? ` → ${controller.model.levels.find((level) => level.id === state.targetLevel)!.index + 1}` : ''}
+        {state.paused ? `Pausiert (${phases[state.phase]})` : phases[state.phase]} · {current.label || `Haltestelle ${current.index + 1}`}
+        {!resting ? ` → ${targetStop.label || `Haltestelle ${targetStop.index + 1}`}` : ''}
       </span>
     </div>
 
@@ -35,7 +36,7 @@ export function PlatformSimulationControls({ controller, availability, onReset }
       <label>
         Zielhaltestelle
         <select aria-label="Zielhaltestelle" value={target} disabled={!resting} onChange={(event) => setSelection({ controller, target: event.target.value })}>
-          {controller.model.levels.map((level) => <option key={level.id} value={level.id}>{level.index + 1}</option>)}
+          {controller.model.levels.map((level) => <option key={level.id} value={level.id}>{level.label || `Haltestelle ${level.index + 1}`}</option>)}
         </select>
       </label>
       <button className="btn-primary" type="button" disabled={!resting || target === state.currentLevel || controller.speedStatus !== 'available'} onClick={() => controller.dispatch({ type: 'start', targetLevel: target })}>▶ Fahrt starten</button>

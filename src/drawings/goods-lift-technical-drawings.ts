@@ -1,4 +1,5 @@
 import { millimetres } from '../engineering'
+import { isLandingSideServed } from '../elevator/configuration/landing-planning'
 import { projectCarrierMechanicalPrimitives } from './carrier-mechanical-drawings'
 import type { GoodsLiftPlanningConfiguration } from '../elevator'
 import { createGoodsLiftNormalizedModel, type GoodsBoxMm, type GoodsLiftNormalizedModel } from '../elevator/goods/goods-lift-model'
@@ -66,7 +67,9 @@ export function createGoodsLiftDrawingContext(configuration: GoodsLiftPlanningCo
 }
 
 export function createGoodsLiftPlanDrawing(context: GoodsLiftDrawingContext,
-  scale: TechnicalDrawingScale = 'auto'): TechnicalDrawingDocument {
+  scale: TechnicalDrawingScale = 'auto', levelId?: string): TechnicalDrawingDocument {
+  const level = levelId === undefined ? context.model.levels[0] : context.model.levels.find((entry)=>entry.id===levelId)
+  const entrances = context.model.entrances.filter((entry)=>level ? isLandingSideServed(level,entry.side) : levelId === undefined)
   const primitives: TechnicalDrawingPrimitive[] = projectCarrierMechanicalPrimitives('goods','plan',context.model.mechanical,context.model.drive)
   const { shaft, platform } = context.model
   if (shaft) {
@@ -93,7 +96,7 @@ export function createGoodsLiftPlanDrawing(context: GoodsLiftDrawingContext,
     const side = index === 0 ? 'left' : 'right'
     primitives.push(...annotate(`${id}-label`, label, side === 'left' ? load.minX : load.maxX, -load.maxZ, side))
   })
-  context.model.entrances.forEach((entrance) => {
+  entrances.forEach((entrance) => {
     if (!platform) return
     const y = entrance.side === 'front' ? -platform.maxZ : -platform.minZ
     primitives.push(line(`${entrance.id}-opening`, 'visible', -entrance.widthMm / 2, y, entrance.widthMm / 2, y))
@@ -101,7 +104,7 @@ export function createGoodsLiftPlanDrawing(context: GoodsLiftDrawingContext,
       entrance.widthMm / 2, y))
     // Front and rear share one explicit width in the current goods contract.
     // One width dimension is sufficient; independent widths can later add a second.
-    if (entrance === context.model.entrances[0]) {
+    if (entrance === entrances[0]) {
       primitives.push({ ...horizontalDimension('goods-door-width', 'door-width', -entrance.widthMm / 2,
         entrance.widthMm / 2, y, y + (entrance.side === 'front' ? -300 : 300), entrance.widthMm), paperOffsetMm: 8 })
     }
@@ -160,11 +163,14 @@ export function createGoodsLiftSectionDrawing(context: GoodsLiftDrawingContext,
     const right = shaft?.maxX ?? platform?.maxX
     if (left === undefined || right === undefined) return
     primitives.push(line(`goods-${level.id}`, 'level', left - 200, -level.elevationMm, right + 200, -level.elevationMm))
-    primitives.push(...annotate(`goods-${level.id}-label`, `Haltestelle ${level.index + 1} · ${level.elevationMm} mm`,
+    const served = context.model.entrances.filter((entry)=>isLandingSideServed(level,entry.side))
+    primitives.push(...annotate(`goods-${level.id}-label`, `${level.label || `Haltestelle ${level.index + 1}`} · ${level.elevationMm} mm`,
       right + 200, -level.elevationMm))
+    if (context.configuration.landingSettings) primitives.push(...annotate(`goods-${level.id}-access`,
+      served.map((e)=>e.side==='front'?'Vorne':'Hinten').join(' / '),right+200,-level.elevationMm+180))
     // Front/rear openings coincide in this X/Y projection. A single outline
     // represents their explicit shared dimensions rather than duplicate edges.
-    const entrance = context.model.entrances[0]
+    const entrance = served[0]
     if (entrance) primitives.push(rect(`goods-landing-${level.id}-opening`, 'hidden',
       -entrance.widthMm / 2, -level.elevationMm - entrance.heightMm, entrance.widthMm, entrance.heightMm, entrance.id))
     const previous = levels[level.index - 1]
@@ -205,7 +211,7 @@ export function createGoodsLiftDoorElevationDrawing(context: GoodsLiftDrawingCon
   const level = selection.levelId === undefined ? context.model.levels[0]
     : context.model.levels.find((entry) => entry.id === selection.levelId)
   const side = selection.side ?? context.model.entrances[0]?.side ?? 'front'
-  const entrance = context.model.entrances.find((entry) => entry.side === side)
+  const entrance = level && isLandingSideServed(level,side) ? context.model.entrances.find((entry) => entry.side === side) : undefined
   const primitives: TechnicalDrawingPrimitive[] = []
   if (entrance) {
     primitives.push(rect('goods-door-opening', 'cut', -entrance.widthMm / 2, -entrance.heightMm,
@@ -216,7 +222,7 @@ export function createGoodsLiftDoorElevationDrawing(context: GoodsLiftDrawingCon
       entrance.widthMm / 2, 0, 300, entrance.widthMm))
     primitives.push(verticalDimension('goods-door-height', 'door-height', -entrance.heightMm, 0,
       entrance.widthMm / 2, entrance.widthMm / 2 + 300, entrance.heightMm))
-    primitives.push(...annotate('goods-door-title', `${level ? `Haltestelle ${level.index + 1}` : 'Haltestelle nicht gewählt'} · ${side === 'front' ? 'Vorne' : 'Hinten'}`,
+    primitives.push(...annotate('goods-door-title', `${level ? level.label || `Haltestelle ${level.index + 1}` : 'Haltestelle nicht gewählt'} · ${side === 'front' ? 'Vorne' : 'Hinten'}`,
       -entrance.widthMm / 2, -entrance.heightMm, 'left'))
   }
   const complete = Boolean(entrance && level)

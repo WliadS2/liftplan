@@ -20,6 +20,7 @@ import {
 import { PASSENGER_VISUALIZATION_TIMING } from './passenger-visualization-profile'
 import { calculateVerticalTravelDuration } from './vertical-travel'
 import { validatePassengerSpatialGeometry } from '../collision/passenger-spatial-validation'
+import { isLandingSideServed } from '../elevator/configuration/landing-planning'
 
 /** Optional visualization setup, supplied separately from technical project data. */
 export interface PassengerVisualizationData {
@@ -91,7 +92,7 @@ function doorsCanMove(inputs: PassengerSimulationInputs): boolean {
   const { doors, installation } = inputs
   if (doors.validation.state === 'invalid' || doors.cabin.length === 0) return false
   return doors.cabin.every((entry) => entry.panels.length > 0 && installation.levels.every((level) =>
-    doors.landings.some((landing) => landing.levelId === level.id &&
+    !isLandingSideServed(level,entry.side) || doors.landings.some((landing) => landing.levelId === level.id &&
       landing.cabinEntranceId === entry.id && landing.panels.length > 0)))
 }
 
@@ -115,6 +116,8 @@ export function createPassengerSimulationModel(
   const region = installation.vertical.travelRegion
   const basicIssues: SimulationIssue[] = []
   if (installation.levels.length < 2) basicIssues.push({ code: 'unavailable-data', path: 'levels' })
+  if (installation.landingIssues?.some((issue) => issue.status === 'unknown')) basicIssues.push({ code:'unavailable-data',path:'levels' })
+  if (installation.landingIssues?.some((issue) => issue.status === 'invalid')) return {status:'invalid',issues:[{code:'invalid-level',path:'levels'}]}
   if (!initial) basicIssues.push({ code: 'unavailable-data', path: 'currentLevel' })
   if (!installation.cabin) basicIssues.push({ code: 'unavailable-data', path: 'cabin' })
   if (!region) basicIssues.push({ code: 'unavailable-data', path: 'cabin.travelEnvelope' })

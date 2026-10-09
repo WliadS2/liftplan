@@ -9,6 +9,7 @@ import type {
   PassengerGeometryPlanningInput,
 } from '../lift-geometry-planning-input'
 import { createPassengerVerticalModel, type PassengerVerticalModel } from './passenger-vertical-model'
+import { normalizeLandings, type LandingIssue } from '../../../elevator/configuration/landing-planning'
 
 export type PassengerGeometryField =
   | 'cabin.widthMm'
@@ -35,6 +36,9 @@ export interface PassengerLandingLevelModel {
   readonly id: string
   readonly index: number
   readonly elevationY: Metres
+  readonly label?: string
+  readonly frontAccess?: boolean
+  readonly rearAccess?: boolean
 }
 
 export interface PassengerDoorModel {
@@ -111,6 +115,8 @@ export interface PassengerInstallationBounds {
 }
 
 export interface PassengerInstallationModel {
+  readonly landingIssues?: readonly LandingIssue[]
+  readonly landingAccessConfigured?: boolean
   readonly vertical: PassengerVerticalModel
   readonly cabin?: PassengerCabinModel
   readonly shaft?: PassengerShaftModel
@@ -183,7 +189,9 @@ function createLevelElevations(levels: LevelPlanningInput): LevelElevationResult
       }
     }
 
-    if (levels.elevationsMm.some((elevation, i) => !Number.isFinite(elevation) || (i > 0 && elevation <= levels.elevationsMm[i - 1]))) {
+    const elevations = levels.elevationsMm.filter((value): value is Millimetres => value !== null)
+    if (elevations.some((elevation, i) => !Number.isFinite(elevation) || (i > 0 && elevation <= elevations[i - 1])) ||
+      (levels.landingSettings !== undefined && levels.stopCount !== undefined && levels.stopCount !== levels.elevationsMm.length)) {
       return {
         elevations: [],
         missingFields: [],
@@ -192,8 +200,8 @@ function createLevelElevations(levels: LevelPlanningInput): LevelElevationResult
     }
 
     return {
-      elevations: levels.elevationsMm.map(millimetresToMetres),
-      missingFields: [],
+      elevations: elevations.map(millimetresToMetres),
+      missingFields: elevations.length !== levels.elevationsMm.length ? ['levels.elevationsMm'] : [],
       invalidFields: [],
     }
   }
@@ -380,8 +388,17 @@ function createInstallationModel(
   input: PassengerGeometryPlanningInput,
   levelElevations: readonly Metres[],
 ): PassengerInstallationModel | undefined {
-  const vertical = createPassengerVerticalModel(levelElevations, input.shaft.pitDepthMm, input.shaft.headroomMm,
-    input.cabinLevelIndex, input.mechanical.zones?.topInsetMm)
+  const landingResult = normalizeLandings({ stopCount: input.levels.stopCount,
+    levelElevationsMm: input.levels.kind === 'explicit' ? input.levels.elevationsMm : undefined,
+    floorHeightMm: input.levels.kind === 'uniform' ? input.levels.floorHeightMm : undefined,
+    landingSettings: input.levels.landingSettings, throughCar: input.cabin.throughCar }, true)
+  const levels = levelElevations.length ? landingResult.levels.map(({ elevationMm, ...level }) => ({
+    ...level, elevationY: millimetresToMetres(elevationMm),
+  })) : []
+  // Missing elevations may omit renderable markers, but must not reassign a cabin's stop reference.
+  const cabinIndex = input.cabinLevelIndex === undefined ? undefined : levels.findIndex((level)=>level.index===input.cabinLevelIndex)
+  const vertical = createPassengerVerticalModel(levels.map((level)=>level.elevationY), input.shaft.pitDepthMm, input.shaft.headroomMm,
+    cabinIndex, input.mechanical.zones?.topInsetMm)
   // A progressive cabin without levels uses the documented datum, never an invented landing.
   const cabinBottomY = vertical.cabinElevationY ?? (input.cabinLevelIndex === undefined ? metres(0) : undefined)
   const cabinHeight =
@@ -481,11 +498,6 @@ function createInstallationModel(
       ? undefined
       : { ...shaftBase, verticalExtent: shaftVerticalExtent }
 
-  const levels = levelElevations.map((elevationY, index) => ({
-    id: `level-${index + 1}`,
-    index,
-    elevationY,
-  }))
   const levelFootprint = shaft
     ? { width: shaft.width, depth: shaft.depth }
     : cabinAssembly
@@ -520,6 +532,8 @@ function createInstallationModel(
 
   return {
     vertical,
+    landingIssues: landingResult.issues,
+    landingAccessConfigured: input.levels.landingSettings !== undefined,
     cabin: cabinAssembly,
     shaft,
     levels,
@@ -540,15 +554,17 @@ export function createPassengerInstallationModel(
   input: PassengerGeometryPlanningInput,
 ): PassengerInstallationModelResult {
   const levelResult = createLevelElevations(input.levels)
-  const missingFields = collectMissingFields(
+  const missingFields = [...collectMissingFields(
     input,
     levelResult.missingFields,
-  )
+  )]
   const invalidFields = [...collectInvalidFields(
     input,
     levelResult.invalidFields,
   )]
-  if (input.cabinLevelIndex !== undefined && (!Number.isInteger(input.cabinLevelIndex) || input.cabinLevelIndex < 0 || input.cabinLevelIndex >= levelResult.elevations.length)) invalidFields.push('cabinLevelIndex')
+  const declaredLevelCount = input.levels.kind === 'explicit' ? input.levels.elevationsMm.length : input.levels.stopCount ?? levelResult.elevations.length
+  if (input.cabinLevelIndex !== undefined && (!Number.isInteger(input.cabinLevelIndex) || input.cabinLevelIndex < 0 || input.cabinLevelIndex >= declaredLevelCount)) invalidFields.push('cabinLevelIndex')
+  else if (input.cabinLevelIndex !== undefined && input.levels.kind === 'explicit' && input.levels.elevationsMm[input.cabinLevelIndex] === null) missingFields.push('cabinLevelIndex')
   const model = createInstallationModel(input, levelResult.elevations)
 
   if (invalidFields.length > 0) {

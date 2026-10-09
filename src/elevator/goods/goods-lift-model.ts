@@ -1,6 +1,7 @@
 import { millimetres, type Millimetres, type MetresPerSecond } from '../../engineering'
 import { normalizeCarrierMechanics, type CarrierMechanicalModel } from '../models/carrier-mechanical-model'
 import { normalizeCarrierDrive, type CarrierDriveModel } from '../models/carrier-drive-model'
+import { normalizeLandings, type NormalizedLanding, type LandingIssue } from '../configuration/landing-planning'
 import type {
   GoodsLiftPlanningConfiguration,
   GoodsLoadEnvelope,
@@ -30,11 +31,7 @@ export interface GoodsLoadBoxMm extends GoodsBoxMm {
   readonly heightKnown: boolean
 }
 
-export interface GoodsLevelModel {
-  readonly id: string
-  readonly index: number
-  readonly elevationMm: Millimetres
-}
+export type GoodsLevelModel = NormalizedLanding
 
 export interface GoodsEntranceModel {
   readonly id: 'goods-front' | 'goods-rear'
@@ -55,6 +52,7 @@ export interface GoodsLiftNormalizedModel {
   readonly movingEnvelope?: GoodsBoxMm
   readonly entrances: readonly GoodsEntranceModel[]
   readonly levels: readonly GoodsLevelModel[]
+  readonly landingIssues?: readonly LandingIssue[]
   readonly pallet?: GoodsLoadBoxMm
   readonly rollContainer?: GoodsLoadBoxMm
   readonly forkliftEnvelope?: GoodsLoadBoxMm
@@ -99,21 +97,12 @@ function normalizeLevels(configuration: GoodsLiftPlanningConfiguration): {
   readonly missing: readonly GoodsLiftModelField[]
   readonly invalid: readonly GoodsLiftModelField[]
 } {
-  const explicit = configuration.levelElevationsMm
-  if (explicit) {
-    if (configuration.storeyHeightsMm) {
-      return { levels: [], missing: [], invalid: ['levelElevationsMm', 'storeyHeightsMm'] }
-    }
-    if (!explicit.length || explicit.some((value, index) => !Number.isFinite(value) || (index > 0 && value <= explicit[index - 1]))) {
-      return { levels: [], missing: [], invalid: ['levelElevationsMm'] }
-    }
-    if (configuration.stopCount !== undefined && configuration.stopCount !== explicit.length) {
-      return { levels: [], missing: [], invalid: ['stopCount', 'levelElevationsMm'] }
-    }
-    return {
-      levels: explicit.map((elevationMm, index) => ({ id: `level-${index + 1}`, index, elevationMm })),
-      missing: [], invalid: [],
-    }
+  const normalized = normalizeLandings(configuration, false)
+  if (configuration.levelElevationsMm || configuration.landingSettings) {
+    return { levels: normalized.levels,
+      missing: normalized.issues.some((i) => i.code === 'missing-elevation') ? ['levelElevationsMm'] : [],
+      invalid: normalized.issues.some((i) => i.status === 'invalid' &&
+        ['invalid-elevation-order', 'invalid-stop-count', 'inconsistent-stop-references'].includes(i.code)) ? ['levelElevationsMm'] : [] }
   }
   if (configuration.stopCount === undefined) return { levels: [], missing: ['stopCount'], invalid: [] }
   if (!Number.isInteger(configuration.stopCount) || configuration.stopCount <= 0) {
@@ -124,13 +113,7 @@ function normalizeLevels(configuration: GoodsLiftPlanningConfiguration): {
   if (heights.length !== Math.max(0, configuration.stopCount - 1) || heights.some((height) => !positive(height))) {
     return { levels: [], missing: [], invalid: ['storeyHeightsMm'] }
   }
-  let elevation = millimetres(0)
-  const levels: GoodsLevelModel[] = [{ id: 'level-1', index: 0, elevationMm: elevation }]
-  heights.forEach((height, index) => {
-    elevation = millimetres(elevation + height)
-    levels.push({ id: `level-${index + 2}`, index: index + 1, elevationMm: elevation })
-  })
-  return { levels, missing: [], invalid: [] }
+  return { levels: normalized.levels, missing: [], invalid: [] }
 }
 
 export function createGoodsLiftNormalizedModel(
@@ -207,6 +190,7 @@ export function createGoodsLiftNormalizedModel(
     movingEnvelope,
     entrances,
     levels: levelResult.levels,
+    landingIssues: normalizeLandings(configuration, false).issues,
     pallet: centeredLoadBox(configuration.pallet, platform?.minY ?? millimetres(0)),
     rollContainer: centeredLoadBox(configuration.rollContainer, platform?.minY ?? millimetres(0)),
     forkliftEnvelope: centeredLoadBox(configuration.forkliftEnvelope, platform?.minY ?? millimetres(0)),

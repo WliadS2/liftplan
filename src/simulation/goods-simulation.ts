@@ -26,6 +26,8 @@ export function createGoodsSimulationModel(normalized: GoodsLiftNormalizationRes
   }
   if (normalized.status === 'empty') return { status: 'unavailable', issues: [{ code: 'planning-incomplete', path: 'platform.levels' }] }
   const model = normalized.model
+  if (model.landingIssues?.length) return {status: model.landingIssues.some((i)=>i.status==='invalid') ? 'invalid' : 'unavailable',
+    issues:[{code:'invalid-level',path:'levels'}]}
   const speed = calculateVerticalTravelDuration(metres(0), metres(0), model.nominalSpeedMetresPerSecond)
   if (speed.status !== 'available') return { status: speed.status === 'unknown' ? 'unavailable' : 'invalid',
     issues: [{ code: speed.status === 'unknown' ? 'planning-incomplete' : 'invalid-timing', path: speed.path }] }

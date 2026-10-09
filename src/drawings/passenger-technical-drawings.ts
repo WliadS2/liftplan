@@ -1,4 +1,5 @@
 import { metresToMillimetres, millimetres, type Millimetres } from '../engineering'
+import { isLandingSideServed } from '../elevator/configuration/landing-planning'
 import type { PassengerGeometryPlanningInput } from '../three/geometry/lift-geometry-planning-input'
 import { createPassengerInstallationModel } from '../three/geometry/passenger/passenger-installation-model'
 import type { PassengerEntranceSide } from '../three/geometry/passenger/passenger-installation-model'
@@ -156,8 +157,9 @@ const PLAN_ANNOTATION = {
 
 /** Plan projection: world X maps right; world Z maps up by pageY = -Z. */
 export function createPassengerPlanDrawing(context: PassengerDrawingContext,
-  scale: TechnicalDrawingScale = 'auto'): TechnicalDrawingDocument {
+  scale: TechnicalDrawingScale = 'auto', levelId?: string): TechnicalDrawingDocument {
   const { installation, layout, components, doors } = context.inputs
+  const selectedLevel = levelId === undefined ? installation.levels[0] : installation.levels.find((entry)=>entry.id===levelId)
   const detail = technicalDrawingDetail(scale)
   const primitives: TechnicalDrawingPrimitive[] = []
   const shaft = installation.shaft
@@ -238,7 +240,7 @@ export function createPassengerPlanDrawing(context: PassengerDrawingContext,
     components.counterweightGuideShoes.flatMap((shoe) => shoe.boxes)
       .forEach((part) => planBox(primitives, part.id, componentBoxBounds(part)))
   }
-  for (const entrance of doors.cabin) {
+  for (const entrance of doors.cabin.filter((entry)=>selectedLevel ? isLandingSideServed(selectedLevel,entry.side) : levelId === undefined)) {
     const x1 = Number(mm(entrance.origin[0] - entrance.openingWidth / 2))
     const x2 = Number(mm(entrance.origin[0] + entrance.openingWidth / 2))
     const y = Number(mm(-entrance.origin[2]))
@@ -247,8 +249,9 @@ export function createPassengerPlanDrawing(context: PassengerDrawingContext,
         Number(mm(entrance.origin[0])), y + 160))
     entrancePlanParts(primitives, entrance, detail, scale === '1:20' || scale === '1:25')
   }
-  const lowestLevelId = installation.levels[0]?.id
-  for (const entrance of doors.landings.filter((entry) => entry.levelId === lowestLevelId)) {
+  for (const entrance of doors.landings.filter((entry) => entry.levelId === selectedLevel?.id)) {
+    const x = Number(mm(entrance.origin[0])), y = Number(mm(-entrance.origin[2])), half = Number(mm(entrance.openingWidth / 2))
+    primitives.push(line(`${entrance.id}-opening`, 'visible', x-half,y,x+half,y))
     entrancePlanParts(primitives, entrance, detail, scale === '1:20' || scale === '1:25')
   }
 
@@ -267,7 +270,8 @@ export function createPassengerPlanDrawing(context: PassengerDrawingContext,
       verticalDimension('cabin-depth', 'cabin-depth', -depth / 2, depth / 2, -width / 2, -width / 2 - 300, millimetres(depth)),
     )
   }
-  const front = cabin?.entrances.find((entry) => entry.side === 'front') ?? cabin?.entrances[0]
+  const applicableEntrances = cabin?.entrances.filter((entry)=>selectedLevel ? isLandingSideServed(selectedLevel,entry.side) : levelId === undefined)
+  const front = applicableEntrances?.find((entry) => entry.side === 'front') ?? applicableEntrances?.[0]
   if (front) {
     const width = Number(mm(front.opening.width)), center = Number(mm(front.centerX)), y = cabin ? Number(mm(-cabin.depth / 2)) : 0
     primitives.push(horizontalDimension('door-width', 'door-width', center - width / 2, center + width / 2, y,
@@ -318,8 +322,11 @@ export function createPassengerSectionDrawing(context: PassengerDrawingContext,
     const y = Number(mm(-level.elevationY))
     primitives.push(line(`${level.id}-line`, 'level', -width / 2 - 120, y, width / 2 + 120, y),
       line(`${level.id}-level-tick`, 'level', width / 2 + 120, y, width / 2 + 165, y - 35),
-      text(`${level.id}-label`, `${formatElevation(Number(mm(level.elevationY)))} · Haltestelle ${level.index + 1}`,
+      text(`${level.id}-label`, `${formatElevation(Number(mm(level.elevationY)))} · ${level.label || `Haltestelle ${level.index + 1}`}`,
         width / 2 + 190, y - 45, 'start', annotationSize))
+    if (installation.landingAccessConfigured) primitives.push(text(`${level.id}-access`,
+      doors.cabin.filter((entry)=>isLandingSideServed(level,entry.side)).map((e)=>e.side==='front'?'Vorne':'Hinten').join(' / '),
+      width/2+190,y+100,'start',annotationSize))
   }
   if (installation.cabin) {
     const cabin = installation.cabin, width = Number(mm(cabin.width)), height = Number(mm(cabin.height))
@@ -349,7 +356,9 @@ export function createPassengerSectionDrawing(context: PassengerDrawingContext,
     primitives.push(line(`${rail.id}-section`, 'secondary', x, Number(mm(-rail.origin[1])), x,
       Number(mm(-(rail.origin[1] + rail.length)))))
   }
-  for (const landing of doors.landings.filter((entry) => entry.side === 'front')) {
+  const sectionLandings = doors.landings.filter((entry,index,all)=>all.findIndex((other)=>other.levelId===entry.levelId &&
+    other.origin[0]===entry.origin[0] && other.openingWidth===entry.openingWidth && other.openingHeight===entry.openingHeight)===index)
+  for (const landing of sectionLandings) {
     const width = Number(mm(landing.openingWidth)), height = Number(mm(landing.openingHeight))
     primitives.push(rect(`${landing.id}-opening`, 'visible', Number(mm(landing.origin[0])) - width / 2,
       Number(mm(-(landing.origin[1] + landing.openingHeight))), width, height, landing.id))
@@ -447,12 +456,12 @@ export function createPassengerDoorElevationDrawing(context: PassengerDrawingCon
   selection: DoorDrawingSelection = {}, scale: TechnicalDrawingScale = 'auto'): TechnicalDrawingDocument {
   const { installation, doors } = context.inputs
   const detail = technicalDrawingDetail(scale)
-  const level = installation.levels.find((entry) => entry.id === selection.levelId) ?? installation.levels[0]
+  const level = selection.levelId === undefined ? installation.levels[0] : installation.levels.find((entry) => entry.id === selection.levelId)
   const availableSides = [...new Set(doors.cabin.map((entry) => entry.side))]
-  const side = availableSides.includes(selection.side ?? 'front') ? selection.side ?? 'front' : availableSides[0] ?? selection.side ?? 'front'
+  const side = selection.side ?? availableSides[0] ?? 'front'
   const landing = doors.landings.find((entry) => entry.levelId === level?.id && entry.side === side)
   const cabin = doors.cabin.find((entry) => entry.side === side)
-  const entrance = landing ?? cabin
+  const entrance = level && isLandingSideServed(level,side) ? landing ?? cabin : undefined
   const primitives: TechnicalDrawingPrimitive[] = []
   if (entrance) {
     const width = Number(mm(entrance.openingWidth)), height = Number(mm(entrance.openingHeight))
@@ -474,7 +483,7 @@ export function createPassengerDoorElevationDrawing(context: PassengerDrawingCon
     primitives.push(
       horizontalDimension('door-elevation-width', 'door-width', -width / 2, width / 2, 0, 300, millimetres(width)),
       verticalDimension('door-elevation-height', 'door-height', -height, 0, width / 2, width / 2 + 300, millimetres(height)),
-      text('door-title', `${landing ? 'Schachttür' : 'Kabinentür'} · ${level ? `Haltestelle ${level.index + 1}` : 'Haltestelle nicht gewählt'} · ${side === 'front' ? 'Vorne' : 'Hinten'}`,
+      text('door-title', `${landing ? 'Schachttür' : 'Kabinentür'} · ${level ? level.label || `Haltestelle ${level.index + 1}` : 'Haltestelle nicht gewählt'} · ${side === 'front' ? 'Vorne' : 'Hinten'}`,
         0, -height - 260),
     )
   }

@@ -14,6 +14,7 @@ export const SPATIAL_STATUS_LABELS: Record<SpatialValidationStatus, string> = {
 }
 
 const messages: Record<PassengerSpatialIssueCode, string> = {
+  ...LANDING_ISSUE_MESSAGES,
   'geometry-unavailable': 'Für die räumliche Prüfung fehlen Geometriedaten.',
   'levels-unavailable': 'Haltestellendaten fehlen. Die Ebenenfolge ist noch nicht bewertet.',
   'invalid-level-order': 'Die Haltestellenhöhen sind nicht eindeutig aufsteigend.',
@@ -58,6 +59,7 @@ export function getSpatialIssueMessage(issue: PassengerSpatialIssue): string {
 }
 
 const goodsMessages: Record<GoodsSpatialIssueCode, string> = {
+  ...LANDING_ISSUE_MESSAGES,
   'geometry-unavailable': 'Für die räumliche Prüfung fehlen Geometriedaten.',
   'invalid-planning-geometry': 'Die eingegebene Planungsgeometrie ist strukturell nicht auswertbar.',
   'platform-outside-shaft': 'Die Ladefläche überschreitet den angegebenen Schacht.',
@@ -85,6 +87,7 @@ const goodsMessages: Record<GoodsSpatialIssueCode, string> = {
 }
 
 const carMessages: Record<CarSpatialIssueCode, string> = {
+  ...LANDING_ISSUE_MESSAGES,
   'geometry-unavailable': 'Für die räumliche Prüfung fehlen Geometriedaten.',
   'invalid-planning-geometry': 'Die eingegebene Planungsgeometrie ist strukturell nicht auswertbar.',
   'platform-outside-shaft': 'Die Plattform überschreitet den angegebenen Schacht.',
@@ -140,3 +143,4 @@ export function getLiftSpatialIssueMessage(
   if (family === 'car') return carMessages[issue.code as CarSpatialIssueCode]
   return messages[issue.code as PassengerSpatialIssueCode]
 }
+import { LANDING_ISSUE_MESSAGES } from './landing-validation-messages'

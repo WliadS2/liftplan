@@ -63,6 +63,7 @@ export interface PassengerSimulationState {
   readonly travelDirection: TravelDirection
 }
 export interface SimulationPose {
+  readonly activeEntranceSides?: readonly ('front' | 'rear')[]
   /** Cabin floor and counterweight centre, in canonical world metres. */
   readonly cabinY: Metres
   readonly counterweightY?: Metres
@@ -185,6 +186,7 @@ export function createSimulationPose(model: PassengerSimulationModel, state: Pas
     start: matches(segment.start, model.governorLinkagePoint!) ? translate(segment.start, cabinOffsetY) : segment.start,
     end: matches(segment.end, model.governorLinkagePoint!) ? translate(segment.end, cabinOffsetY) : segment.end })) : []
   return { cabinY, counterweightY, cabinOffsetY, counterweightOffsetY,
+    activeEntranceSides: (['front','rear'] as const).filter((side) => isLandingSideServed(level(model,state.currentLevel)!,side)),
     tractionSheaveRotation: model.traction ? (cabinY === initial.elevationY ? 0 : model.traction.rotationSign * (cabinY - initial.elevationY) / model.traction.contactRadius) : undefined,
     cabinDoorProgress: model.capabilities.doorMovement.available ? state.doorProgress : 0,
     activeLandingDoorProgress: model.capabilities.doorMovement.available ? state.doorProgress : 0,
@@ -248,3 +250,4 @@ export function createPassengerSimulationController(model: PassengerSimulationMo
   }
 }
 export type PassengerSimulationController = ReturnType<typeof createPassengerSimulationController>
+import { isLandingSideServed } from '../elevator/configuration/landing-planning'

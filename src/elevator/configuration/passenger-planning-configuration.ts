@@ -10,6 +10,7 @@ import {
 import type { LiftConfiguration } from '../models/lift-configuration'
 import { LIFT_FAMILIES } from '../types/lift-family'
 import { passengerDoorSystemDataSchema, type PassengerDoorSystemData } from './passenger-door-data'
+import { getLandingRows, landingSettingsSchema, levelElevationsSchema, updateLandingCount, type LandingSettings } from './landing-planning'
 import {
   passengerMechanicalPlanningSchema,
   COUNTERWEIGHT_ARRANGEMENTS,
@@ -31,7 +32,8 @@ export interface PassengerPlanningConfiguration
   readonly capacityKg?: Kilograms
   readonly passengerCount?: number
   readonly stopCount?: number
-  readonly levelElevationsMm?: readonly Millimetres[]
+  readonly levelElevationsMm?: readonly (Millimetres | null)[]
+  readonly landingSettings?: readonly LandingSettings[]
   readonly cabinLevelIndex?: number
   readonly ratedSpeedMetresPerSecond?: MetresPerSecond
   readonly cabinWidthMm?: Millimetres
@@ -76,7 +78,8 @@ export const passengerPlanningConfigurationSchema = z
     capacityKg: optionalKilograms,
     passengerCount: z.number().int().optional(),
     stopCount: z.number().int().optional(),
-    levelElevationsMm: z.array(z.number().finite().transform(millimetres)).readonly().optional(),
+    levelElevationsMm: levelElevationsSchema.optional(),
+    landingSettings: z.array(landingSettingsSchema).readonly().optional(),
     cabinLevelIndex: z.number().int().nonnegative().optional(),
     ratedSpeedMetresPerSecond: optionalMetresPerSecond,
     cabinWidthMm: optionalMillimetres,
@@ -118,5 +121,15 @@ export function updatePassengerPlanningConfiguration(
   configuration: PassengerPlanningConfiguration,
   update: PassengerPlanningConfigurationUpdate,
 ): PassengerPlanningConfiguration {
-  return { ...configuration, ...update }
+  const next = updateLandingCount(configuration, update, true)
+  if (!next.landingSettings || (!Object.hasOwn(update,'stopCount') && !Object.hasOwn(update,'landingSettings'))) return next
+  const before = getLandingRows(configuration,true), after = getLandingRows(next,true)
+  const removed = new Set(before.filter((row)=>!after.some((other)=>other.id===row.id)).map((row)=>row.id))
+  if (!removed.size) return next
+  const currentId = before[configuration.cabinLevelIndex ?? 0]?.id
+  const preservedIndex = after.findIndex((row)=>row.id===currentId)
+  return { ...next,
+    cabinLevelIndex: configuration.cabinLevelIndex === undefined ? undefined : preservedIndex >= 0 ? preservedIndex : Math.max(0,Math.min(configuration.cabinLevelIndex,after.length-1)),
+    doors: next.doors ? {...next.doors,landings:next.doors.landings?.map((series)=>({...series,
+      overrides:series.overrides?.filter((override)=>!removed.has(override.levelId))}))} : undefined }
 }

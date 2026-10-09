@@ -1,11 +1,12 @@
 import type { Millimetres } from '../engineering'
+import { validateLandingOpenings, type LandingIssueCode } from '../elevator/configuration/landing-planning'
 import { validateCarrierMechanics } from './carrier-mechanical-validation'
 import { validateCarrierDrive } from './carrier-drive-validation'
 import type { GoodsLoadBoxMm, GoodsLiftNormalizationResult, GoodsLiftNormalizedModel, GoodsPlanRectangleMm } from '../elevator/goods/goods-lift-model'
 
 export type GoodsSpatialValidationStatus = 'ok' | 'warning' | 'invalid' | 'unknown'
 export type GoodsSpatialIssueSeverity = 'info' | 'warning' | 'error'
-export type GoodsSpatialIssueCode =
+export type GoodsSpatialIssueCode = LandingIssueCode
   | 'geometry-unavailable' | 'invalid-planning-geometry'
   | 'platform-outside-shaft' | 'zero-platform-clearance'
   | 'door-geometry-unavailable' | 'door-outside-platform'
@@ -83,6 +84,9 @@ function loadRule(ruleId: string, unavailable: GoodsSpatialIssueCode, outside: G
 
 function evaluateModel(model: GoodsLiftNormalizedModel): readonly GoodsSpatialRuleResult[] {
   const rules: GoodsSpatialRuleResult[] = []
+  const landingIssues = [...model.landingIssues ?? [], ...validateLandingOpenings(model.levels,model.entrances,model.shaft)]
+  rules.push(result('goods.landings.configuration',landingIssues.some((i)=>i.status==='invalid') ? 'invalid' : landingIssues.length ? 'unknown' : 'ok',
+    landingIssues.map((i)=>({...issue(i.code,i.status==='invalid'?'error':'info',i.levelId?[i.levelId]:[]),blocksPlatformTravel:i.status==='invalid'}))))
   for (const rule of validateCarrierDrive(model.drive,model)) rules.push(result(`goods.${rule.ruleId}`,rule.status,
     rule.status === 'ok' ? [] : [{...issue(rule.status === 'invalid' ? 'invalid-planning-geometry' : 'geometry-unavailable',
       rule.status === 'invalid' ? 'error' : 'info',rule.involvedComponentIds.map((id)=>`goods-${id}`)),

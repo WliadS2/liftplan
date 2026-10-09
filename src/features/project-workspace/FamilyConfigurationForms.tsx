@@ -11,6 +11,7 @@ import {
 } from '../../elevator'
 import { kilograms, metresPerSecond, millimetres, type Millimetres } from '../../engineering'
 import type { CarrierDrivePlanning } from '../../elevator/configuration/carrier-drive-planning'
+import { LandingEditor } from './LandingEditor'
 
 function DrivePlanningFields({drive,onChange}:{readonly drive?:CarrierDrivePlanning;readonly onChange:(drive:CarrierDrivePlanning)=>void}) {
   return <details><summary>Antrieb und Mechanik</summary>
@@ -133,13 +134,14 @@ export function GoodsLiftConfigurationForm({ configuration, onChange }: {
   const update = (value: Parameters<typeof updateGoodsLiftPlanningConfiguration>[1]) =>
     onChange(updateGoodsLiftPlanningConfiguration(configuration, value))
   return <div className="field-group" data-lift-family-form="goods">
+    <LandingEditor configuration={configuration} passenger={false} onChange={onChange}/>
     <DrivePlanningFields drive={configuration.drive} onChange={(drive)=>update({drive})}/>
     <h3>Allgemein</h3>
     <label className="field"><span>Projektname</span><input type="text" value={configuration.projectName}
       onChange={(event) => update({ projectName: event.target.value })} /></label>
     <NumberField label="Tragfähigkeit (kg)" value={configuration.ratedLoadKg}
       onChange={(value) => update({ ratedLoadKg: value === undefined ? undefined : kilograms(value) })} />
-    <NumberField label="Anzahl Haltestellen" step="1" value={configuration.stopCount}
+    <NumberField label="Anzahl Haltestellen" step="1" value={configuration.levelElevationsMm?.length ?? configuration.stopCount}
       onChange={(stopCount) => update({ stopCount })} />
     <NumberField label="Nenngeschwindigkeit (m/s)" step="any" value={configuration.nominalSpeedMetresPerSecond}
       onChange={(value) => update({ nominalSpeedMetresPerSecond: value === undefined ? undefined : metresPerSecond(value) })} />
@@ -222,13 +224,14 @@ export function CarLiftConfigurationForm({ configuration, onChange }: {
   const updatePosition = (value: Partial<NonNullable<CarLiftPlanningConfiguration['vehiclePosition']>>) =>
     update({ vehiclePosition: { ...configuration.vehiclePosition, ...value } })
   return <div className="field-group" data-lift-family-form="car">
+    <LandingEditor configuration={configuration} passenger={false} onChange={onChange}/>
     <DrivePlanningFields drive={configuration.drive} onChange={(drive)=>update({drive})}/>
     <h3>Allgemein</h3>
     <label className="field"><span>Projektname</span><input type="text" value={configuration.projectName}
       onChange={(event) => update({ projectName: event.target.value })} /></label>
     <NumberField label="Tragfähigkeit (kg)" value={configuration.ratedLoadKg}
       onChange={(value) => update({ ratedLoadKg: value === undefined ? undefined : kilograms(value) })} />
-    <NumberField label="Anzahl Haltestellen" step="1" value={configuration.stopCount}
+    <NumberField label="Anzahl Haltestellen" step="1" value={configuration.levelElevationsMm?.length ?? configuration.stopCount}
       onChange={(stopCount) => update({ stopCount })} />
     <NumberField label="Nenngeschwindigkeit (m/s)" step="any" value={configuration.nominalSpeedMetresPerSecond}
       onChange={(value) => update({ nominalSpeedMetresPerSecond: value === undefined ? undefined : metresPerSecond(value) })} />

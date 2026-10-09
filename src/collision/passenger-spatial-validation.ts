@@ -1,4 +1,5 @@
 import type { PassengerGeometryPlanningInput } from '../three/geometry/lift-geometry-planning-input'
+import type { LandingIssueCode } from '../elevator/configuration/landing-planning'
 import { createPassengerInstallationModel } from '../three/geometry/passenger/passenger-installation-model'
 import { createPassengerMechanicalLayout } from '../three/geometry/passenger/mechanical/passenger-mechanical-layout'
 import { createPassengerMechanicalComponents } from '../three/geometry/passenger/mechanical/mechanical-component-model'
@@ -26,7 +27,7 @@ import {
 export type SpatialValidationStatus = 'ok' | 'warning' | 'invalid' | 'unknown'
 export type SpatialRuleSource = 'geometric' | 'planning' | 'verified-standard' | 'manufacturer'
 export type SpatialIssueSeverity = 'info' | 'warning' | 'error'
-export type PassengerSpatialIssueCode =
+export type PassengerSpatialIssueCode = LandingIssueCode
   | 'geometry-unavailable'
   | 'levels-unavailable' | 'invalid-level-order' | 'level-outside-installation'
   | 'cabin-geometry-unavailable' | 'invalid-cabin-dimensions' | 'shaft-geometry-unavailable'
@@ -112,6 +113,10 @@ const geometricRule = (
 
 const ruleLevels = geometricRule('passenger.levels.structure', 'levels', ['installation.levels'], (context) => {
   const rule = ruleLevels, levels = context.inputs.installation.levels
+  const landingIssues = context.inputs.installation.landingIssues ?? []
+  if (landingIssues.length) return result(rule,landingIssues.some((i)=>i.status==='invalid')?'invalid':'unknown',
+    landingIssues.map((i)=>issue(i.code,i.status==='invalid'?'error':'info','levels',i.levelId?[i.levelId]:[],
+      {affectedLevelId:i.levelId,blocksCabinTravel:i.status==='invalid',suggestedField:'levelElevationsMm'})))
   if (!levels.length) return result(rule, 'unknown', [issue('levels-unavailable', 'info', 'levels', [], { suggestedField: 'stopCount' })])
   for (const [index, level] of levels.entries()) {
     if (!Number.isFinite(level.elevationY) || (index > 0 && level.elevationY <= levels[index - 1].elevationY)) {
@@ -276,6 +281,13 @@ const ruleDoors = geometricRule('passenger.doors.structure', 'doors', ['doors'],
       return result(rule, 'invalid', [issue('invalid-landing-level', 'error', 'doors', [entry.id], {
         affectedLevelId: entry.levelId, suggestedField: 'doors.landings',
       })])
+    }
+    const shaft = context.inputs.installation.shaft
+    if (entry.role === 'landing' && shaft && (entry.origin[0]-entry.openingWidth/2 < -shaft.width/2 ||
+      entry.origin[0]+entry.openingWidth/2 > shaft.width/2 || (shaft.verticalExtent &&
+        (entry.origin[1] < shaft.verticalExtent.bottomY || entry.origin[1]+entry.openingHeight > shaft.verticalExtent.topY)))) {
+      return result(rule,'invalid',[issue('landing-door-shaft-conflict','error','doors',[entry.id,'shaft'],
+        {affectedLevelId:entry.levelId,blocksCabinTravel:true})])
     }
     const panelsValid = entry.openingWidth > 0 && entry.openingHeight > 0 && entry.panels.every((panel) =>
       panel.width > 0 && panel.height > 0 && panel.thickness > 0 &&

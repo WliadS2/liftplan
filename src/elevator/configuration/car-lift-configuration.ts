@@ -10,6 +10,7 @@ import {
 import type { LiftConfiguration } from '../models/lift-configuration'
 import { LIFT_FAMILIES } from '../types/lift-family'
 import { updateUniformLevelIntervals } from './uniform-level-update'
+import { landingSettingsSchema, levelElevationsSchema, updateLandingCount, type LandingSettings } from './landing-planning'
 import { carrierMechanicalPlanningSchema, type CarrierMechanicalPlanning } from './carrier-mechanical-planning'
 import { carrierDrivePlanningSchema, carrierSafetyPlanningSchema, type CarrierDrivePlanning, type CarrierSafetyPlanning } from './carrier-drive-planning'
 
@@ -72,7 +73,8 @@ export interface CarLiftPlanningConfiguration
   readonly pitDepthMm?: Millimetres
   readonly headroomMm?: Millimetres
   readonly storeyHeightsMm?: readonly Millimetres[]
-  readonly levelElevationsMm?: readonly Millimetres[]
+  readonly levelElevationsMm?: readonly (Millimetres | null)[]
+  readonly landingSettings?: readonly LandingSettings[]
   readonly vehicle?: CarLiftVehicleEnvelope
   readonly vehiclePosition?: CarLiftVehiclePosition
   readonly entryApproachEnvelope?: CarLiftApproachEnvelope
@@ -122,7 +124,8 @@ export const carLiftPlanningConfigurationSchema = z.object({
   pitDepthMm: optionalMm,
   headroomMm: optionalMm,
   storeyHeightsMm: z.array(finite.transform(millimetres)).readonly().optional(),
-  levelElevationsMm: z.array(finite.transform(millimetres)).readonly().optional(),
+  levelElevationsMm: levelElevationsSchema.optional(),
+  landingSettings: z.array(landingSettingsSchema).readonly().optional(),
   vehicle: z.object({
     widthMm: optionalMm,
     lengthMm: optionalMm,
@@ -162,7 +165,8 @@ export function updateCarLiftPlanningConfiguration(
   configuration: CarLiftPlanningConfiguration,
   update: CarLiftPlanningConfigurationUpdate,
 ): CarLiftPlanningConfiguration {
-  return updateUniformLevelIntervals(configuration, update)
+  return configuration.levelElevationsMm || configuration.landingSettings
+    ? updateLandingCount(configuration, update, false) : updateUniformLevelIntervals(configuration, update)
 }
 
 export function createCenteredVehiclePosition(headingDegrees = 0): CarLiftVehiclePosition {

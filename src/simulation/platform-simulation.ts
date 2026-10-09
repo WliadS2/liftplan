@@ -1,6 +1,7 @@
 import { metres, millimetres, millimetresToMetres, type Millimetres, type MetresPerSecond } from '../engineering'
 import { calculateVerticalTravelDuration } from './vertical-travel'
 import type { CarrierDriveVisualization } from './carrier-drive-visualization'
+import { isLandingSideServed, type NormalizedLanding } from '../elevator/configuration/landing-planning'
 
 export type PlatformSimulationPhase = 'idle' | 'door-closing' | 'moving' | 'door-opening' | 'door-open'
 export type PlatformSimulationIssue = { readonly code: 'planning-incomplete' | 'geometric-conflict' | 'invalid-timing'
@@ -12,7 +13,7 @@ export interface PlatformSimulationModel {
   readonly mechanicalVisualization?:CarrierDriveVisualization
   readonly family: 'goods' | 'car'
   readonly nominalSpeedMetresPerSecond?: MetresPerSecond
-  readonly levels: readonly { readonly id: string; readonly index: number; readonly elevationMm: Millimetres }[]
+  readonly levels: readonly NormalizedLanding[]
   readonly referenceFloorMm: Millimetres
   readonly capabilities: Readonly<Record<PlatformSimulationCapabilityName, { readonly available: boolean; readonly path: string }>>
   /** Physical dynamics remain unsupported; mechanicalVisualization separately declares kinematic bindings. */
@@ -81,8 +82,8 @@ export function createPlatformSimulationPose(model: PlatformSimulationModel, sta
     : level(model, state.currentLevel)!.elevationMm
   return { floorMm, platformOffsetMm: millimetres(floorMm - model.referenceFloorMm),
     activeLandingLevel: state.phase === 'moving' ? undefined : state.currentLevel,
-    frontDoorProgress: model.capabilities.frontDoorMovement.available ? state.doorProgress : 0,
-    rearDoorProgress: model.capabilities.rearDoorMovement.available ? state.doorProgress : 0 }
+    frontDoorProgress: model.capabilities.frontDoorMovement.available && isLandingSideServed(level(model,state.currentLevel)!, 'front') ? state.doorProgress : 0,
+    rearDoorProgress: model.capabilities.rearDoorMovement.available && isLandingSideServed(level(model,state.currentLevel)!, 'rear') ? state.doorProgress : 0 }
 }
 export function advancePlatformSimulation(model: PlatformSimulationModel, state: PlatformSimulationState, deltaSeconds: number): PlatformSimulationResult {
   if (!Number.isFinite(deltaSeconds) || deltaSeconds < 0) return reject('invalid-clock', 'deltaSeconds')

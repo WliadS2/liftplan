@@ -27,6 +27,7 @@ import { getLiftSpatialIssueMessage, SPATIAL_STATUS_LABELS } from './spatial-val
 import { CarLiftConfigurationForm, GoodsLiftConfigurationForm } from './FamilyConfigurationForms'
 import { PlansWorkspace } from './PlansWorkspace'
 import { ProjectPersistenceControls } from './ProjectPersistenceControls'
+import { LandingEditor } from './LandingEditor'
 import './ProjectWorkspace.css'
 
 const liftTypes = getLiftTypeDefinitions()
@@ -249,7 +250,7 @@ export function ProjectWorkspace() {
                   <input
                     type="number"
                     step="1"
-                    value={project.configuration.stopCount ?? ''}
+                    value={project.configuration.levelElevationsMm?.length ?? project.configuration.stopCount ?? ''}
                     onChange={(event) =>
                       updatePassengerConfiguration({
                         stopCount: parseOptionalNumber(event.target.value),
@@ -426,6 +427,8 @@ export function ProjectWorkspace() {
                     }
                   />
                 </label>
+
+                <LandingEditor configuration={project.configuration} passenger onChange={updatePassengerConfiguration}/>
 
                 <h3>Schematisches Gegengewicht (mm)</h3>
 

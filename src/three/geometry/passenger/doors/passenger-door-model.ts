@@ -1,4 +1,5 @@
 import type { ComponentDataSource } from '../../../../elevator/configuration/mechanical-component-data'
+import { isLandingSideServed } from '../../../../elevator/configuration/landing-planning'
 import type {
   PassengerDoorSystemData, DoorAssemblyData, DoorCylinderData, DoorOpeningType, DoorOperatorData,
   DoorCouplingData, DoorInterlockData,
@@ -352,6 +353,7 @@ export function createPassengerDoorSystem(data: PassengerDoorSystemData | undefi
       overrideIds.add(override.levelId)
     }
     for (const level of installation.levels) {
+      if (!isLandingSideServed(level, series.side)) continue
       const override = series.overrides?.find((entry) => entry.levelId === level.id), separation = override?.separationMm ?? series.separationMm
       if (!positiveDriveDimensions([separation]) || !Number.isFinite(level.elevationY)) { issue('invalid-door-level', series.id, level.id); continue }
       const opening = override?.opening ?? series.opening, origin = p(car.origin[0], level.elevationY, car.origin[2] + (series.side === 'front' ? 1 : -1) * mm(separation))
@@ -368,6 +370,17 @@ export function createPassengerDoorSystem(data: PassengerDoorSystemData | undefi
       relationships.push({ cabinEntranceId: car.id, landingEntranceId: landing.id, levelId: level.id, cabinAtLevelOrigin: predicted,
         entranceAxesCorrespond: nearDriveValue(car.origin[0], landing.origin[0]) && nearDriveValue(car.rotationY, landing.rotationY), sillSeparation,
         interfacePointsCoincide: carPoint && landing.coupling ? driveDistance(carPoint, landing.coupling.interfacePoint) < GEOMETRY_EPSILON : undefined })
+    }
+  }
+  // Explicit per-stop planning can show usable openings on the declared shaft plane.
+  // This does not fabricate a manufactured landing-door series or its sill separation.
+  if (installation.landingAccessConfigured && installation.shaft) {
+    for (const level of installation.levels) for (const car of cabin) {
+      if (!isLandingSideServed(level, car.side) || data?.landings?.some((series) => series.side === car.side)) continue
+      const base = entrance(`landing-${level.id}-${car.side}`, 'landing', car.side,
+        p(car.origin[0], level.elevationY, (car.side === 'front' ? 1 : -1) * installation.shaft.depth / 2),
+        car.openingWidth, car.openingHeight, 'planning', undefined)
+      if (base) landings.push({ ...base, levelId: level.id, cabinEntranceId: car.id })
     }
   }
   const models = [...cabin, ...landings]

@@ -3,7 +3,7 @@ import type { Millimetres } from '../../engineering'
 interface VerticalPlanningData {
   readonly stopCount?: number
   readonly storeyHeightsMm?: readonly Millimetres[]
-  readonly levelElevationsMm?: readonly Millimetres[]
+  readonly levelElevationsMm?: readonly (Millimetres | null)[]
 }
 
 /** Editing a count reuses a known uniform interval, never extrapolates independent elevations. */

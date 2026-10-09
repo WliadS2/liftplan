@@ -1,4 +1,5 @@
 import { millimetres } from '../engineering'
+import { isLandingSideServed } from '../elevator/configuration/landing-planning'
 import { projectCarrierMechanicalPrimitives } from './carrier-mechanical-drawings'
 import { layoutGoodsDrawingAnnotations } from './goods-drawing-annotation-layout'
 import type { CarLiftPlanningConfiguration } from '../elevator/configuration/car-lift-configuration'
@@ -59,7 +60,8 @@ export function createCarLiftDrawingContext(configuration: CarLiftPlanningConfig
 }
 
 export function createCarLiftPlanDrawing(context: CarLiftDrawingContext,
-  scale: TechnicalDrawingScale = 'auto'): TechnicalDrawingDocument {
+  scale: TechnicalDrawingScale = 'auto', levelId?: string): TechnicalDrawingDocument {
+  const level = levelId === undefined ? context.model.levels[0] : context.model.levels.find((entry)=>entry.id===levelId)
   const primitives: TechnicalDrawingPrimitive[] = projectCarrierMechanicalPrimitives('car','plan',context.model.mechanical,context.model.drive)
   const { shaft, platform, vehicle } = context.model
   if (shaft) {
@@ -109,7 +111,7 @@ export function createCarLiftPlanDrawing(context: CarLiftDrawingContext,
     primitives.push(rect(envelope.id, 'hidden', envelope.bounds.minX, -envelope.bounds.maxZ,
       boxWidth(envelope.bounds), boxDepth(envelope.bounds), envelope.id))
   })
-  context.model.entrances.forEach((entrance) => {
+  context.model.entrances.filter((entry)=>level ? isLandingSideServed(level,entry.side) : levelId === undefined).forEach((entrance) => {
     if (!platform) return
     const y = entrance.side === 'front' ? -platform.maxZ : -platform.minZ
     primitives.push(line(`${entrance.id}-opening`, 'visible', -entrance.clearWidthMm / 2, y, entrance.clearWidthMm / 2, y))
@@ -166,13 +168,20 @@ export function createCarLiftSectionDrawing(context: CarLiftDrawingContext,
         width, vehicle.heightMm, 'car-vehicle'))
     }
   }
-  levels.forEach((level) => {
+  levels.forEach((level,index) => {
     const left = shaft?.minX ?? -500
     const right = shaft?.maxX ?? 500
     primitives.push(line(`car-${level.id}`, 'level', left - 200, -level.elevationMm, right + 200, -level.elevationMm))
-    primitives.push(text(`car-${level.id}-label`, `Haltestelle ${level.index + 1}`, right + 450, -level.elevationMm))
+    const served = context.model.entrances.filter((entry)=>isLandingSideServed(level,entry.side))
+    primitives.push(text(`car-${level.id}-label`, context.configuration.landingSettings
+      ? `${level.label || `Haltestelle ${level.index + 1}`} · ${level.elevationMm} mm` : `Haltestelle ${level.index + 1}`, right + 450, -level.elevationMm))
+    if (context.configuration.landingSettings) primitives.push(text(`car-${level.id}-access`,
+      served.map((e)=>e.side==='front'?'Vorne':'Hinten').join(' / '),right+450,-level.elevationMm+180))
+    const previous = levels[index-1]
+    if (previous) primitives.push(verticalDimension(`car-storey-${level.id}`, 'storey-height',
+      -level.elevationMm, -previous.elevationMm, left, left-500, millimetres(level.elevationMm-previous.elevationMm)))
     // Shared front/rear clear dimensions coincide in this X/Y projection.
-    const entrance = context.model.entrances[0]
+    const entrance = served[0]
     if (entrance) primitives.push(rect(`car-landing-${level.id}-opening`, 'hidden',
       -entrance.clearWidthMm / 2, -level.elevationMm - entrance.clearHeightMm,
       entrance.clearWidthMm, entrance.clearHeightMm, entrance.id))
@@ -188,9 +197,9 @@ export function createCarLiftSectionDrawing(context: CarLiftDrawingContext,
 
 export function createCarLiftDoorElevationDrawing(context: CarLiftDrawingContext,
   selection: CarDoorDrawingSelection = {}, scale: TechnicalDrawingScale = 'auto'): TechnicalDrawingDocument {
-  const level = context.model.levels.find((entry) => entry.id === selection.levelId) ?? context.model.levels[0]
+  const level = selection.levelId === undefined ? context.model.levels[0] : context.model.levels.find((entry) => entry.id === selection.levelId)
   const side = selection.side ?? 'front'
-  const entrance = context.model.entrances.find((entry) => entry.side === side)
+  const entrance = level && isLandingSideServed(level,side) ? context.model.entrances.find((entry) => entry.side === side) : undefined
   const primitives: TechnicalDrawingPrimitive[] = []
   if (entrance) {
     primitives.push(rect('car-door-opening', 'cut', -entrance.clearWidthMm / 2, -entrance.clearHeightMm,
@@ -210,7 +219,7 @@ export function createCarLiftDoorElevationDrawing(context: CarLiftDrawingContext
           vehicleWidth, vehicleHeight, 'car-vehicle'))
       }
     }
-    primitives.push(text('car-door-title', `${level ? `Haltestelle ${level.index + 1}` : 'Haltestelle nicht gewählt'} · ${side === 'front' ? 'Vorne' : 'Hinten'}`,
+    primitives.push(text('car-door-title', `${level ? level.label || `Haltestelle ${level.index + 1}` : 'Haltestelle nicht gewählt'} · ${side === 'front' ? 'Vorne' : 'Hinten'}`,
       0, -entrance.clearHeightMm - 260))
   }
   const complete = Boolean(entrance && level)

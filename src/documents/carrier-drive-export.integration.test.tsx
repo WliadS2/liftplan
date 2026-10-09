@@ -16,6 +16,8 @@ import { createTechnicalPlanPdfMetadata,prepareTechnicalPlanPdf } from './techni
 import { generateTechnicalPlanPdf } from './technical-plan-pdf-renderer'
 import { createTechnicalPlanDxfMetadata,prepareTechnicalPlanDxf } from './technical-plan-dxf'
 import { generateTechnicalPlanDxf } from './technical-plan-dxf-renderer'
+import { editLanding,resizeLandings } from '../elevator/configuration/landing-planning'
+import { millimetres } from '../engineering'
 
 // Exercise the browser ESM build used by Vite, rather than the package's Node UMD entry.
 vi.mock('svg2pdf.js',async()=>{
@@ -38,8 +40,10 @@ beforeAll(()=>{
 afterAll(()=>{Reflect.deleteProperty(SVGElement.prototype,'getBBox');vi.restoreAllMocks()})
 
 describe('actual SVG to PDF vector generation regression',()=>{
-  it.each(['passenger','goods','car'] as const)('%s generates current and complete vector A4 sheets',async family=>{
-    const config = family === 'goods' ? createGoodsLiftQaFixture() : family === 'car' ? createCarLiftQaFixture() : createPassengerMechanicalFixture()
+  it.each((['passenger','goods','car'] as const).flatMap(family=>[false,true].map(custom=>({family,custom}))))('$family generates current and complete vector A4 sheets (custom landings: $custom)',async ({family,custom})=>{
+    const base = family === 'goods' ? createGoodsLiftQaFixture() : family === 'car' ? createCarLiftQaFixture() : createPassengerMechanicalFixture()
+    const config = custom ? editLanding(editLanding(resizeLandings(base,family==='passenger',2),family==='passenger',0,{label:'EG'}),
+      family==='passenger',1,{label:'OG 1',elevationMm:millimetres(3200)}) : base
     const planning = createLiftGeometryPlanningInput(config)
     const context = config.family === 'goods' ? createGoodsLiftDrawingContext(config) : config.family === 'car' ? createCarLiftDrawingContext(config)
       : planning ? createPassengerDrawingContext(planning) : undefined
