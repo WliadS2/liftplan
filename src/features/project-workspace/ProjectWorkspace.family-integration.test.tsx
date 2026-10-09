@@ -42,6 +42,27 @@ function selectFamily(family: 'goods' | 'car') {
 }
 
 describe('family-specific project workspace forms', () => {
+  it.each(['passenger', 'goods', 'car'] as const)('collapses %s inspectors independently without losing fields or changing project state', (family) => {
+    useProjectStore.getState().setLiftFamily(family)
+    const { container } = render(<ProjectWorkspace />)
+    const before = useProjectStore.getState().project
+    const field = screen.getByLabelText('Aufzugstyp', { exact: false })
+    fireEvent.click(screen.getByRole('button', { name: 'Konfiguration einklappen' }))
+    expect(container.querySelector('.workspace-body')).toHaveAttribute('data-left-collapsed', 'true')
+    expect(field).not.toBeVisible()
+    expect(screen.getByRole('button', { name: 'Technische Daten einklappen' })).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'Technische Daten einklappen' }))
+    expect(container.querySelector('#data-content')).not.toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Konfiguration einblenden' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Technische Daten einblenden' }))
+    expect(field).toBeVisible()
+    expect(field).toBe(screen.getByLabelText('Aufzugstyp', { exact: false }))
+    expect(useProjectStore.getState().project).toBe(before)
+    const heading = container.querySelector('.data-panel .inspector-heading')!
+    expect(heading.querySelector('h2')).toHaveTextContent('Technische Daten')
+    expect(heading.querySelector('button')).toHaveAttribute('aria-controls', 'data-content')
+  })
+
   it('preserves the existing passenger form path', () => {
     render(<ProjectWorkspace />)
     expect(screen.getByLabelText('Personenanzahl', { exact: false })).toBeInTheDocument()

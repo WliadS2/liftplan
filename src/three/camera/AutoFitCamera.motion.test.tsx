@@ -3,11 +3,12 @@ import { act, cleanup, render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PerspectiveCamera, Vector3 } from 'three'
 import { AutoFitCamera } from './AutoFitCamera'
+import { calculateCameraFit } from './camera-fit'
 import { PASSENGER_CAMERA_POLICIES, GOODS_CAMERA_POLICIES, CAR_CAMERA_POLICIES } from './view-camera-policy'
 
 const runtime = vi.hoisted(() => ({
   tick: undefined as undefined | ((state: unknown) => void), onStart: undefined as undefined | (() => void),
-  controls: undefined as undefined | { target: Vector3; update: ReturnType<typeof vi.fn>; minDistance: number; maxDistance: number },
+  controls: undefined as undefined | { target: Vector3; update: ReturnType<typeof vi.fn>; minDistance: number; maxDistance: number; enableDamping?: boolean },
 }))
 vi.mock('@react-three/fiber', () => ({ useFrame: (tick: typeof runtime.tick) => { runtime.tick = tick } }))
 vi.mock('@react-three/drei', async () => {
@@ -22,6 +23,59 @@ vi.mock('@react-three/drei', async () => {
 })
 afterEach(cleanup)
 describe('rigid simulation camera following', () => {
+  it('clears residual damping before fitting so reset and resize cannot drift away from the target', () => {
+    const frame = { bounds: { min: [-1, 0, -1] as const, max: [1, 2, 1] as const,
+      center: [0, 1, 0] as const, width: 2, height: 2, depth: 2 }, target: [0, 1, 0] as const }
+    const camera = new PerspectiveCamera(38)
+    const request = { viewMode: 'overview', installationKey: 'fixture', doorSelectionKey: '', resetRevision: 0 }
+    const view = render(<AutoFitCamera frame={frame} request={request} />)
+    const controls = runtime.controls!
+    controls.enableDamping = true
+    let residual = 3
+    controls.update.mockImplementation(() => {
+      controls.target.x += residual
+      camera.position.x += residual
+      residual = controls.enableDamping ? residual * 0.9 : 0
+    })
+    let size = { width: 704, height: 455 }
+    const tick = () => act(() => runtime.tick!({ camera, size }))
+    tick()
+    expect(controls.target.toArray()).toEqual(frame.target)
+    expect(camera.position.toArray()).toEqual(calculateCameraFit(frame.bounds, frame.target, size).position)
+    runtime.onStart!(); residual = 2
+    view.rerender(<AutoFitCamera frame={frame} request={{ ...request, resetRevision: 1 }} />)
+    tick()
+    expect(controls.target.toArray()).toEqual(frame.target)
+    expect(residual).toBe(0); expect(controls.enableDamping).toBe(true)
+    residual = 2; size = { width: 956, height: 455 }; tick()
+    expect(controls.target.toArray()).toEqual(frame.target)
+    expect(camera.position.toArray()).toEqual(calculateCameraFit(frame.bounds, frame.target, size).position)
+    expect(controls.update).toHaveBeenCalledTimes(6)
+  })
+
+  it('reframes to the real resized canvas after inspector or Fahrdemo changes, then allows manual orbit and reset', () => {
+    const frame = { bounds: { min: [-2, -1, -2] as const, max: [2, 20, 2] as const,
+      center: [0, 9.5, 0] as const, width: 4, height: 21, depth: 4 }, target: [0, 9.5, 0] as const }
+    const camera = new PerspectiveCamera(38)
+    const request = { viewMode: 'overview', installationKey: 'fixture', doorSelectionKey: '', resetRevision: 0 }
+    const view = render(<AutoFitCamera frame={frame} request={request} />)
+    let size = { width: 704, height: 420 }
+    const tick = () => act(() => runtime.tick!({ camera, size }))
+    for (const next of [size, { width: 956, height: 420 }, { width: 1208, height: 420 }, { width: 704, height: 510 }]) {
+      size = next
+      tick()
+      expect(camera.position.toArray()).toEqual(calculateCameraFit(frame.bounds, frame.target, size).position)
+      expect(runtime.controls!.target.toArray()).toEqual(frame.target)
+    }
+    expect(runtime.controls!.update).toHaveBeenCalledTimes(4)
+    runtime.onStart!(); camera.position.x += 3
+    const manual = camera.position.clone()
+    tick(); expect(camera.position.equals(manual)).toBe(true)
+    view.rerender(<AutoFitCamera frame={frame} request={{ ...request, resetRevision: 1 }} />)
+    tick()
+    expect(camera.position.toArray()).toEqual(calculateCameraFit(frame.bounds, frame.target, size).position)
+  })
+
   it.each([PASSENGER_CAMERA_POLICIES,GOODS_CAMERA_POLICIES,CAR_CAMERA_POLICIES].flatMap((policies) =>
     (['overview', 'cutaway'] as const).map((viewMode) => ({ policies, viewMode }))))('$viewMode: keeps installation position, pivot and zoom fixed throughout travel and manual orbit', ({policies,viewMode})=>{
     const frame = {bounds:{min:[-2,-1,-2] as const,max:[2,32,2] as const,center:[0,15.5,0] as const,

@@ -67,13 +67,13 @@ export function PassengerSimulationControls({ controller }: { readonly controlle
   const pose = import.meta.env.DEV ? controller.getPose() : undefined
 
   return <div className="simulation-controls">
-    <div className="simulation-status-row" style={{ cursor: 'pointer' }} onClick={() => setCollapsed(!collapsed)}>
-      <strong style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
+    <div className="simulation-status-row">
+      <button className="simulation-toggle" type="button" aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: collapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }}>
           <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
         Fahrdemo
-      </strong>
+      </button>
       <span role="status">
         {state.paused ? `Pausiert (${phases[state.phase]})` : phases[state.phase]} · {current.label || `Haltestelle ${current.index + 1}`}
         {state.phase !== 'idle' ? ` → ${targetStop.label || `Haltestelle ${targetStop.index + 1}`}` : ''}
@@ -95,7 +95,8 @@ export function PassengerSimulationControls({ controller }: { readonly controlle
       <button className="btn-tertiary" type="button" onClick={() => controller.dispatch({ type: 'reset' })}>↺ Zurücksetzen</button>
     </div>
 
-    <details className="panel-note" style={{ position: 'relative', right: 'auto', bottom: 'auto', marginTop: 'var(--space-8)' }}>
+    <div className="simulation-notes">
+    <details className="panel-note">
       <summary>Hinweise & Einschränkungen</summary>
       <ul style={{ margin: 'var(--space-4) 0 0', paddingLeft: 'var(--space-16)' }}>
         <li>Vertikalfahrt mit Nenngeschwindigkeit. Ohne Beschleunigungs- oder Bremsmodell.</li>
@@ -103,16 +104,17 @@ export function PassengerSimulationControls({ controller }: { readonly controlle
       </ul>
     </details>
     
-    {import.meta.env.DEV && pose && <details className="panel-note" style={{ position: 'relative', right: 'auto', bottom: 'auto', marginTop: 'var(--space-4)' }}>
+    {import.meta.env.DEV && pose && <details className="panel-note">
       <summary>Bewegungsdaten</summary>
       <p style={{ margin: 0 }}>Stand beim letzten Zustandswechsel: Kabinenboden {pose.cabinY.toFixed(3)} m
         {pose.counterweightY === undefined ? '' : ` · Gegengewichtmitte ${pose.counterweightY.toFixed(3)} m`}
         {' '}· Fahrfortschritt {(pose.travelProgress * 100).toFixed(1)} % · Türöffnung {(pose.cabinDoorProgress * 100).toFixed(1)} %
         {pose.tractionSheaveRotation === undefined ? '' : ` · Treibscheibenwinkel ${pose.tractionSheaveRotation.toFixed(3)} rad`}</p>
     </details>}
-    {snapshot.issues.map((issue, index) => <p className="viewport-status" role="alert" key={index}>{errors[issue.code]}</p>)}
+    </div>
       </>
     )}
+    {snapshot.issues.map((issue, index) => <p className="viewport-status" role="alert" key={index}>{errors[issue.code]}</p>)}
   </div>
 }
 

@@ -87,7 +87,9 @@ export function CarLiftViewport({ normalized, sceneModel, validation, initialVie
       </div>
       <div className="viewport-notices">
         {!renderModel?.assemblies.length && <p className="viewport-status">Für diesen Ansichtsmodus fehlen Planungsdaten.</p>}
-        {renderModel && <p className="panel-note" aria-label="3D-Legende">{getCarLiftRenderLegend(renderModel).join(' · ')}</p>}
+        {renderModel && <details className="panel-note" aria-label="3D-Legende"><summary>3D-Legende</summary>
+          <p>{getCarLiftRenderLegend(renderModel).join(' · ')}</p>
+        </details>}
         {normalized.status === 'partial' && <p className="viewport-status">Teilansicht – weitere Planungsdaten fehlen.</p>}
         {normalized.status === 'invalid' && <p className="viewport-status" role="alert">Teilansicht – ungültige Planungsdaten werden soweit darstellbar angezeigt.</p>}
         {validation.status === 'invalid' && normalized.status !== 'invalid' && <p className="viewport-status" role="alert">

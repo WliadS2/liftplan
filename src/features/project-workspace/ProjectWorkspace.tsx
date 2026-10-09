@@ -99,6 +99,8 @@ export function ProjectWorkspace() {
   const resetProject = useProjectStore((state) => state.resetProject)
 
   const [activeTab, setActiveTab] = useState<'3d' | 'plans'>('3d')
+  const [leftCollapsed, setLeftCollapsed] = useState(false)
+  const [rightCollapsed, setRightCollapsed] = useState(false)
 
   const geometryInput = useMemo(
     () => createLiftGeometryPlanningInput(project.configuration),
@@ -167,7 +169,7 @@ export function ProjectWorkspace() {
       <header className="workspace-header">
         <div className="workspace-header-title">
           <h1>LiftPlan</h1>
-          <span className="eyebrow">Engineering Workspace</span>
+          <span className="eyebrow">Planungsarbeitsplatz</span>
         </div>
         <div className="workspace-header-actions">
           {DevelopmentMechanicalControls && (
@@ -179,10 +181,15 @@ export function ProjectWorkspace() {
       </header>
       <ProjectPersistenceControls />
 
-      <div className="workspace-body">
-        <aside className="workspace-panel configuration-panel" aria-labelledby="configuration-heading">
-          <div className="panel-content">
+      <div className="workspace-body" data-left-collapsed={leftCollapsed} data-right-collapsed={rightCollapsed}>
+        <aside className="workspace-panel configuration-panel" aria-labelledby="configuration-heading" data-collapsed={leftCollapsed}>
+          <div className="inspector-heading">
             <h2 id="configuration-heading">Konfiguration</h2>
+            <button type="button" aria-controls="configuration-content" aria-expanded={!leftCollapsed}
+              aria-label={leftCollapsed ? 'Konfiguration einblenden' : 'Konfiguration einklappen'}
+              onClick={() => setLeftCollapsed((value) => !value)}>{leftCollapsed ? '»' : '«'}</button>
+          </div>
+          <div id="configuration-content" className="panel-content" hidden={leftCollapsed}>
 
             <label className="field">
               <span>Aufzugstyp</span>
@@ -548,9 +555,14 @@ export function ProjectWorkspace() {
           </div>
         </main>
 
-        <aside className="workspace-panel data-panel" aria-labelledby="data-heading">
-          <div className="panel-content">
+        <aside className="workspace-panel data-panel" aria-labelledby="data-heading" data-collapsed={rightCollapsed}>
+          <div className="inspector-heading">
             <h2 id="data-heading">Technische Daten</h2>
+            <button type="button" aria-controls="data-content" aria-expanded={!rightCollapsed}
+              aria-label={rightCollapsed ? 'Technische Daten einblenden' : 'Technische Daten einklappen'}
+              onClick={() => setRightCollapsed((value) => !value)}>{rightCollapsed ? '«' : '»'}</button>
+          </div>
+          <div id="data-content" className="panel-content" hidden={rightCollapsed}>
             <section className="planning-status" aria-labelledby="planning-status-heading">
               <h3 id="planning-status-heading">Planungsstatus</h3>
               <p className={spatialConflicts > 0 ? 'planning-status-conflict' : ''}>

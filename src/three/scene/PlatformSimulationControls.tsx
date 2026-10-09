@@ -17,13 +17,13 @@ export function PlatformSimulationControls({ controller, availability, onReset }
   const current = controller.model.levels.find((level) => level.id === state.currentLevel)!
   const targetStop = controller.model.levels.find((level)=>level.id===state.targetLevel)!
   return <div className="simulation-controls">
-    <div className="simulation-status-row" style={{ cursor: 'pointer' }} onClick={() => setCollapsed(!collapsed)}>
-      <strong style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
+    <div className="simulation-status-row">
+      <button className="simulation-toggle" type="button" aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: collapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }}>
           <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
         Fahrdemo
-      </strong>
+      </button>
       <span role="status">
         {state.paused ? `Pausiert (${phases[state.phase]})` : phases[state.phase]} · {current.label || `Haltestelle ${current.index + 1}`}
         {!resting ? ` → ${targetStop.label || `Haltestelle ${targetStop.index + 1}`}` : ''}
@@ -45,7 +45,7 @@ export function PlatformSimulationControls({ controller, availability, onReset }
       <button className="btn-tertiary" type="button" onClick={() => { controller.dispatch({ type: 'reset' }); onReset() }}>↺ Zurücksetzen</button>
     </div>
 
-    <details className="panel-note" style={{ position: 'relative', right: 'auto', bottom: 'auto', marginTop: 'var(--space-8)' }}>
+    <details className="panel-note">
       <summary>{availability === 'complete' ? 'Fahrdemo verfügbar' : 'Fahrdemo teilweise verfügbar'}</summary>
       <ul style={{ margin: 'var(--space-4) 0 0', paddingLeft: 'var(--space-16)' }}>
         <li>Visualisierung ohne Nachweis des realen Fahrverhaltens.</li>
@@ -54,9 +54,9 @@ export function PlatformSimulationControls({ controller, availability, onReset }
         {controller.model.family === 'car' && <li>Autoaufzug: keine Fahrzeugfahr- oder Wendebewegung.</li>}
       </ul>
     </details>
-    {issues.length > 0 && <p role="alert" className="viewport-status">Diese Aktion ist im aktuellen Zustand der Fahrdemo nicht verfügbar.</p>}
       </>
     )}
+    {issues.length > 0 && <p role="alert" className="viewport-status">Diese Aktion ist im aktuellen Zustand der Fahrdemo nicht verfügbar.</p>}
   </div>
 }
 export function PlatformSimulationUnavailable({ result }: { readonly result: Exclude<PlatformSimulationModelResult, { status: 'available' }> }) {

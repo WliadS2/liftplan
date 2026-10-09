@@ -235,15 +235,12 @@ export function ProjectPersistenceControls() {
 
       <div className="toolbar-separator" />
 
-      <div className="toolbar-group">
+      <details className="project-actions-menu">
+        <summary className="btn-secondary">Weitere Aktionen</summary>
+        <div className="project-actions-list">
         <button type="button" className="btn-secondary" disabled={disabled} onClick={() => void handleDuplicate()}>Duplizieren</button>
         <button type="button" className="btn-secondary" disabled={disabled} onClick={handleRenameClick}>Umbenennen</button>
         <button type="button" className="btn-danger" disabled={disabled} onClick={handleDeleteClick}>Löschen</button>
-      </div>
-
-      <div className="toolbar-separator" />
-
-      <div className="toolbar-group">
         <button type="button" className="btn-tertiary" disabled={disabled} onClick={() => void handleExport()}>Exportieren</button>
         <button type="button" className="btn-tertiary" onClick={() => importRef.current?.click()}>Importieren</button>
         <input
@@ -257,15 +254,11 @@ export function ProjectPersistenceControls() {
             event.currentTarget.value = ''
           }}
         />
-      </div>
-
-      <div className="toolbar-separator" />
-
-      <div className="toolbar-group">
         <button type="button" className="btn-tertiary" onClick={() => versionsDialogRef.current?.showModal()} disabled={disabled}>
           Versionsverlauf
         </button>
-      </div>
+        </div>
+      </details>
 
       <div className="save-status-container">
         <span className={`save-status save-status-${status}`}>{PROJECT_SAVE_STATUS_LABELS[status]}</span>

@@ -43,6 +43,13 @@ export function AutoFitCamera({ frame, request, motion }: AutoFitCameraProps) {
     }
     previousOffset.current = offset
 
+    // Consume pending orbit/pan inertia before applying an explicit frame.
+    // Otherwise the next controls update drifts away from the freshly fitted target.
+    if (controlsRef.current.enableDamping) {
+      controlsRef.current.enableDamping = false
+      controlsRef.current.update()
+      controlsRef.current.enableDamping = true
+    }
     const fit = calculateCameraFit(frame.bounds, frame.target, size, undefined, undefined, frame.direction)
     camera.up.set(...fit.up)
     camera.position.set(...fit.position)

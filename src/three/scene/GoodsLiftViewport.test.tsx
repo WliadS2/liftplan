@@ -67,6 +67,26 @@ function renderConfiguration(configuration: GoodsLiftPlanningConfiguration) {
 }
 
 describe('goods-lift viewport', () => {
+  it('collapses Fahrdemo without resetting paused travel, the selected stop or the canvas', () => {
+    renderConfiguration(createGoodsLiftQaFixture())
+    fireEvent.change(screen.getByRole('combobox', { name: 'Zielhaltestelle' }), { target: { value: 'level-6' } })
+    fireEvent.click(screen.getByRole('button', { name: '▶ Fahrt starten' }))
+    act(() => { driver.controller!.advance(2); driver.controller!.dispatch({ type: 'pause' }) })
+    const controller = driver.controller!, state = controller.getState(), pose = controller.getPose()
+    fireEvent.click(screen.getByRole('button', { name: 'Fahrdemo' }))
+    expect(screen.getByRole('button', { name: 'Fahrdemo' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('combobox', { name: 'Zielhaltestelle' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('goods-canvas')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Fahrdemo' }))
+    expect(screen.getByRole('combobox', { name: 'Zielhaltestelle' })).toHaveValue('level-6')
+    expect(controller.getState()).toBe(state); expect(controller.getPose()).toBe(pose)
+    fireEvent.click(screen.getByRole('button', { name: 'Fortsetzen' }))
+    expect(controller.getState().paused).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Fahrdemo' }))
+    act(() => controller.dispatch({ type: 'start', targetLevel: 'level-6' }))
+    expect(screen.getByRole('alert')).toBeVisible()
+  })
+
   it('wires fixed installation motion separately from platform/load following and resets the active view',()=>{
     renderConfiguration(createGoodsLiftQaFixture())
     const overview=camera.props!.frame

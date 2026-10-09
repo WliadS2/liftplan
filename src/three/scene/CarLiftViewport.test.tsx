@@ -26,6 +26,25 @@ function viewport(configuration: CarLiftPlanningConfiguration) {
   return render(<CarLiftViewport normalized={model.normalized} validation={model.validation} sceneModel={model.scene} />)
 }
 describe('Autoaufzug viewport states and controls', () => {
+  it('collapses Fahrdemo independently of hydraulic travel and preserves the selected stop', () => {
+    viewport(createCarLiftQaFixture())
+    fireEvent.change(screen.getByRole('combobox', { name: 'Zielhaltestelle' }), { target: { value: 'level-6' } })
+    fireEvent.click(screen.getByRole('button', { name: '▶ Fahrt starten' }))
+    act(() => { driver.controller!.advance(2); driver.controller!.dispatch({ type: 'pause' }) })
+    const controller = driver.controller!, pose = controller.getPose(), state = controller.getState()
+    fireEvent.click(screen.getByRole('button', { name: 'Fahrdemo' }))
+    expect(screen.getByRole('button', { name: 'Fahrdemo' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByTestId('car-canvas')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Fahrdemo' }))
+    expect(screen.getByRole('combobox', { name: 'Zielhaltestelle' })).toHaveValue('level-6')
+    expect(controller.getState()).toBe(state); expect(controller.getPose()).toBe(pose)
+    fireEvent.click(screen.getByRole('button', { name: 'Fortsetzen' }))
+    expect(controller.getState().paused).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Fahrdemo' }))
+    act(() => controller.dispatch({ type: 'start', targetLevel: 'level-6' }))
+    expect(screen.getByRole('alert')).toBeVisible()
+  })
+
   it('wires fixed installation motion separately from vehicle/platform following and resets the active view',()=>{
     viewport(createCarLiftQaFixture())
     const overview=camera.props!.frame

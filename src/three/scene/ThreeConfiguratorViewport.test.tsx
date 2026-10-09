@@ -23,6 +23,25 @@ vi.mock('../geometry/passenger/PassengerElevatorAssembly', () => ({ PassengerEle
 afterEach(cleanup)
 
 describe('actual passenger viewport mode wiring', () => {
+  it('keeps paused passenger travel and the target selection intact when Fahrdemo is collapsed', () => {
+    render(<ThreeConfiguratorViewport geometryInput={createLiftGeometryPlanningInput({ ...createPassengerMechanicalFixture(), stopCount: 6 })} />)
+    fireEvent.change(screen.getByRole('combobox', { name: 'Zielhaltestelle' }), { target: { value: 'level-6' } })
+    fireEvent.click(screen.getByRole('button', { name: '▶ Fahrt starten' }))
+    act(() => { runtime.controller!.advance(2); runtime.controller!.dispatch({ type: 'pause' }) })
+    const controller = runtime.controller!, pose = controller.getPose(), state = controller.getState()
+    fireEvent.click(screen.getByRole('button', { name: 'Fahrdemo' }))
+    expect(screen.getByRole('button', { name: 'Fahrdemo' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByTestId('passenger-scene-mode')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Fahrdemo' }))
+    expect(screen.getByRole('combobox', { name: 'Zielhaltestelle' })).toHaveValue('level-6')
+    expect(controller.getState()).toBe(state); expect(controller.getPose()).toBe(pose)
+    fireEvent.click(screen.getByRole('button', { name: 'Fortsetzen' }))
+    expect(controller.getState().paused).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Fahrdemo' }))
+    act(() => controller.dispatch({ type: 'start', targetLevel: 'level-6' }))
+    expect(screen.getByRole('alert')).toBeVisible()
+  })
+
   it('renders the implemented catalog in order and selects every runtime scene/camera mode', () => {
     render(<ThreeConfiguratorViewport geometryInput={createLiftGeometryPlanningInput(createPassengerMechanicalFixture())} />)
     const toolbar = within(screen.getByRole('group', { name: 'Ansichtsmodus' }))

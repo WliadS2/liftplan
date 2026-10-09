@@ -110,12 +110,12 @@ export function GoodsLiftViewport({
           </Canvas>
         </div>
         <div className="viewport-notices">
-          {renderModel && <p className="panel-note" aria-label="3D-Legende">
+          {renderModel && <details className="panel-note" aria-label="3D-Legende"><summary>3D-Legende</summary>
             {getGoodsLiftRenderLegend(renderModel).map((entry) => <span key={entry.label}
               style={{ display: 'inline-block', marginRight: '0.8em' }}>
               <span aria-hidden="true" style={{ color: entry.color }}>━ </span>{entry.label}
             </span>)}
-          </p>}
+          </details>}
           {normalized.status === 'partial' && <p className="viewport-status">Teilansicht – weitere Planungsdaten fehlen.</p>}
           {normalized.status === 'invalid' && <p className="viewport-status" role="alert">
             Teilansicht – ungültige Planungsdaten werden soweit darstellbar angezeigt.
